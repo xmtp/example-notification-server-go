@@ -4,19 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
 	"github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/migrations"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	"github.com/xmtp/example-notification-server-go/pkg/server"
 	"go.uber.org/zap"
 )
 
@@ -54,27 +49,28 @@ func main() {
 	// waitForShutdown(s, cancel)
 }
 
-func waitForShutdown(s *server.Server, cancel context.CancelFunc) {
-	termChannel := make(chan os.Signal, 1)
-	signal.Notify(termChannel, syscall.SIGINT, syscall.SIGTERM)
-	<-termChannel
-	cancel()
-	s.Stop()
-}
+// Commenting out as these are currently unused
+// func waitForShutdown(s *server.Server, cancel context.CancelFunc) {
+// 	termChannel := make(chan os.Signal, 1)
+// 	signal.Notify(termChannel, syscall.SIGINT, syscall.SIGTERM)
+// 	<-termChannel
+// 	cancel()
+// 	s.Stop()
+// }
 
-func initDb() *bun.DB {
-	database, err := db.CreateBunDB(opts.DbConnectionString, 10*time.Second)
-	if err != nil {
-		log.Fatal("db creation error", zap.Error(err))
-	}
+// func initDb() *bun.DB {
+// 	database, err := db.CreateBunDB(opts.DbConnectionString, 10*time.Second)
+// 	if err != nil {
+// 		log.Fatal("db creation error", zap.Error(err))
+// 	}
 
-	err = db.Migrate(context.Background(), database)
-	if err != nil {
-		log.Fatal("db migration error", zap.Error(err))
-	}
+// 	err = db.Migrate(context.Background(), database)
+// 	if err != nil {
+// 		log.Fatal("db migration error", zap.Error(err))
+// 	}
 
-	return database
-}
+// 	return database
+// }
 
 func createMigration() error {
 	db, err := db.CreateBunDB(opts.DbConnectionString, 30*time.Second)
