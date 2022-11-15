@@ -11,24 +11,22 @@ import (
 
 type Server struct {
 	ctx           context.Context
-	cancel        context.CancelFunc
+	logger        *zap.Logger
 	xmtpClient    v1.MessageApiClient
 	installations InstallationService
 	subscriptions SubscriptionService
 	delivery      DeliveryService
 }
 
-func New(logger *zap.Logger, opts options.Options, installations InstallationService, subscriptions SubscriptionService, delivery DeliveryService) (*Server, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+func New(ctx context.Context, opts options.Options, logger *zap.Logger, installations InstallationService, subscriptions SubscriptionService, delivery DeliveryService) (*Server, error) {
 	client, err := xmtp.NewClient(ctx, opts.XmtpGrpcAddress)
 	if err != nil {
-		cancel()
 		return nil, err
 	}
 
 	return &Server{
 		ctx:           ctx,
-		cancel:        cancel,
+		logger:        logger,
 		xmtpClient:    client,
 		installations: installations,
 		subscriptions: subscriptions,
@@ -36,6 +34,10 @@ func New(logger *zap.Logger, opts options.Options, installations InstallationSer
 	}, nil
 }
 
-func (s *Server) RunUntilShutdown() {
+func (s *Server) Start() error {
+	return nil
+}
+
+func (s *Server) Stop() {
 	return
 }

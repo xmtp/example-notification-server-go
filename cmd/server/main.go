@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -13,6 +16,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/db/migrations"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
+	"github.com/xmtp/example-notification-server-go/pkg/server"
 	"go.uber.org/zap"
 )
 
@@ -36,22 +40,29 @@ func main() {
 		}
 		return
 	}
-
-	_ = createDb()
-	logger.Info("Created database")
-
-	// s, err := server.New(logger, installationService, subscriptionService, deliveryService)
+	// ctx, cancel := context.WithCancel(context.Background())
+	// s, err := server.New(ctx, opts, logger, installationService, subscriptionService, deliveryService)
 	// if err != nil {
-	// 	fatal("failed to start server: %s", err)
+	// 	logger.Fatal("failed to create server", zap.Error(err))
 	// }
 
-	// err = s.RunUntilShutdown()
+	// err = s.Start()
 	// if err != nil {
 	// 	logger.Fatal("Failed to start server", zap.Error(err))
 	// }
+
+	// waitForShutdown(s, cancel)
 }
 
-func createDb() *bun.DB {
+func waitForShutdown(s *server.Server, cancel context.CancelFunc) {
+	termChannel := make(chan os.Signal, 1)
+	signal.Notify(termChannel, syscall.SIGINT, syscall.SIGTERM)
+	<-termChannel
+	cancel()
+	s.Stop()
+}
+
+func initDb() *bun.DB {
 	database, err := db.CreateBunDB(opts.DbConnectionString, 10*time.Second)
 	if err != nil {
 		log.Fatal("db creation error", zap.Error(err))
