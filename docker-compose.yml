@@ -1,0 +1,7 @@
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: xmtp
+    ports:
+      - 25432:5432
