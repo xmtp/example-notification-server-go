@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jessevdk/go-flags"
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
 	"github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/migrations"
@@ -16,6 +17,7 @@ import (
 )
 
 var opts options.Options
+var logger *zap.Logger
 
 func main() {
 	var err error
@@ -26,7 +28,7 @@ func main() {
 		return
 	}
 
-	logger := logging.CreateLogger(opts.LogEncoding, opts.LogLevel)
+	logger = logging.CreateLogger(opts.LogEncoding, opts.LogLevel)
 
 	if opts.CreateMigration != "" {
 		if err = createMigration(); err != nil {
@@ -34,6 +36,9 @@ func main() {
 		}
 		return
 	}
+
+	_ = createDb()
+	logger.Info("Created database")
 
 	// s, err := server.New(logger, installationService, subscriptionService, deliveryService)
 	// if err != nil {
@@ -44,7 +49,20 @@ func main() {
 	// if err != nil {
 	// 	logger.Fatal("Failed to start server", zap.Error(err))
 	// }
+}
 
+func createDb() *bun.DB {
+	database, err := db.CreateBunDB(opts.DbConnectionString, 10*time.Second)
+	if err != nil {
+		log.Fatal("db creation error", zap.Error(err))
+	}
+
+	err = db.Migrate(context.Background(), database)
+	if err != nil {
+		log.Fatal("db migration error", zap.Error(err))
+	}
+
+	return database
 }
 
 func createMigration() error {

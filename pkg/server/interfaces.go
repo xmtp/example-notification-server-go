@@ -14,13 +14,13 @@ const (
 )
 
 type DeliveryMechanism struct {
-	kind  DeliveryMechanismKind
-	value string
+	Kind  DeliveryMechanismKind
+	Value string
 }
 
 type RegisterResponse struct {
-	installationId string
-	validUntil     time.Time
+	InstallationId string
+	ValidUntil     time.Time
 }
 
 type LookupInstallationsRequest struct {
