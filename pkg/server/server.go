@@ -20,7 +20,7 @@ type Server struct {
 
 func New(logger *zap.Logger, opts options.Options, installations InstallationService, subscriptions SubscriptionService, delivery DeliveryService) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	client, err := xmtp.NewClient(ctx, opts.XmtpAddress)
+	client, err := xmtp.NewClient(ctx, opts.XmtpGrpcAddress)
 	if err != nil {
 		cancel()
 		return nil, err
