@@ -20,9 +20,9 @@ func createDb() *bun.DB {
 func CreateTestDb() (*bun.DB, func()) {
 	ctx := context.Background()
 	db := createDb()
-	database.Migrate(ctx, db)
+	_ = database.Migrate(ctx, db)
 
 	return db, func() {
-		db.ResetModel(ctx, (*database.Installation)(nil), (*database.Subscription)(nil), (*database.DeviceDeliveryMechanism)(nil))
+		_ = db.ResetModel(ctx, (*database.Installation)(nil), (*database.Subscription)(nil), (*database.DeviceDeliveryMechanism)(nil))
 	}
 }

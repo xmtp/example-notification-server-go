@@ -159,6 +159,7 @@ func Test_Delete(t *testing.T) {
 		Where("id = ?", INSTALLATION_ID).
 		Scan(ctx)
 
+	require.NoError(t, err)
 	require.NotNil(t, install.DeletedAt)
 }
 
