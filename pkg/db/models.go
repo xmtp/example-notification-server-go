@@ -19,12 +19,13 @@ type Installation struct {
 type DeviceDeliveryMechanism struct {
 	bun.BaseModel `bun:"table:device_delivery_mechanisms"`
 
+	ID             int64                            `bun:",pk,autoincrement"`
 	CreatedAt      time.Time                        `bun:"created_at,notnull,default:current_timestamp"`
 	UpdatedAt      time.Time                        `bun:"updated_at,notnull,default:current_timestamp"`
-	InstallationId string                           `bun:"installation_id,notnull,pk"`
+	InstallationId string                           `bun:"installation_id,notnull"`
 	Installation   Installation                     `bun:"rel:belongs-to,join:installation_id=id"`
-	Kind           interfaces.DeliveryMechanismKind `bun:"kind,notnull,pk"`
-	Token          string                           `bun:"token,notnull,pk"`
+	Kind           interfaces.DeliveryMechanismKind `bun:"kind,notnull"`
+	Token          string                           `bun:"token,notnull"`
 }
 
 type Subscription struct {
