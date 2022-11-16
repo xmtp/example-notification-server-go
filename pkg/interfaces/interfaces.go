@@ -25,6 +25,10 @@ type RegisterResponse struct {
 	ValidUntil     time.Time
 }
 
+/**
+An installation represents an app installed on a device. If the app is reinstalled, or installed onto
+a new device it is expected to generate a fresh installation_id.
+*/
 type Installation struct {
 	Id                string
 	DeliveryMechanism DeliveryMechanism
