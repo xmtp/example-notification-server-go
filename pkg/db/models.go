@@ -4,13 +4,7 @@ import (
 	"time"
 
 	"github.com/uptrace/bun"
-)
-
-type DeliveryMechanismKind string
-
-const (
-	APNS DeliveryMechanismKind = "apns"
-	FCM  DeliveryMechanismKind = "fcm"
+	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 )
 
 type Installation struct {
@@ -25,12 +19,12 @@ type Installation struct {
 type DeviceDeliveryMechanism struct {
 	bun.BaseModel `bun:"table:device_delivery_mechanisms"`
 
-	CreatedAt      time.Time             `bun:"created_at,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time             `bun:"updated_at,notnull,default:current_timestamp"`
-	InstallationId string                `bun:"installation_id,notnull,pk"`
-	Installation   Installation          `bun:"rel:belongs-to,join:installation_id=id"`
-	Kind           DeliveryMechanismKind `bun:"kind,notnull,pk"`
-	Token          string                `bun:"token,notnull,pk"`
+	CreatedAt      time.Time                        `bun:"created_at,notnull,default:current_timestamp"`
+	UpdatedAt      time.Time                        `bun:"updated_at,notnull,default:current_timestamp"`
+	InstallationId string                           `bun:"installation_id,notnull,pk"`
+	Installation   Installation                     `bun:"rel:belongs-to,join:installation_id=id"`
+	Kind           interfaces.DeliveryMechanismKind `bun:"kind,notnull,pk"`
+	Token          string                           `bun:"token,notnull,pk"`
 }
 
 type Subscription struct {

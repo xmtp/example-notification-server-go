@@ -23,7 +23,7 @@ func createService(db *bun.DB) interfaces.Installations {
 	)
 }
 
-func buildInstallation(installationId string, kind database.DeliveryMechanismKind, token string) interfaces.Installation {
+func buildInstallation(installationId string, kind interfaces.DeliveryMechanismKind, token string) interfaces.Installation {
 	return interfaces.Installation{
 		Id: installationId,
 		DeliveryMechanism: interfaces.DeliveryMechanism{
@@ -39,7 +39,7 @@ func Test_Register(t *testing.T) {
 	defer cleanup()
 
 	svc := createService(db)
-	res, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, database.APNS, TOKEN))
+	res, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 
 	require.NoError(t, err)
 	require.Equal(t, INSTALLATION_ID, res.InstallationId)
@@ -50,7 +50,7 @@ func Test_Register(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, installation.Id, INSTALLATION_ID)
 	require.Len(t, installation.DeliveryMechanisms, 1)
-	require.Equal(t, installation.DeliveryMechanisms[0].Kind, database.APNS)
+	require.Equal(t, installation.DeliveryMechanisms[0].Kind, interfaces.APNS)
 	require.Equal(t, installation.DeliveryMechanisms[0].Token, TOKEN)
 }
 
@@ -62,7 +62,7 @@ func Test_RegisterDuplicate(t *testing.T) {
 
 	svc := createService(db)
 
-	req := buildInstallation(INSTALLATION_ID, database.APNS, TOKEN)
+	req := buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN)
 	_, err = svc.Register(ctx, req)
 
 	require.NoError(t, err)
@@ -106,7 +106,7 @@ func Test_RegisterUpdate(t *testing.T) {
 	token1 := "token1"
 	token2 := "token2"
 
-	req1 := buildInstallation(INSTALLATION_ID, database.APNS, token1)
+	req1 := buildInstallation(INSTALLATION_ID, interfaces.APNS, token1)
 
 	_, err = svc.Register(ctx, req1)
 	require.NoError(t, err)
@@ -120,7 +120,7 @@ func Test_RegisterUpdate(t *testing.T) {
 
 	require.NoError(t, err)
 
-	req2 := buildInstallation(INSTALLATION_ID, database.APNS, token2)
+	req2 := buildInstallation(INSTALLATION_ID, interfaces.APNS, token2)
 	_, err = svc.Register(ctx, req2)
 
 	require.NoError(t, err)
@@ -145,7 +145,7 @@ func Test_Delete(t *testing.T) {
 	defer cleanup()
 	svc := createService(db)
 
-	createReq := buildInstallation(INSTALLATION_ID, database.APNS, TOKEN)
+	createReq := buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN)
 	_, err := svc.Register(ctx, createReq)
 
 	require.NoError(t, err)
@@ -171,13 +171,15 @@ func Test_Get(t *testing.T) {
 
 	installationIds := []string{"install1", "install2", "install3"}
 	for _, installationId := range installationIds {
-		_, err := svc.Register(ctx, buildInstallation(installationId, database.APNS, TOKEN))
+		_, err := svc.Register(ctx, buildInstallation(installationId, interfaces.APNS, TOKEN))
 		require.NoError(t, err)
 	}
 
 	installs, err := svc.GetInstallations(ctx, installationIds)
+
 	require.NoError(t, err)
 	require.Len(t, installs, len(installationIds))
+
 	for i, install := range installs {
 		require.Equal(t, install.Id, installationIds[len(installationIds)-i-1])
 		require.Equal(t, install.DeliveryMechanism.Token, TOKEN)
@@ -192,7 +194,7 @@ func Test_GetMultiple(t *testing.T) {
 
 	tokens := []string{"token1", "token2", "token3"}
 	for _, token := range tokens {
-		_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, database.APNS, token))
+		_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, token))
 		require.NoError(t, err)
 	}
 
@@ -200,4 +202,21 @@ func Test_GetMultiple(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res, 1)
 	require.Equal(t, res[0].DeliveryMechanism.Token, "token3")
+}
+
+func Test_GetDeleted(t *testing.T) {
+	ctx := context.Background()
+	db, cleanup := test.CreateTestDb()
+	defer cleanup()
+	svc := createService(db)
+
+	_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
+	require.NoError(t, err)
+
+	err = svc.Delete(ctx, INSTALLATION_ID)
+	require.NoError(t, err)
+
+	results, err := svc.GetInstallations(ctx, []string{INSTALLATION_ID})
+	require.NoError(t, err)
+	require.Len(t, results, 0)
 }

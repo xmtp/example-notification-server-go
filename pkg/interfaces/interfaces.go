@@ -4,12 +4,18 @@ import (
 	"context"
 	"time"
 
-	"github.com/xmtp/example-notification-server-go/pkg/db"
 	v1 "github.com/xmtp/proto/go/message_api/v1"
 )
 
+type DeliveryMechanismKind string
+
+const (
+	APNS DeliveryMechanismKind = "apns"
+	FCM  DeliveryMechanismKind = "fcm"
+)
+
 type DeliveryMechanism struct {
-	Kind      db.DeliveryMechanismKind
+	Kind      DeliveryMechanismKind
 	Token     string
 	UpdatedAt time.Time
 }
