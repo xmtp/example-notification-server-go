@@ -31,7 +31,7 @@ type DeviceDeliveryMechanism struct {
 type Subscription struct {
 	bun.BaseModel `bun:"table:subscriptions"`
 
-	ID             int64     `bun:",pk,autoincrement"`
+	Id             int64     `bun:",pk,autoincrement"`
 	CreatedAt      time.Time `bun:"created_at,notnull,default:current_timestamp"`
 	InstallationId string    `bun:"installation_id,notnull"`
 	Topic          string    `bun:"topic,notnull"`

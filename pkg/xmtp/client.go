@@ -10,7 +10,7 @@ import (
 )
 
 func newConn(ctx context.Context, apiAddress string) (*grpc.ClientConn, error) {
-	dialAddr := fmt.Sprintf("dns://%s", apiAddress)
+	dialAddr := fmt.Sprintf(apiAddress)
 	return grpc.DialContext(
 		ctx,
 		dialAddr,
