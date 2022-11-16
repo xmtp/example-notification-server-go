@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
@@ -29,11 +30,28 @@ func (s *ApiServer) RegisterInstallation(
 	req *connect.Request[proto.RegisterInstallationRequest],
 ) (*connect.Response[proto.RegisterInstallationResponse], error) {
 	s.logger.Info("RegisterInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
-	res := connect.NewResponse(&proto.RegisterInstallationResponse{
-		InstallationId: req.Msg.InstallationId,
-	})
 
-	return res, nil
+	mechanism := convertDeliveryMechanism(req.Msg.DeliveryMechanism)
+	if mechanism == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("missing delivery mechanism"))
+	}
+	result, err := s.installations.Register(
+		ctx,
+		interfaces.Installation{
+			Id:                req.Msg.InstallationId,
+			DeliveryMechanism: *mechanism,
+		},
+	)
+
+	if err != nil {
+		s.logger.Error("error registering installation", zap.Error(err))
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&proto.RegisterInstallationResponse{
+		InstallationId: req.Msg.InstallationId,
+		ValidUntil:     uint64(result.ValidUntil.UnixMilli()),
+	}), nil
 }
 
 func (s *ApiServer) DeleteInstallation(
@@ -41,9 +59,14 @@ func (s *ApiServer) DeleteInstallation(
 	req *connect.Request[proto.DeleteInstallationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	s.logger.Info("DeleteInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
-	res := connect.NewResponse(&emptypb.Empty{})
 
-	return res, nil
+	err := s.installations.Delete(ctx, req.Msg.InstallationId)
+	if err != nil {
+		s.logger.Error("error deleting installation", zap.Error(err))
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (s *ApiServer) Subscribe(
@@ -51,9 +74,14 @@ func (s *ApiServer) Subscribe(
 	req *connect.Request[proto.SubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	s.logger.Info("Subscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
-	res := connect.NewResponse(&emptypb.Empty{})
 
-	return res, nil
+	err := s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
+	if err != nil {
+		s.logger.Error("error subscribing", zap.Error(err))
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (s *ApiServer) Unsubscribe(
@@ -61,7 +89,25 @@ func (s *ApiServer) Unsubscribe(
 	req *connect.Request[proto.UnsubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
 	s.logger.Info("Unsubscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
-	res := connect.NewResponse(&emptypb.Empty{})
 
-	return res, nil
+	err := s.subscriptions.Unsubscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
+	if err != nil {
+		s.logger.Error("error unsubscribing", zap.Error(err))
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.DeliveryMechanism {
+	if mechanism == nil {
+		return nil
+	}
+	apnsToken := mechanism.GetApnsDeviceToken()
+	fcmToken := mechanism.GetFirebaseDeviceToken()
+	if apnsToken != "" {
+		return &interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: apnsToken}
+	} else {
+		return &interfaces.DeliveryMechanism{Kind: interfaces.FCM, Token: fcmToken}
+	}
 }
