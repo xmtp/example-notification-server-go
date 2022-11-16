@@ -12,11 +12,12 @@ CREATE TABLE installations (
 
 CREATE TABLE device_delivery_mechanisms (
     id SERIAL PRIMARY KEY,
-    installation_id TEXT REFERENCES installations(id),
+    installation_id TEXT REFERENCES installations(id) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
     kind TEXT NOT NULL,
     token TEXT NOT NULL,
-    UNIQUE (kind, token)
+    UNIQUE (installation_id, kind, token)
 )
 
 --bun:split
