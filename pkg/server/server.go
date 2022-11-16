@@ -22,7 +22,7 @@ type Server struct {
 	ctx            context.Context
 	logger         *zap.Logger
 	opts           options.Options
-	messageChannel chan v1.Envelope
+	messageChannel chan *v1.Envelope
 	xmtpClient     v1.MessageApiClient
 	installations  interfaces.Installations
 	subscriptions  interfaces.Subscriptions
@@ -47,7 +47,7 @@ func New(
 	return &Server{
 		api:            api.NewApiServer(logger, installations, subscriptions),
 		ctx:            ctx,
-		messageChannel: make(chan v1.Envelope, 100),
+		messageChannel: make(chan *v1.Envelope, 100),
 		opts:           opts,
 		logger:         logger,
 		xmtpClient:     client,
@@ -121,7 +121,7 @@ func (s *Server) startMessageListener() {
 
 				if msg != nil {
 					s.logger.Info("Got message", zap.String("topic", msg.ContentTopic))
-					s.messageChannel <- *msg
+					s.messageChannel <- msg
 				}
 			}
 		}
