@@ -95,8 +95,7 @@ func (s DefaultInstallationService) GetInstallations(ctx context.Context, instal
 		Scan(ctx, &results)
 
 	if err != nil {
-		panic(err)
-		// return nil, err
+		return nil, err
 	}
 	out := []interfaces.Installation{}
 	for i := range results {
