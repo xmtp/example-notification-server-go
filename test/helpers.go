@@ -23,6 +23,8 @@ func CreateTestDb() (*bun.DB, func()) {
 	_ = database.Migrate(ctx, db)
 
 	return db, func() {
-		_ = db.ResetModel(ctx, (*database.Installation)(nil), (*database.Subscription)(nil), (*database.DeviceDeliveryMechanism)(nil))
+		_, _ = db.NewTruncateTable().Model((*database.Installation)(nil)).Exec(ctx)
+		_, _ = db.NewTruncateTable().Model((*database.DeviceDeliveryMechanism)(nil)).Exec(ctx)
+		_, _ = db.NewTruncateTable().Model((*database.Subscription)(nil)).Exec(ctx)
 	}
 }

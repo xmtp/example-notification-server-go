@@ -22,10 +22,10 @@ type DeviceDeliveryMechanism struct {
 	ID             int64                            `bun:",pk,autoincrement"`
 	CreatedAt      time.Time                        `bun:"created_at,notnull,default:current_timestamp"`
 	UpdatedAt      time.Time                        `bun:"updated_at,notnull,default:current_timestamp"`
-	InstallationId string                           `bun:"installation_id,notnull"`
+	InstallationId string                           `bun:"installation_id,notnull,unique:group"`
 	Installation   Installation                     `bun:"rel:belongs-to,join:installation_id=id"`
-	Kind           interfaces.DeliveryMechanismKind `bun:"kind,notnull"`
-	Token          string                           `bun:"token,notnull"`
+	Kind           interfaces.DeliveryMechanismKind `bun:"kind,notnull,unique:group"`
+	Token          string                           `bun:"token,notnull,unique:group"`
 }
 
 type Subscription struct {
