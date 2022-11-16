@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"log"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
@@ -19,7 +18,7 @@ type ApiServer struct {
 
 func NewApiServer(logger *zap.Logger, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
 	return &ApiServer{
-		logger:        logger,
+		logger:        logger.Named("api"),
 		installations: installations,
 		subscriptions: subscriptions,
 	}
@@ -29,7 +28,7 @@ func (s *ApiServer) RegisterInstallation(
 	ctx context.Context,
 	req *connect.Request[proto.RegisterInstallationRequest],
 ) (*connect.Response[proto.RegisterInstallationResponse], error) {
-	log.Println("Request headers: ", req.Header())
+	s.logger.Info("RegisterInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
 	res := connect.NewResponse(&proto.RegisterInstallationResponse{
 		InstallationId: req.Msg.InstallationId,
 	})
@@ -41,7 +40,7 @@ func (s *ApiServer) DeleteInstallation(
 	ctx context.Context,
 	req *connect.Request[proto.DeleteInstallationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	log.Println("Request headers: ", req.Header())
+	s.logger.Info("DeleteInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
 	res := connect.NewResponse(&emptypb.Empty{})
 
 	return res, nil
@@ -51,7 +50,7 @@ func (s *ApiServer) Subscribe(
 	ctx context.Context,
 	req *connect.Request[proto.SubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	log.Println("Request headers: ", req.Header())
+	s.logger.Info("Subscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
 	res := connect.NewResponse(&emptypb.Empty{})
 
 	return res, nil
@@ -61,7 +60,7 @@ func (s *ApiServer) Unsubscribe(
 	ctx context.Context,
 	req *connect.Request[proto.UnsubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	log.Println("Request headers: ", req.Header())
+	s.logger.Info("Unsubscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
 	res := connect.NewResponse(&emptypb.Empty{})
 
 	return res, nil
