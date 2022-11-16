@@ -72,7 +72,7 @@ The API supports plain JSON and can be used via CURL
 ./dev/run --api
 curl \
     --header "Content-Type: application/json" \
-    --data '{"installationId": "123"}' \
+    --data '{"installationId": "123", "deliveryMechanism": {"apnsDeviceToken": "foo"}}' \
     http://localhost:8080/notifications.v1.Notifications/RegisterInstallation
 ```
 
