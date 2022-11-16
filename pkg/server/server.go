@@ -158,6 +158,10 @@ func (s *Server) processEnvelope(env *v1.Envelope) error {
 		return err
 	}
 
+	if len(subs) == 0 {
+		return nil
+	}
+
 	installationIds := make([]string, len(subs))
 	for i, sub := range subs {
 		installationIds[i] = sub.InstallationId
