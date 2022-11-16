@@ -1,6 +1,3 @@
 version: v1
 directories:
   - proto
-lint:
-  use:
-    - DEFAULT

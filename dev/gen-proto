@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -e
+
+rm -rf ./pkg/proto
+buf build
+buf generate
