@@ -14,12 +14,10 @@ import (
 type DefaultInstallationService struct {
 	logger *zap.Logger
 	db     *bun.DB
-	ctx    context.Context
 }
 
-func NewInstallationsService(ctx context.Context, logger *zap.Logger, db *bun.DB) *DefaultInstallationService {
+func NewInstallationsService(logger *zap.Logger, db *bun.DB) *DefaultInstallationService {
 	return &DefaultInstallationService{
-		ctx:    ctx,
 		logger: logger.Named("installations"),
 		db:     db,
 	}

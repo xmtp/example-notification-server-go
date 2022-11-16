@@ -17,7 +17,6 @@ const TOKEN = "bar"
 
 func createService(db *bun.DB) interfaces.Installations {
 	return NewInstallationsService(
-		context.Background(),
 		logging.CreateLogger("console", "info"),
 		db,
 	)
