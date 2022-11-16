@@ -4,14 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jessevdk/go-flags"
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
 	"github.com/xmtp/example-notification-server-go/pkg/db"
+	database "github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/migrations"
+	"github.com/xmtp/example-notification-server-go/pkg/delivery"
+	"github.com/xmtp/example-notification-server-go/pkg/installations"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
+	"github.com/xmtp/example-notification-server-go/pkg/server"
+	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
 	"go.uber.org/zap"
 )
 
@@ -35,42 +44,48 @@ func main() {
 		}
 		return
 	}
-	// ctx, cancel := context.WithCancel(context.Background())
-	// s, err := server.New(ctx, opts, logger, installationService, subscriptionService, deliveryService)
-	// if err != nil {
-	// 	logger.Fatal("failed to create server", zap.Error(err))
-	// }
 
-	// err = s.Start()
-	// if err != nil {
-	// 	logger.Fatal("Failed to start server", zap.Error(err))
-	// }
+	db := initDb()
+	installationsService := installations.NewInstallationsService(logger, db)
+	subscriptionsService := subscriptions.NewSubscriptionsService(logger, db)
+	deliveryService := delivery.NewDeliveryService(logger)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	// waitForShutdown(s, cancel)
+	s, err := server.New(ctx, opts, logger, installationsService, subscriptionsService, deliveryService)
+	if err != nil {
+		logger.Fatal("failed to create server", zap.Error(err))
+	}
+
+	err = s.Start()
+	if err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
+
+	waitForShutdown(s, cancel)
 }
 
 // Commenting out as these are currently unused
-// func waitForShutdown(s *server.Server, cancel context.CancelFunc) {
-// 	termChannel := make(chan os.Signal, 1)
-// 	signal.Notify(termChannel, syscall.SIGINT, syscall.SIGTERM)
-// 	<-termChannel
-// 	cancel()
-// 	s.Stop()
-// }
+func waitForShutdown(s *server.Server, cancel context.CancelFunc) {
+	termChannel := make(chan os.Signal, 1)
+	signal.Notify(termChannel, syscall.SIGINT, syscall.SIGTERM)
+	<-termChannel
+	cancel()
+	s.Stop()
+}
 
-// func initDb() *bun.DB {
-// 	database, err := db.CreateBunDB(opts.DbConnectionString, 10*time.Second)
-// 	if err != nil {
-// 		log.Fatal("db creation error", zap.Error(err))
-// 	}
+func initDb() *bun.DB {
+	db, err := database.CreateBunDB(opts.DbConnectionString, 10*time.Second)
+	if err != nil {
+		log.Fatal("db creation error", zap.Error(err))
+	}
 
-// 	err = db.Migrate(context.Background(), database)
-// 	if err != nil {
-// 		log.Fatal("db migration error", zap.Error(err))
-// 	}
+	err = database.Migrate(context.Background(), db)
+	if err != nil {
+		log.Fatal("db migration error", zap.Error(err))
+	}
 
-// 	return database
-// }
+	return db
+}
 
 func createMigration() error {
 	db, err := db.CreateBunDB(opts.DbConnectionString, 30*time.Second)

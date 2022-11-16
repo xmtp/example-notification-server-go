@@ -31,7 +31,7 @@ type Installation struct {
 }
 
 type Subscription struct {
-	ID             int64
+	Id             int64
 	CreatedAt      time.Time
 	InstallationId string
 	Topic          string
@@ -44,13 +44,12 @@ type SendRequest struct {
 	Message        v1.Envelope
 }
 
+// Pluggable Installation Service interface
 type Installations interface {
 	Register(ctx context.Context, installation Installation) (*RegisterResponse, error)
 	Delete(ctx context.Context, installationId string) error
 	GetInstallations(ctx context.Context, installationIds []string) ([]Installation, error)
 }
-
-// Pluggable Installation Service interface
 
 // This interface is not expected to be pluggable
 type Subscriptions interface {
@@ -61,5 +60,5 @@ type Subscriptions interface {
 
 // Pluggable interface for sending push notifications
 type Delivery interface {
-	Send(ctx context.Context, req SendRequest)
+	Send(ctx context.Context, req SendRequest) error
 }

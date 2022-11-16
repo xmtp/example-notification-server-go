@@ -36,9 +36,11 @@ func New(ctx context.Context, opts options.Options, logger *zap.Logger, installa
 }
 
 func (s *Server) Start() error {
+	s.logger.Info("Server started")
 	return nil
 }
 
 func (s *Server) Stop() {
+	s.logger.Info("Server stopped")
 	return
 }
