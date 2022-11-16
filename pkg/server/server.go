@@ -2,9 +2,12 @@ package server
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/xmtp/example-notification-server-go/pkg/api"
@@ -120,7 +123,6 @@ func (s *Server) startMessageListener() {
 				}
 
 				if msg != nil {
-					s.logger.Info("Got message", zap.String("topic", msg.ContentTopic))
 					s.messageChannel <- msg
 				}
 			}
@@ -131,12 +133,67 @@ func (s *Server) startMessageListener() {
 func (s *Server) startMessageWorkers() {
 	for i := 0; i < s.opts.Worker.NumWorkers; i++ {
 		go func() {
+			var err error
 			for msg := range s.messageChannel {
+				err = s.processEnvelope(msg)
+				if err != nil {
+					s.logger.Error("error processing envelope", zap.String("topic", msg.ContentTopic), zap.Error(err))
+					continue
+				}
 				s.logger.Info("processed a message", zap.String("topic", msg.ContentTopic))
 			}
 			s.logger.Info("shutting down worker")
 		}()
 	}
+}
+
+func (s *Server) processEnvelope(env *v1.Envelope) error {
+	if shouldIgnoreTopic(env.ContentTopic) {
+		s.logger.Info("ignoring message", zap.String("topic", env.ContentTopic))
+		return nil
+	}
+
+	subs, err := s.subscriptions.GetSubscriptions(s.ctx, env.ContentTopic)
+	if err != nil {
+		return err
+	}
+
+	installationIds := make([]string, len(subs))
+	for i, sub := range subs {
+		installationIds[i] = sub.InstallationId
+	}
+
+	installations, err := s.installations.GetInstallations(s.ctx, installationIds)
+	if err != nil {
+		return err
+	}
+
+	if len(installations) == 0 {
+		return nil
+	}
+
+	return s.delivery.Send(
+		s.ctx,
+		interfaces.SendRequest{
+			Installations:  installations,
+			Message:        env,
+			IdempotencyKey: buildIdempotencyKey(env),
+		},
+	)
+}
+
+func shouldIgnoreTopic(topic string) bool {
+	if strings.HasPrefix(topic, "/xmtp/0/contact-") || strings.HasPrefix(topic, "/xmtp/0/privatestore-") {
+		return true
+	}
+	return false
+}
+
+func buildIdempotencyKey(env *v1.Envelope) string {
+	h := sha1.New()
+	h.Write([]byte(env.ContentTopic))
+	h.Write(env.Message)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (s *Server) Stop() {
