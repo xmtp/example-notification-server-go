@@ -2,6 +2,21 @@
 
 set -e
 
+[ -n "$(go env GOBIN)" ] && export PATH="$(go env GOBIN):${PATH}"
+[ -n "$(go env GOPATH)" ] && export PATH="$(go env GOPATH)/bin:${PATH}"
+
+if ! which buf &>/dev/null; then
+    go install go install github.com/bufbuild/buf/cmd/buf@latest
+fi
+
+if ! which protoc-gen-go &>/dev/null; then
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+fi
+
+if ! which protoc-gen-connect-go &>/dev/null; then
+    go install github.com/bufbuild/connect-go/cmd/protoc-gen-connect-go@latest
+fi
+
 rm -rf ./pkg/proto
 buf build
 buf generate
