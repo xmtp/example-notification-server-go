@@ -41,7 +41,7 @@ type Subscription struct {
 type SendRequest struct {
 	IdempotencyKey string
 	Installations  []Installation
-	Message        v1.Envelope
+	Message        *v1.Envelope
 }
 
 // Pluggable Installation Service interface
