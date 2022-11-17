@@ -38,11 +38,11 @@ func startServer(t *testing.T, ctx context.Context, server *ApiServer) func() {
 	}
 
 	go func() {
-		httpServer.ListenAndServe()
+		_ = httpServer.ListenAndServe()
 	}()
 
 	return func() {
-		httpServer.Shutdown(ctx)
+		_ = httpServer.Shutdown(ctx)
 	}
 }
 
