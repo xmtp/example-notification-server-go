@@ -43,7 +43,6 @@ func startServer(t *testing.T, ctx context.Context, server *ApiServer) func() {
 
 	return func() {
 		httpServer.Shutdown(ctx)
-		// t.Error(err)
 	}
 }
 
