@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sideshow/apns2"
+	"github.com/sideshow/apns2/payload"
 	"github.com/sideshow/apns2/token"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
@@ -15,6 +16,7 @@ type DefaultDeliveryService struct {
 	logger            *zap.Logger
 	notificationTopic string
 	apnsClient        *apns2.Client
+	opts              options.ApnsOptions
 }
 
 func NewDeliveryService(logger *zap.Logger, opts options.ApnsOptions) (*DefaultDeliveryService, error) {
@@ -26,32 +28,53 @@ func NewDeliveryService(logger *zap.Logger, opts options.ApnsOptions) (*DefaultD
 	return &DefaultDeliveryService{
 		logger:     logger.Named("delivery-service"),
 		apnsClient: client,
+		opts:       opts,
 	}, nil
 }
 
 func (d DefaultDeliveryService) Send(ctx context.Context, req interfaces.SendRequest) error {
 	d.logger.Info("Sending notification", zap.Any("req", req))
+	var err error
 	for _, installation := range req.Installations {
 		if installation.DeliveryMechanism.Kind != interfaces.APNS {
 			d.logger.Info("ignoring message. unsupported delivery mechanism")
 			continue
 		}
+		// TODO: Better error handling for cases where one message succeeds and another fails
+		err = d.deliverApns(ctx, installation.DeliveryMechanism.Token, req.Message.GetContentTopic())
+		if err != nil {
+			break
+		}
 	}
-	return nil
+
+	return err
 }
 
 func (d DefaultDeliveryService) deliverApns(ctx context.Context, deviceToken, topic string) error {
+	// TODO: Figure out the message format
+	notificationPayload := payload.NewPayload().
+		MutableContent().
+		Alert("New message from XMTP").
+		Custom("topic", topic)
+
 	notification := &apns2.Notification{
 		DeviceToken: deviceToken,
-		Topic:       "com.sideshow.Apns2",
-		Payload:     []byte(`{"aps":{"alert":"Hello!"}}`),
+		Topic:       d.opts.Topic,
+		Payload:     notificationPayload,
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
 	res, err := d.apnsClient.PushWithContext(ctx, notification)
 	if res != nil {
-		d.logger.Info("Sent notification", zap.String("apns_id", res.ApnsID))
+		d.logger.Info(
+			"Sent notification",
+			zap.String("apns_id", res.ApnsID),
+			zap.Int("status_code", res.StatusCode),
+		)
 	}
+
 	return err
 }
 
