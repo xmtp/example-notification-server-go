@@ -5,17 +5,26 @@ type ApiOptions struct {
 	Port    int  `short:"p" long:"api-port" env:"API_PORT" default:"8080" description:"Port for the Connect GRPC API"`
 }
 
-type WorkerOptions struct {
-	Enabled    bool `long:"worker" description:"Enable the stream listening worker"`
-	NumWorkers int  `long:"num-workers" description:"Number of workers used to process messages" default:"50"`
+type ApnsOptions struct {
+	P8Certificate string `long:"apns-p8-certificate" env:"APNS_P8_CERTIFICATE" description:".p8 certificate for APNS"`
+	KeyId         string `long:"apns-key-id" env:"APNS_KEY_ID" description:"Key ID associated with APNS credentials"`
+	TeamId        string `long:"apns-team-id" env:"APNS_TEAM_ID" description:"APNS Team ID"`
+	Topic         string `long:"apns-topic" env:"APNS_TOPIC" description:"Topic to be used on all messages"`
+}
+
+type XmtpOpts struct {
+	ListenerEnabled bool   `long:"xmtp-listener" description:"Enable the XMTP listener to actually send notifications. Requires APNSOptions to be configured"`
+	GrpcAddress     string `short:"x" long:"xmtp-address" env:"XMTP_GRPC_ADDRESS" description:"Address (including port) of XMTP GRPC server"`
+	NumWorkers      int    `long:"num-workers" description:"Number of workers used to process messages" default:"50"`
 }
 
 type Options struct {
-	Api                ApiOptions    `group:"API Options"`
-	Worker             WorkerOptions `group:"Worker Options"`
-	XmtpGrpcAddress    string        `short:"x" long:"xmtp-address" env:"XMTP_GRPC_ADDRESS" description:"Address (including port) of XMTP GRPC server"`
-	DbConnectionString string        `short:"d" long:"db-connection-string" env:"DB_CONNECTION_STRING" description:"Address to database"`
-	LogEncoding        string        `long:"log-encoding" env:"LOG_ENCODING" description:"Log encoding" choice:"console" choice:"json" default:"console"`
-	LogLevel           string        `long:"log-level" env:"LOG_LEVEL" description:"log-level" choice:"debug" choice:"info" choice:"error" default:"info"`
-	CreateMigration    string        `long:"create-migration" description:"create a migration with the given name"`
+	Api  ApiOptions  `group:"API Options"`
+	Xmtp XmtpOpts    `group:"Worker Options"`
+	Apns ApnsOptions `group:"APNS Options"`
+
+	DbConnectionString string `short:"d" long:"db-connection-string" env:"DB_CONNECTION_STRING" description:"Address to database"`
+	LogEncoding        string `long:"log-encoding" env:"LOG_ENCODING" description:"Log encoding" choice:"console" choice:"json" default:"console"`
+	LogLevel           string `long:"log-level" env:"LOG_LEVEL" description:"log-level" choice:"debug" choice:"info" choice:"error" default:"info"`
+	CreateMigration    string `long:"create-migration" description:"create a migration with the given name"`
 }

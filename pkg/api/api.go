@@ -3,11 +3,17 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/proto"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -15,6 +21,8 @@ type ApiServer struct {
 	logger        *zap.Logger
 	installations interfaces.Installations
 	subscriptions interfaces.Subscriptions
+	httpServer    *http.Server
+	port          int
 }
 
 func NewApiServer(logger *zap.Logger, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
@@ -23,6 +31,38 @@ func NewApiServer(logger *zap.Logger, installations interfaces.Installations, su
 		installations: installations,
 		subscriptions: subscriptions,
 	}
+}
+
+func (s *ApiServer) Start() {
+	mux := http.NewServeMux()
+	path, handler := protoconnect.NewNotificationsHandler(s)
+	mux.Handle(path, handler)
+	s.httpServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.port),
+		Handler: h2c.NewHandler(mux, &http2.Server{}),
+	}
+
+	s.logger.Info("api server started", zap.String("address", s.httpServer.Addr), zap.String("path", path))
+
+	go func() {
+		if err := s.httpServer.ListenAndServe(); err != nil {
+			s.logger.Info("api server stopped", zap.Error(err))
+		}
+	}()
+}
+
+func (s *ApiServer) Stop() {
+	s.logger.Info("server shutting down")
+	if s.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			s.logger.Fatal("server failed to shutdown", zap.Error(err))
+		}
+	}
+
+	s.logger.Info("server stopped")
+	return
 }
 
 func (s *ApiServer) RegisterInstallation(
