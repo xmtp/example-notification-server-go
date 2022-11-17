@@ -78,8 +78,12 @@ func (s DefaultInstallationService) Delete(ctx context.Context, installationId s
 }
 
 func (s DefaultInstallationService) GetInstallations(ctx context.Context, installationIds []string) ([]interfaces.Installation, error) {
-	results := make([]db.DeviceDeliveryMechanism, 0)
+	// Abort if empty
+	if len(installationIds) == 0 {
+		return []interfaces.Installation{}, nil
+	}
 
+	results := make([]db.DeviceDeliveryMechanism, 0)
 	err := s.db.NewSelect().
 		Model((*db.DeviceDeliveryMechanism)(nil)).
 		Where("installation_id IN (?)", bun.In(installationIds)).

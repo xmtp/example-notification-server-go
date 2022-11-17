@@ -48,7 +48,7 @@ func (s SubscriptionsService) Subscribe(ctx context.Context, installationId stri
 			delete(topicMap, result.Topic)
 		}
 
-		for topic, _ := range topicMap {
+		for topic := range topicMap {
 			newSub := db.Subscription{
 				InstallationId: installationId,
 				Topic:          topic,
