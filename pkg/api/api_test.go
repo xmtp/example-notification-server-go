@@ -79,11 +79,14 @@ func Test_RegisterInstallation(t *testing.T) {
 	deviceToken := "foo"
 	validUntil := time.Now()
 
-	ctx.installationsMock.On("Register", mock.Anything, mock.Anything).
-		Return(&interfaces.RegisterResponse{
-			InstallationId: INSTALLATION_ID,
-			ValidUntil:     validUntil,
-		}, nil)
+	ctx.installationsMock.On(
+		"Register",
+		mock.Anything,
+		mock.Anything,
+	).Return(&interfaces.RegisterResponse{
+		InstallationId: INSTALLATION_ID,
+		ValidUntil:     validUntil,
+	}, nil)
 
 	result, err := ctx.client.RegisterInstallation(
 		ctx.ctx,
@@ -104,8 +107,11 @@ func Test_RegisterInstallationError(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.cleanup()
 
-	ctx.installationsMock.On("Register", mock.Anything, mock.Anything).
-		Return(nil, errors.New("err"))
+	ctx.installationsMock.On(
+		"Register",
+		mock.Anything,
+		mock.Anything,
+	).Return(nil, errors.New("err"))
 
 	result, err := ctx.client.RegisterInstallation(
 		ctx.ctx,
@@ -136,7 +142,12 @@ func Test_DeleteInstallation(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	ctx.installationsMock.AssertCalled(t, "Delete", mock.Anything, INSTALLATION_ID)
+	ctx.installationsMock.AssertCalled(
+		t,
+		"Delete",
+		mock.Anything,
+		INSTALLATION_ID,
+	)
 }
 
 func Test_Subscribe(t *testing.T) {
@@ -144,8 +155,12 @@ func Test_Subscribe(t *testing.T) {
 	defer ctx.cleanup()
 	topics := []string{"topic1"}
 
-	ctx.subscriptionsMock.On("Subscribe", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+	ctx.subscriptionsMock.On(
+		"Subscribe",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(nil)
 
 	_, err := ctx.client.Subscribe(
 		ctx.ctx,
@@ -156,15 +171,25 @@ func Test_Subscribe(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	ctx.subscriptionsMock.AssertCalled(t, "Subscribe", mock.Anything, INSTALLATION_ID, topics)
+	ctx.subscriptionsMock.AssertCalled(
+		t,
+		"Subscribe",
+		mock.Anything,
+		INSTALLATION_ID,
+		topics,
+	)
 }
 
 func Test_SubscribeError(t *testing.T) {
 	ctx := setupTest(t)
 	defer ctx.cleanup()
 
-	ctx.subscriptionsMock.On("Subscribe", mock.Anything, mock.Anything, mock.Anything).
-		Return(errors.New("test"))
+	ctx.subscriptionsMock.On(
+		"Subscribe",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(errors.New("test"))
 
 	_, err := ctx.client.Subscribe(
 		ctx.ctx,
@@ -183,8 +208,12 @@ func Test_Unsubscribe(t *testing.T) {
 	defer ctx.cleanup()
 	topics := []string{"topic1"}
 
-	ctx.subscriptionsMock.On("Unsubscribe", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+	ctx.subscriptionsMock.On(
+		"Unsubscribe",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(nil)
 
 	_, err := ctx.client.Unsubscribe(
 		ctx.ctx,
@@ -195,5 +224,11 @@ func Test_Unsubscribe(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	ctx.subscriptionsMock.AssertCalled(t, "Unsubscribe", mock.Anything, INSTALLATION_ID, topics)
+	ctx.subscriptionsMock.AssertCalled(
+		t,
+		"Unsubscribe",
+		mock.Anything,
+		INSTALLATION_ID,
+		topics,
+	)
 }
