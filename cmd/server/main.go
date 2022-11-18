@@ -12,6 +12,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
+	"github.com/xmtp/example-notification-server-go/pkg/api"
 	"github.com/xmtp/example-notification-server-go/pkg/db"
 	database "github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/migrations"
@@ -19,8 +20,8 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/installations"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	"github.com/xmtp/example-notification-server-go/pkg/server"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
+	"github.com/xmtp/example-notification-server-go/pkg/xmtp"
 	"go.uber.org/zap"
 )
 
@@ -45,32 +46,53 @@ func main() {
 		return
 	}
 
+	if !opts.Xmtp.ListenerEnabled && !opts.Api.Enabled {
+		logger.Fatal("no --api or --xmtp-listener flags applied")
+	}
+
 	db := initDb()
+	ctx, cancel := context.WithCancel(context.Background())
 	installationsService := installations.NewInstallationsService(logger, db)
 	subscriptionsService := subscriptions.NewSubscriptionsService(logger, db)
-	deliveryService := delivery.NewDeliveryService(logger)
-	ctx, cancel := context.WithCancel(context.Background())
+	var listener *xmtp.Listener
+	var apiServer *api.ApiServer
 
-	s, err := server.New(ctx, opts, logger, installationsService, subscriptionsService, deliveryService)
-	if err != nil {
-		logger.Fatal("failed to create server", zap.Error(err))
+	if opts.Xmtp.ListenerEnabled {
+		deliveryService, err := delivery.NewDeliveryService(logger, opts.Apns)
+		if err != nil {
+			log.Fatalf("Failed to initialize delivery service")
+		}
+
+		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryService)
+		if err != nil {
+			log.Fatalf("failed to initialize listener")
+		}
+		listener.Start()
 	}
 
-	err = s.Start()
-	if err != nil {
-		logger.Fatal("Failed to start server", zap.Error(err))
+	if opts.Api.Enabled {
+		apiServer = api.NewApiServer(logger, installationsService, subscriptionsService)
+		apiServer.Start()
 	}
 
-	waitForShutdown(s, cancel)
+	waitForShutdown()
+
+	if apiServer != nil {
+		apiServer.Stop()
+	}
+
+	if listener != nil {
+		listener.Stop()
+	}
+
+	cancel()
 }
 
 // Commenting out as these are currently unused
-func waitForShutdown(s *server.Server, cancel context.CancelFunc) {
+func waitForShutdown() {
 	termChannel := make(chan os.Signal, 1)
 	signal.Notify(termChannel, syscall.SIGINT, syscall.SIGTERM)
 	<-termChannel
-	cancel()
-	s.Stop()
 }
 
 func initDb() *bun.DB {
