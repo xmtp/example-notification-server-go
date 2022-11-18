@@ -11,8 +11,8 @@ This repo is very much a WIP, and some important features are not yet completed.
 | Installations Service | 🟢     | Some minor revisions will be needed, but looking pretty good |
 | Subscriptions Service | 🟢     |                                                              |
 | API Server            | 🟢     | Working as expected                                          |
-| XMTP Worker           | 🟡     | Simple implementation developed. Needs more testing          |
-| Delivery Service      | 🛑     | Implementation is only a stub                                |
+| XMTP Worker           | 🟡     | Needs more testing, but works                                |
+| Delivery Service      | 🟡     | Basic implementation in place. Untested                      |
 
 ## Prerequisites
 
