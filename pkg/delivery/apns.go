@@ -45,7 +45,7 @@ func (a ApnsDelivery) Send(ctx context.Context, deviceToken, topic, message stri
 		Payload:     notificationPayload,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)
