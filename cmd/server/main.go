@@ -62,14 +62,14 @@ func main() {
 		var fcm *delivery.FcmDelivery
 		var err error
 
-		if opts.Apns.KeyId != "" {
+		if opts.Apns.Enabled {
 			apns, err = delivery.NewApnsDelivery(logger, opts.Apns)
 			if err != nil {
 				logger.Fatal("failed to initialize APNS", zap.Error(err))
 			}
 		}
 
-		if opts.Fcm.CredentialsJson != "" {
+		if opts.Fcm.Enabled {
 			fcm, err = delivery.NewFcmDelivery(ctx, logger, opts.Fcm)
 			if err != nil {
 				logger.Fatal("failed to initialize FCM", zap.Error(err))

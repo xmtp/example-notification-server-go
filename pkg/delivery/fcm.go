@@ -16,7 +16,7 @@ type FcmDelivery struct {
 	client *messaging.Client
 }
 
-func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOptions) (*FcmDeliveryAgent, error) {
+func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOptions) (*FcmDelivery, error) {
 	creds := option.WithCredentialsJSON([]byte(opts.CredentialsJson))
 	app, err := firebase.NewApp(ctx, &firebase.Config{
 		ProjectID: opts.ProjectId,

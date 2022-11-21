@@ -6,6 +6,7 @@ type ApiOptions struct {
 }
 
 type ApnsOptions struct {
+	Enabled       bool   `long:"apns-enabled" env:"APNS_ENABLED" description:"Enable APNS"`
 	P8Certificate string `long:"apns-p8-certificate" env:"APNS_P8_CERTIFICATE" description:".p8 certificate for APNS"`
 	KeyId         string `long:"apns-key-id" env:"APNS_KEY_ID" description:"Key ID associated with APNS credentials"`
 	TeamId        string `long:"apns-team-id" env:"APNS_TEAM_ID" description:"APNS Team ID"`
@@ -13,6 +14,7 @@ type ApnsOptions struct {
 }
 
 type FcmOptions struct {
+	Enabled         bool   `long:"fcm-enabled" env:"FCM_ENABLED" description:"Enable FCM sending"`
 	CredentialsJson string `long:"fcm-credentials-json" env:"FCM_CREDENTIALS_JSON" description:"FCM Credentials"`
 	ProjectId       string `long:"fcm-project-id" env:"FCM_PROJECT_ID" description:"FCM Project ID"`
 }

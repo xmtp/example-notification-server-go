@@ -10,11 +10,11 @@ import (
 type DefaultDeliveryService struct {
 	logger            *zap.Logger
 	notificationTopic string
-	apns              *ApnsDeliveryAgent
-	fcm               *FcmDeliveryAgent
+	apns              *ApnsDelivery
+	fcm               *FcmDelivery
 }
 
-func NewDeliveryService(logger *zap.Logger, apns *ApnsDeliveryAgent, fcm *FcmDeliveryAgent) *DefaultDeliveryService {
+func NewDeliveryService(logger *zap.Logger, apns *ApnsDelivery, fcm *FcmDelivery) *DefaultDeliveryService {
 	return &DefaultDeliveryService{
 		logger: logger.Named("delivery-service"),
 		apns:   apns,
