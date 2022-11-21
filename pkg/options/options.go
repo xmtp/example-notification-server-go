@@ -12,7 +12,12 @@ type ApnsOptions struct {
 	Topic         string `long:"apns-topic" env:"APNS_TOPIC" description:"Topic to be used on all messages"`
 }
 
-type XmtpOpts struct {
+type FcmOptions struct {
+	CredentialsJson string `long:"fcm-credentials-json" env:"FCM_CREDENTIALS_JSON" description:"FCM Credentials"`
+	ProjectId       string `long:"fcm-project-id" env:"FCM_PROJECT_ID" description:"FCM Project ID"`
+}
+
+type XmtpOptions struct {
 	ListenerEnabled bool   `long:"xmtp-listener" description:"Enable the XMTP listener to actually send notifications. Requires APNSOptions to be configured"`
 	GrpcAddress     string `short:"x" long:"xmtp-address" env:"XMTP_GRPC_ADDRESS" description:"Address (including port) of XMTP GRPC server"`
 	NumWorkers      int    `long:"num-workers" description:"Number of workers used to process messages" default:"50"`
@@ -20,8 +25,9 @@ type XmtpOpts struct {
 
 type Options struct {
 	Api  ApiOptions  `group:"API Options"`
-	Xmtp XmtpOpts    `group:"Worker Options"`
+	Xmtp XmtpOptions `group:"Worker Options"`
 	Apns ApnsOptions `group:"APNS Options"`
+	Fcm  FcmOptions  `group:"FCM Options"`
 
 	DbConnectionString string `short:"d" long:"db-connection-string" env:"DB_CONNECTION_STRING" description:"Address to database"`
 	LogEncoding        string `long:"log-encoding" env:"LOG_ENCODING" description:"Log encoding" choice:"console" choice:"json" default:"console"`

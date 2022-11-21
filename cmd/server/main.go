@@ -58,14 +58,28 @@ func main() {
 	var apiServer *api.ApiServer
 
 	if opts.Xmtp.ListenerEnabled {
-		deliveryService, err := delivery.NewDeliveryService(logger, opts.Apns)
-		if err != nil {
-			log.Fatalf("Failed to initialize delivery service")
+		var apns *delivery.ApnsDelivery
+		var fcm *delivery.FcmDelivery
+		var err error
+
+		if opts.Apns.KeyId != "" {
+			apns, err = delivery.NewApnsDelivery(logger, opts.Apns)
+			if err != nil {
+				logger.Fatal("failed to initialize APNS", zap.Error(err))
+			}
 		}
 
+		if opts.Fcm.CredentialsJson != "" {
+			fcm, err = delivery.NewFcmDelivery(ctx, logger, opts.Fcm)
+			if err != nil {
+				logger.Fatal("failed to initialize FCM", zap.Error(err))
+			}
+		}
+
+		deliveryService := delivery.NewDeliveryService(logger, apns, fcm)
 		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryService)
 		if err != nil {
-			log.Fatalf("failed to initialize listener")
+			logger.Fatal("failed to initialize listener", zap.Error(err))
 		}
 		listener.Start()
 	}
