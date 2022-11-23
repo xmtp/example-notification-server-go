@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -e
+
+DOCKER_IMAGE_TAG="${DOCKER_IMAGE_TAG:-dev}"
+DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME:-xmtp/notifications-server}"
+
+docker buildx build \
+    --platform linux/amd64 \
+    --tag "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}" \
+    -f ./Dockerfile \
+    -q \
+    --push \
+    .
