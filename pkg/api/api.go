@@ -9,6 +9,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
+	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"github.com/xmtp/example-notification-server-go/pkg/proto"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
 	"go.uber.org/zap"
@@ -25,11 +26,12 @@ type ApiServer struct {
 	port          int
 }
 
-func NewApiServer(logger *zap.Logger, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
+func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
 	return &ApiServer{
 		logger:        logger.Named("api"),
 		installations: installations,
 		subscriptions: subscriptions,
+		port:          opts.Port,
 	}
 }
 
@@ -42,7 +44,7 @@ func (s *ApiServer) Start() {
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
-	s.logger.Info("api server started", zap.String("address", s.httpServer.Addr), zap.String("path", path))
+	s.logger.Info("api server started", zap.String("address", s.httpServer.Addr), zap.Int("port", s.port), zap.String("path", path))
 
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil {

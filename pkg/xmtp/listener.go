@@ -19,7 +19,7 @@ type Listener struct {
 	ctx            context.Context
 	cancelFunc     func()
 	xmtpClient     v1.MessageApiClient
-	opts           options.XmtpOpts
+	opts           options.XmtpOptions
 	messageChannel chan *v1.Envelope
 	installations  interfaces.Installations
 	delivery       interfaces.Delivery
@@ -29,12 +29,12 @@ type Listener struct {
 func NewListener(
 	ctx context.Context,
 	logger *zap.Logger,
-	opts options.XmtpOpts,
+	opts options.XmtpOptions,
 	installations interfaces.Installations,
 	subscriptions interfaces.Subscriptions,
 	delivery interfaces.Delivery,
 ) (*Listener, error) {
-	client, err := NewClient(ctx, opts.GrpcAddress)
+	client, err := NewClient(ctx, opts.GrpcAddress, opts.UseTls)
 	if err != nil {
 		return nil, err
 	}

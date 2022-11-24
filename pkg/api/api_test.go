@@ -13,10 +13,9 @@ import (
 	"github.com/xmtp/example-notification-server-go/mocks"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
+	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"github.com/xmtp/example-notification-server-go/pkg/proto"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 const INSTALLATION_ID = "install1"
@@ -26,24 +25,6 @@ func buildClient() protoconnect.NotificationsClient {
 		http.DefaultClient,
 		"http://localhost:8080",
 	)
-}
-
-func startServer(t *testing.T, ctx context.Context, server *ApiServer) func() {
-	mux := http.NewServeMux()
-	path, handler := protoconnect.NewNotificationsHandler(server)
-	mux.Handle(path, handler)
-	httpServer := &http.Server{
-		Addr:    ":8080",
-		Handler: h2c.NewHandler(mux, &http2.Server{}),
-	}
-
-	go func() {
-		_ = httpServer.ListenAndServe()
-	}()
-
-	return func() {
-		_ = httpServer.Shutdown(ctx)
-	}
 }
 
 type testContext struct {
@@ -59,8 +40,13 @@ func setupTest(t *testing.T) testContext {
 	ctx := context.Background()
 	installationsMock := mocks.NewInstallations(t)
 	subscriptionsMock := mocks.NewSubscriptions(t)
-	apiServer := NewApiServer(logging.CreateLogger("console", "info"), installationsMock, subscriptionsMock)
-	cleanup := startServer(t, ctx, apiServer)
+	apiServer := NewApiServer(logging.CreateLogger("console", "info"), options.ApiOptions{Port: 8080}, installationsMock, subscriptionsMock)
+	apiServer.Start()
+	time.Sleep(50 * time.Millisecond)
+
+	cleanup := func() {
+		apiServer.Stop()
+	}
 
 	return testContext{
 		cleanup:           cleanup,
