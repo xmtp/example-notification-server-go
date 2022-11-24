@@ -23,7 +23,7 @@ func newConn(ctx context.Context, apiAddress string, useTls bool) (*grpc.ClientC
 func getCredentials(useTls bool) credentials.TransportCredentials {
 	if useTls {
 		return credentials.NewTLS(&tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: false,
 		})
 	}
 	return insecure.NewCredentials()
