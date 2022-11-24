@@ -38,11 +38,11 @@ func (s *ApiServer) Start() {
 	path, handler := protoconnect.NewNotificationsHandler(s)
 	mux.Handle(path, handler)
 	s.httpServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.port),
+		Addr:    fmt.Sprintf(":%d", 8080),
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
-	s.logger.Info("api server started", zap.String("address", s.httpServer.Addr), zap.String("path", path))
+	s.logger.Info("api server started", zap.String("address", s.httpServer.Addr), zap.Int("port", s.port), zap.String("path", path))
 
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil {
