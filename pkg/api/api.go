@@ -25,11 +25,12 @@ type ApiServer struct {
 	port          int
 }
 
-func NewApiServer(logger *zap.Logger, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
+func NewApiServer(logger *zap.Logger, port int, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
 	return &ApiServer{
 		logger:        logger.Named("api"),
 		installations: installations,
 		subscriptions: subscriptions,
+		port:          port,
 	}
 }
 
