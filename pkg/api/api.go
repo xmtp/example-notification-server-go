@@ -39,7 +39,7 @@ func (s *ApiServer) Start() {
 	path, handler := protoconnect.NewNotificationsHandler(s)
 	mux.Handle(path, handler)
 	s.httpServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", 8080),
+		Addr:    fmt.Sprintf(":%d", s.port),
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
