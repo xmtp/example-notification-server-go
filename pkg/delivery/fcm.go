@@ -2,10 +2,10 @@ package delivery
 
 import (
 	"context"
-	"log"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
+	"github.com/pkg/errors"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
@@ -21,11 +21,15 @@ func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOpt
 	app, err := firebase.NewApp(ctx, &firebase.Config{
 		ProjectID: opts.ProjectId,
 	}, creds)
+
 	if err != nil {
-		log.Fatalf("error initializing app: %v\n", err)
+		return nil, errors.Wrap(err, "failed to initialize firebase app")
 	}
+
+	// Use the auth method to validate the credentials
+	_, err = app.Auth(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "firebase credentials failed to validate")
 	}
 
 	messaging, err := app.Messaging(ctx)
@@ -61,7 +65,6 @@ func (f *FcmDelivery) Send(ctx context.Context, token, topic, message string) er
 			},
 			Data: data,
 		},
-		Webpush: &messaging.WebpushConfig{},
 		APNS: &messaging.APNSConfig{
 			Payload: &messaging.APNSPayload{
 				CustomData: map[string]interface {

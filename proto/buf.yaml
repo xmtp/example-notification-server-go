@@ -1,4 +1,5 @@
 version: v1
+name: buf.build/nickxmtp/example-notification-server
 breaking:
   use:
     - FILE

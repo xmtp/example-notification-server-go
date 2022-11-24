@@ -3,8 +3,11 @@ module github.com/xmtp/example-notification-server-go
 go 1.18
 
 require (
+	firebase.google.com/go/v4 v4.10.0
 	github.com/bufbuild/connect-go v1.1.0
 	github.com/jessevdk/go-flags v1.5.0
+	github.com/pkg/errors v0.8.1
+	github.com/sideshow/apns2 v0.23.0
 	github.com/stretchr/testify v1.8.1
 	github.com/uptrace/bun v1.1.8
 	github.com/uptrace/bun/dialect/pgdialect v1.1.8
@@ -13,6 +16,7 @@ require (
 	github.com/xmtp/proto v1.3.2-0.20221114211142-5de75035720f
 	go.uber.org/zap v1.23.0
 	golang.org/x/net v0.2.0
+	google.golang.org/api v0.96.0
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -23,7 +27,6 @@ require (
 	cloud.google.com/go/firestore v1.6.1 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/storage v1.26.0 // indirect
-	firebase.google.com/go/v4 v4.10.0 // indirect
 	github.com/MicahParks/keyfunc v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
@@ -39,7 +42,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/sideshow/apns2 v0.23.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
@@ -52,7 +54,6 @@ require (
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/api v0.96.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/appengine/v2 v2.0.2 // indirect
 	google.golang.org/genproto v0.0.0-20220810155839-1856144b1d9c // indirect
