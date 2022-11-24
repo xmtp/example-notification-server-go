@@ -9,6 +9,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
+	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"github.com/xmtp/example-notification-server-go/pkg/proto"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
 	"go.uber.org/zap"
@@ -25,12 +26,12 @@ type ApiServer struct {
 	port          int
 }
 
-func NewApiServer(logger *zap.Logger, port int, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
+func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
 	return &ApiServer{
 		logger:        logger.Named("api"),
 		installations: installations,
 		subscriptions: subscriptions,
-		port:          port,
+		port:          opts.Port,
 	}
 }
 

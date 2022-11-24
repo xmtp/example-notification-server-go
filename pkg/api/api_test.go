@@ -13,6 +13,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/mocks"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
+	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"github.com/xmtp/example-notification-server-go/pkg/proto"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
 )
@@ -39,7 +40,7 @@ func setupTest(t *testing.T) testContext {
 	ctx := context.Background()
 	installationsMock := mocks.NewInstallations(t)
 	subscriptionsMock := mocks.NewSubscriptions(t)
-	apiServer := NewApiServer(logging.CreateLogger("console", "info"), 8080, installationsMock, subscriptionsMock)
+	apiServer := NewApiServer(logging.CreateLogger("console", "info"), options.ApiOptions{Port: 8080}, installationsMock, subscriptionsMock)
 	apiServer.Start()
 	cleanup := func() {
 		apiServer.Stop()
