@@ -40,6 +40,7 @@ func setupTest(t *testing.T) testContext {
 	installationsMock := mocks.NewInstallations(t)
 	subscriptionsMock := mocks.NewSubscriptions(t)
 	apiServer := NewApiServer(logging.CreateLogger("console", "info"), 8080, installationsMock, subscriptionsMock)
+	apiServer.Start()
 	cleanup := func() {
 		apiServer.Stop()
 	}
