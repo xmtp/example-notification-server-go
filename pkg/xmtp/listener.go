@@ -34,7 +34,7 @@ func NewListener(
 	subscriptions interfaces.Subscriptions,
 	delivery interfaces.Delivery,
 ) (*Listener, error) {
-	client, err := NewClient(ctx, opts.GrpcAddress)
+	client, err := NewClient(ctx, opts.GrpcAddress, opts.UseTls)
 	if err != nil {
 		return nil, err
 	}
