@@ -42,6 +42,8 @@ func setupTest(t *testing.T) testContext {
 	subscriptionsMock := mocks.NewSubscriptions(t)
 	apiServer := NewApiServer(logging.CreateLogger("console", "info"), options.ApiOptions{Port: 8080}, installationsMock, subscriptionsMock)
 	apiServer.Start()
+	time.Sleep(50 * time.Millisecond)
+
 	cleanup := func() {
 		apiServer.Stop()
 	}
