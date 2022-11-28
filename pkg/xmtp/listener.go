@@ -75,7 +75,7 @@ func (l *Listener) startMessageListener() {
 			time.Sleep(3 * time.Second)
 			continue
 		}
-	StreamLoop:
+	streamLoop:
 		for {
 			select {
 			case <-l.ctx.Done():
@@ -85,12 +85,12 @@ func (l *Listener) startMessageListener() {
 				msg, err := stream.Recv()
 				if err == io.EOF {
 					l.logger.Info("stream closed")
-					break StreamLoop
+					break streamLoop
 				}
 
 				if err != nil {
 					l.logger.Error("error reading from stream", zap.Error(err))
-					break StreamLoop
+					break streamLoop
 				}
 
 				if msg != nil {
