@@ -82,11 +82,11 @@ func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationId st
 
 func (s SubscriptionsService) GetSubscriptions(ctx context.Context, topic string) (out []interfaces.Subscription, err error) {
 	results := make([]db.Subscription, 0)
-	_, err = s.db.NewSelect().
+	err = s.db.NewSelect().
 		Model(&results).
 		Where("topic = ?", topic).
-		Where("is_active = ?", true).
-		Exec(ctx)
+		Where("is_active = TRUE").
+		Scan(ctx)
 
 	if err != nil {
 		return nil, err

@@ -75,6 +75,7 @@ func (l *Listener) startMessageListener() {
 			time.Sleep(3 * time.Second)
 			continue
 		}
+	streamLoop:
 		for {
 			select {
 			case <-l.ctx.Done():
@@ -84,12 +85,12 @@ func (l *Listener) startMessageListener() {
 				msg, err := stream.Recv()
 				if err == io.EOF {
 					l.logger.Info("stream closed")
-					break
+					break streamLoop
 				}
 
 				if err != nil {
 					l.logger.Error("error reading from stream", zap.Error(err))
-					break
+					break streamLoop
 				}
 
 				if msg != nil {
@@ -128,6 +129,7 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	}
 
 	if len(subs) == 0 {
+		l.logger.Info("no subscriptions for topic", zap.String("topic", env.ContentTopic))
 		return nil
 	}
 
@@ -142,6 +144,7 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	}
 
 	if len(installations) == 0 {
+		l.logger.Info("No matching installations found for topic", zap.String("topic", env.ContentTopic))
 		return nil
 	}
 

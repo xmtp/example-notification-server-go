@@ -131,3 +131,18 @@ func Test_UnsubscribeResubscribe(t *testing.T) {
 	require.Equal(t, stored.InstallationId, INSTALLATION_ID)
 	require.True(t, stored.IsActive)
 }
+
+func Test_GetSubscriptions(t *testing.T) {
+	ctx := context.Background()
+	db, cleanup := test.CreateTestDb()
+	defer cleanup()
+
+	svc := createService(db)
+
+	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
+	require.NoError(t, err)
+
+	subs, err := svc.GetSubscriptions(ctx, TOPIC)
+	require.NoError(t, err)
+	require.Len(t, subs, 1)
+}
