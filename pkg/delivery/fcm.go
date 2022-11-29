@@ -44,8 +44,6 @@ func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOpt
 }
 
 func (f *FcmDelivery) Send(ctx context.Context, token, topic, message string) error {
-	title := "New message from XMTP"
-	body := "Open app to read"
 	data := map[string]string{
 		"topic":            topic,
 		"encryptedMessage": message,
@@ -54,18 +52,15 @@ func (f *FcmDelivery) Send(ctx context.Context, token, topic, message string) er
 	_, err := f.client.Send(ctx, &messaging.Message{
 		Token: token,
 		Data:  data,
-		Notification: &messaging.Notification{
-			Title: title,
-			Body:  body,
-		},
 		Android: &messaging.AndroidConfig{
-			Notification: &messaging.AndroidNotification{
-				Title: title,
-				Body:  body,
-			},
-			Data: data,
+			Data:     data,
+			Priority: "high",
 		},
 		APNS: &messaging.APNSConfig{
+			Headers: map[string]string{
+				"apns-push-type": "background",
+				"apns-priority":  "5",
+			},
 			Payload: &messaging.APNSPayload{
 				CustomData: map[string]interface {
 				}{
@@ -73,11 +68,7 @@ func (f *FcmDelivery) Send(ctx context.Context, token, topic, message string) er
 					"encryptedMessage": message,
 				},
 				Aps: &messaging.Aps{
-					Alert: &messaging.ApsAlert{
-						Title: title,
-						Body:  body,
-					},
-					MutableContent: true,
+					ContentAvailable: true,
 				},
 			},
 		},
