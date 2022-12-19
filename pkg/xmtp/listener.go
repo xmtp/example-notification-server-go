@@ -33,8 +33,10 @@ func NewListener(
 	installations interfaces.Installations,
 	subscriptions interfaces.Subscriptions,
 	delivery interfaces.Delivery,
+	clientVersion string,
+	appVersion string,
 ) (*Listener, error) {
-	client, err := NewClient(ctx, opts.GrpcAddress, opts.UseTls)
+	client, err := NewClient(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
 	if err != nil {
 		return nil, err
 	}

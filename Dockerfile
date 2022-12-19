@@ -8,7 +8,8 @@ WORKDIR /app
 COPY . .
 
 # Build the final node binary
-RUN go build -o bin/notifications-server cmd/server/main.go
+ARG GIT_COMMIT=unknown
+RUN go build -ldflags="-X 'main.GitCommit=$GIT_COMMIT'" -o bin/notifications-server cmd/server/main.go
 
 # ACTUAL IMAGE -------------------------------------------------------
 

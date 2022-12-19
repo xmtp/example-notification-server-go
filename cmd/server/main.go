@@ -28,6 +28,8 @@ import (
 var opts options.Options
 var logger *zap.Logger
 
+var GitCommit string
+
 func main() {
 	var err error
 	if _, err = flags.Parse(&opts); err != nil {
@@ -38,6 +40,13 @@ func main() {
 	}
 
 	logger = logging.CreateLogger(opts.LogEncoding, opts.LogLevel)
+
+	shortGitCommit := GitCommit
+	if len(shortGitCommit) >= 7 {
+		shortGitCommit = shortGitCommit[:7]
+	}
+	clientVersion := "example-notifications-server-go/" + shortGitCommit
+	appVersion := clientVersion
 
 	if opts.CreateMigration != "" {
 		if err = createMigration(); err != nil {
@@ -77,7 +86,7 @@ func main() {
 		}
 
 		deliveryService := delivery.NewDeliveryService(logger, apns, fcm)
-		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryService)
+		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryService, clientVersion, appVersion)
 		if err != nil {
 			logger.Fatal("failed to initialize listener", zap.Error(err))
 		}
@@ -88,6 +97,8 @@ func main() {
 		apiServer = api.NewApiServer(logger, opts.Api, installationsService, subscriptionsService)
 		apiServer.Start()
 	}
+
+	logger.Info("started", zap.String("client-version", clientVersion), zap.String("app-version", appVersion))
 
 	waitForShutdown()
 

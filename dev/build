@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 
+mkdir -p dist/
 go build -o ./dist ./...
