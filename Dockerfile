@@ -8,7 +8,12 @@ WORKDIR /app
 COPY . .
 
 # Build the final node binary
-RUN go build -o bin/notifications-server cmd/server/main.go
+ARG GIT_COMMIT=unknown
+ARG XMTP_GO_CLIENT_VERSION=unknown
+RUN go build \
+    -o bin/notifications-server \
+    -ldflags="-X 'main.GitCommit=$GIT_COMMIT' -X 'main.XMTPGoClientVersion=$XMTP_GO_CLIENT_VERSION'" \
+    cmd/server/main.go
 
 # ACTUAL IMAGE -------------------------------------------------------
 

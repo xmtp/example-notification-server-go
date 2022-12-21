@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,6 +29,11 @@ import (
 var opts options.Options
 var logger *zap.Logger
 
+var (
+	GitCommit           string
+	XMTPGoClientVersion string
+)
+
 func main() {
 	var err error
 	if _, err = flags.Parse(&opts); err != nil {
@@ -38,6 +44,11 @@ func main() {
 	}
 
 	logger = logging.CreateLogger(opts.LogEncoding, opts.LogLevel)
+
+	clientVersion := "example-notifications-server-go/" + shortGitCommit()
+	appVersion := "xmtp-go/" + shortXMTPGoClientVersion()
+
+	logger.Info("starting", zap.String("client-version", clientVersion), zap.String("app-version", appVersion))
 
 	if opts.CreateMigration != "" {
 		if err = createMigration(); err != nil {
@@ -77,7 +88,7 @@ func main() {
 		}
 
 		deliveryService := delivery.NewDeliveryService(logger, apns, fcm)
-		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryService)
+		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryService, clientVersion, appVersion)
 		if err != nil {
 			logger.Fatal("failed to initialize listener", zap.Error(err))
 		}
@@ -136,4 +147,16 @@ func createMigration() error {
 	}
 
 	return err
+}
+
+func shortGitCommit() string {
+	val := GitCommit
+	if len(val) >= 7 {
+		val = val[:7]
+	}
+	return val
+}
+
+func shortXMTPGoClientVersion() string {
+	return strings.Split(XMTPGoClientVersion, "-")[0]
 }

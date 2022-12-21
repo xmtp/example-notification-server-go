@@ -1,3 +1,10 @@
 #!/usr/bin/env sh
 
-go build -o ./dist ./...
+GIT_COMMIT="$(git rev-parse HEAD)"
+XMTP_GO_CLIENT_VERSION="$(go list -json -m all | jq -r '. | select(.Path == "github.com/xmtp/proto") | .Version')"
+
+mkdir -p dist/
+go build \
+    -o ./dist \
+    -ldflags="-X 'main.GitCommit=$GIT_COMMIT' -X 'main.XMTPGoClientVersion=$XMTP_GO_CLIENT_VERSION'" \
+    ./...
