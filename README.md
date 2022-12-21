@@ -129,7 +129,7 @@ go test -p 1 ./...
 
 ## Extending the server
 
-The implementations of the `Installations` service and the `Delivery` service designed to be easily replaced. For a production application you will likely want to replace with a more robust set of tools for managing device tokens and sending notifications idempotently. To do that, you would modify `cmd/server/main.go` and replace those service interfaces with your custom implementation.
+The implementations of the `Installations` service and the `Delivery` service are designed to be easily replaced. For a production application you will likely want to replace with a more robust set of tools for managing device tokens and sending notifications idempotently. To do that, you would modify `cmd/server/main.go` and replace those service interfaces with your custom implementation.
 
 If you are using Firebase for push delivery, the only modifications needed (if any) may be to customize the payload sent to clients.
 
