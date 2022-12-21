@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,7 +29,10 @@ import (
 var opts options.Options
 var logger *zap.Logger
 
-var GitCommit string
+var (
+	GitCommit           string
+	XMTPGoClientVersion string
+)
 
 func main() {
 	var err error
@@ -42,7 +46,9 @@ func main() {
 	logger = logging.CreateLogger(opts.LogEncoding, opts.LogLevel)
 
 	clientVersion := "example-notifications-server-go/" + shortGitCommit()
-	appVersion := clientVersion
+	appVersion := "xmtp-go/" + shortXMTPGoClientVersion()
+
+	logger.Info("starting", zap.String("client-version", clientVersion), zap.String("app-version", appVersion))
 
 	if opts.CreateMigration != "" {
 		if err = createMigration(); err != nil {
@@ -93,8 +99,6 @@ func main() {
 		apiServer = api.NewApiServer(logger, opts.Api, installationsService, subscriptionsService)
 		apiServer.Start()
 	}
-
-	logger.Info("started", zap.String("client-version", clientVersion), zap.String("app-version", appVersion))
 
 	waitForShutdown()
 
@@ -151,4 +155,8 @@ func shortGitCommit() string {
 		val = val[:7]
 	}
 	return val
+}
+
+func shortXMTPGoClientVersion() string {
+	return strings.Split(XMTPGoClientVersion, "-")[0]
 }
