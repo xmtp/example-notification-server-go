@@ -4,7 +4,7 @@ Example push notification server, written in Golang
 
 ## Project status
 
-This repo is in Developer Preview status, and breaking changes are still possible.
+This project is in Developer Preview. Software in this phase does is not formally supported, will change without warning, and may not be backwards compatible. We do NOT recommend using Developer Preview software in production applications.
 
 Many applications will have different needs for push notifications (different delivery providers, different metadata attached to payloads, etc), and this repo is designed to be forked and customized for each application's needs.
 
