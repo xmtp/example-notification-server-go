@@ -41,11 +41,7 @@ func main() {
 
 	logger = logging.CreateLogger(opts.LogEncoding, opts.LogLevel)
 
-	shortGitCommit := GitCommit
-	if len(shortGitCommit) >= 7 {
-		shortGitCommit = shortGitCommit[:7]
-	}
-	clientVersion := "example-notifications-server-go/" + shortGitCommit
+	clientVersion := "example-notifications-server-go/" + shortGitCommit()
 	appVersion := clientVersion
 
 	if opts.CreateMigration != "" {
@@ -147,4 +143,12 @@ func createMigration() error {
 	}
 
 	return err
+}
+
+func shortGitCommit() string {
+	val := GitCommit
+	if len(val) >= 7 {
+		val = val[:7]
+	}
+	return val
 }
