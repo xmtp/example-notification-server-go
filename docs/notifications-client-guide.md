@@ -8,7 +8,7 @@ This document aims to be a guide to implementing a notifications client in your 
 
 The Notification Server uses Protobuf/[Connect](https://connect.build/docs/introduction) for service definitions and contracts. The service definition is published [here](https://buf.build/nickxmtp/example-notification-server/docs/main:notifications.v1). This can be used to generate clients in a range of languages. You may wish to publish your own version of the contract to be used by your client, and this will be necessary if you change any of the protobuf contracts.
 
-To generate a Typescript service client create a `buf.gen.yaml` file in your project root like this
+To generate a Typescript service client, create a `buf.gen.yaml` file in your project root like this:
 
 ```yaml
 version: v1
