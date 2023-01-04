@@ -152,7 +152,7 @@ Once decoded, you can create a local notification using the framework of your ch
 
 In my example, I am using the React Native Firebase SDK to listen for notifications and handle them. I've implemented some basic caching of the conversation list and XMTP client to limit the number of network requests required to decrypt the message.
 
-You can see an extremely hacky but functional implementation [here](https://github.com/xmtp/example-chat-react-native/blob/nm/add-firebase/lib/notifications.ts)
+You can see an extremely hacky but functional implementation [here](https://github.com/xmtp/example-chat-react-native/blob/nm/add-firebase/lib/notifications.ts).
 
 ### Updating the conversation list
 
