@@ -164,7 +164,7 @@ The Notification Server, as currently configured, sends both iOS and Android not
 
 This is probably the right approach for Android, but on iOS runs the risk of getting rate-limited when operating at scale. To implement this as regular notifications that do not get rate limited as aggressively, you could include a Notification element in the payload and set the `mutable-content` flag to true. The challenge here is that you will then require a [Notification Service Extension](https://developer.apple.com/documentation/usernotifications/modifying_content_in_newly_delivered_notifications) to handle the decryption of the content. You can read more about [Notification Service Extensions](https://www.strv.com/blog/app-extensions-introduction-to-notification-service-engineering) here.
 
-### How to build a high quality client
+### How to build a high-quality client
 
 - Some additional data fields will likely be useful in a production service. `id`, `type`, and `version` could all help build a high quality client. Those can be configured in the Delivery Service. For example, you may want to dedupe notifications by ID, route to different handlers using type, and use the version field to ensure compatibility between the client and server notification schema.
 - `client.conversations.list()` can be a slow and expensive call with lots of heavy cryptographic operations. Especially for users with many ongoing chats. Caching the conversation list and only refreshing when necessary would make the notification handler far more performant.
