@@ -56,6 +56,12 @@ func (f *FcmDelivery) Send(ctx context.Context, token, topic, message string) er
 			Data:     data,
 			Priority: "high",
 		},
+		Webpush: &messaging.WebpushConfig{
+			Data: data,
+			Notification: &messaging.WebpushNotification{
+				Title: "New message from XMTP",
+			},
+		},
 		APNS: &messaging.APNSConfig{
 			Headers: map[string]string{
 				"apns-push-type": "background",
