@@ -6,7 +6,9 @@ Example push notification server, written in Golang
 
 ![Status](https://camo.githubusercontent.com/47c9762c88d56b96ffa436e2af994dab07f6f61f2a0388cd08be7d42b1b8fef5/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563745f5374617475732d446576656c6f7065725f507265766965772d79656c6c6f77)
 
-This project is in Developer Preview. Software in this phase does is not formally supported, will change without warning, and may not be backwards compatible. We do NOT recommend using Developer Preview software in production applications.
+This project is in Developer Preview status and ready to serve as a reference for you to start building. 
+
+However, we do NOT recommend using Developer Preview software in production apps. Software in this status may change based on feedback.
 
 Many applications will have different needs for push notifications (different delivery providers, different metadata attached to payloads, etc), and this repo is designed to be forked and customized for each application's needs.
 
