@@ -6,7 +6,7 @@ Example push notification server, written in Golang
 
 ![Status](https://camo.githubusercontent.com/47c9762c88d56b96ffa436e2af994dab07f6f61f2a0388cd08be7d42b1b8fef5/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563745f5374617475732d446576656c6f7065725f507265766965772d79656c6c6f77)
 
-This project is in Developer Preview status and ready to serve as a reference for you to start building. 
+This project is in Developer Preview status and ready to serve as a reference for you to start building.
 
 However, we do NOT recommend using Developer Preview software in production apps. Software in this status may change based on feedback.
 
@@ -52,13 +52,23 @@ source .env
 ./dev/run --xmtp-listener --api
 ```
 
+### Running the listener and just logging the message
+
+If you want to just log the message received from the listener and nothing more, use this branch and do the following:
+
+````sh
+./dev/up
+source .env
+./dev/run --xmtp-listener
+```
+
 ### Command line options
 
 To see a full list of command line options run
 
 ```sh
 ./dev/run --help
-```
+````
 
 Here is the output as of 21/12/2021:
 
