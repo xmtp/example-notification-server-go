@@ -30,7 +30,8 @@ func (s DefaultInstallationService) Register(ctx context.Context, installation i
 			Model(&db.Installation{
 				Id: installation.Id,
 			}).
-			Ignore().
+			On("CONFLICT(id) DO UPDATE").
+			Set("deleted_at = NULL").
 			Exec(ctx)
 
 		if err != nil {

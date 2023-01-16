@@ -162,6 +162,33 @@ func Test_Delete(t *testing.T) {
 	require.NotNil(t, install.DeletedAt)
 }
 
+func Test_DeleteAndRegisterAgain(t *testing.T) {
+	ctx := context.Background()
+	db, cleanup := test.CreateTestDb()
+	defer cleanup()
+	svc := createService(db)
+
+	createReq := buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN)
+	_, err := svc.Register(ctx, createReq)
+
+	require.NoError(t, err)
+
+	err = svc.Delete(ctx, INSTALLATION_ID)
+	require.NoError(t, err)
+
+	_, err = svc.Register(ctx, createReq)
+	require.NoError(t, err)
+
+	install := new(database.Installation)
+	err = db.NewSelect().
+		Model(install).
+		Where("id = ?", INSTALLATION_ID).
+		Scan(ctx)
+
+	require.NoError(t, err)
+	require.Nil(t, install.DeletedAt)
+}
+
 func Test_Get(t *testing.T) {
 	ctx := context.Background()
 	db, _ := test.CreateTestDb()
