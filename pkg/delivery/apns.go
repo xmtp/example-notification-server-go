@@ -19,7 +19,14 @@ type ApnsDelivery struct {
 }
 
 func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDelivery, error) {
-	client, err := getApnsClient([]byte(opts.P8Certificate), opts.KeyId, opts.TeamId)
+	bytes, err := ioutil.ReadFile(opts.P8Certificate)
+	
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := getApnsClient(bytes, opts.KeyId, opts.TeamId)
+
 	if err != nil {
 		return nil, err
 	}
