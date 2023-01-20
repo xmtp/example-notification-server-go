@@ -6,11 +6,12 @@ type ApiOptions struct {
 }
 
 type ApnsOptions struct {
-	Enabled       bool   `long:"apns-enabled" env:"APNS_ENABLED" description:"Enable APNS"`
-	P8Certificate string `long:"apns-p8-certificate" env:"APNS_P8_CERTIFICATE" description:".p8 certificate for APNS"`
-	KeyId         string `long:"apns-key-id" env:"APNS_KEY_ID" description:"Key ID associated with APNS credentials"`
-	TeamId        string `long:"apns-team-id" env:"APNS_TEAM_ID" description:"APNS Team ID"`
-	Topic         string `long:"apns-topic" env:"APNS_TOPIC" description:"Topic to be used on all messages"`
+	Enabled               bool   `long:"apns-enabled" env:"APNS_ENABLED" description:"Enable APNS"`
+	P8Certificate         string `long:"apns-p8-certificate" env:"APNS_P8_CERTIFICATE" description:".p8 certificate data for APNS"`
+	P8CertificateFilePath string `long:"apns-p8-certificate-file-path" env:"APNS_P8_CERTIFICATE_FILE_PATH" description:".p8 certificate file for APNS"`
+	KeyId                 string `long:"apns-key-id" env:"APNS_KEY_ID" description:"Key ID associated with APNS credentials"`
+	TeamId                string `long:"apns-team-id" env:"APNS_TEAM_ID" description:"APNS Team ID"`
+	Topic                 string `long:"apns-topic" env:"APNS_TOPIC" description:"Topic to be used on all messages"`
 }
 
 type FcmOptions struct {

@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"io/ioutil"
 	"time"
 
 	"github.com/sideshow/apns2"
@@ -19,7 +20,21 @@ type ApnsDelivery struct {
 }
 
 func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDelivery, error) {
-	client, err := getApnsClient([]byte(opts.P8Certificate), opts.KeyId, opts.TeamId)
+	var bytes []byte
+	var err error
+
+	if opts.P8Certificate == "" {
+		bytes, err = ioutil.ReadFile(opts.P8CertificateFilePath)
+
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		bytes = []byte(opts.P8Certificate)
+	}
+
+	client, err := getApnsClient(bytes, opts.KeyId, opts.TeamId)
+
 	if err != nil {
 		return nil, err
 	}
