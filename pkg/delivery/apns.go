@@ -2,7 +2,7 @@ package delivery
 
 import (
 	"context"
-	"ioutil"
+	"io/ioutil"
 	"time"
 
 	"github.com/sideshow/apns2"
