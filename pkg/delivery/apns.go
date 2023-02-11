@@ -69,6 +69,7 @@ func (a ApnsDelivery) Send(ctx context.Context, deviceToken, topic, message stri
 			"Sent notification",
 			zap.String("apns_id", res.ApnsID),
 			zap.Int("status_code", res.StatusCode),
+			zap.String("reason", res.Reason),
 		)
 	}
 
