@@ -12,7 +12,7 @@ type ApnsOptions struct {
 	KeyId                 string `long:"apns-key-id" env:"APNS_KEY_ID" description:"Key ID associated with APNS credentials"`
 	TeamId                string `long:"apns-team-id" env:"APNS_TEAM_ID" description:"APNS Team ID"`
 	Topic                 string `long:"apns-topic" env:"APNS_TOPIC" description:"Topic to be used on all messages"`
-	Mode                  string `long:"apns-mode" env:"APNS_MODE" description:"Which APNS servers to deliver to, development or production"`
+	Mode                  string `long:"apns-mode" env:"APNS_MODE" description:"Which APNS servers to deliver to, development or production" choice:"development" choice:"production" default:"development"`
 }
 
 type FcmOptions struct {
