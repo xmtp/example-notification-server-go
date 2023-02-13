@@ -40,3 +40,12 @@ jobs:
           variable-name: notifications_server_image
           variable-value: ${{ steps.push.outputs.docker_image }}
           variable-value-required-prefix: xmtp/notifications-server
+      - name: Deploy to production
+        uses: xmtp-labs/terraform-deployer@v1
+        with:
+          terraform-token: ${{ secrets.TERRAFORM_TOKEN }}
+          terraform-org: xmtp
+          terraform-workspace: production
+          variable-name: notifications_server_image
+          variable-value: ${{ steps.push.outputs.docker_image }}
+          variable-value-required-prefix: xmtp/notifications-server
