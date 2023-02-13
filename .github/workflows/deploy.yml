@@ -24,8 +24,19 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Deploy
+      - name: Push
+        id: push
         run: |
           export DOCKER_IMAGE_TAG=latest
           IMAGE_TO_DEPLOY=xmtp/notifications-server@$(dev/push)
-          echo Successfully pushed $IMAGE_TO_DEPLOY
+          echo "docker_image=${IMAGE_TO_DEPLOY}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to dev
+        uses: xmtp-labs/terraform-deployer@v1
+        with:
+          terraform-token: ${{ secrets.TERRAFORM_TOKEN }}
+          terraform-org: xmtp
+          terraform-workspace: dev
+          variable-name: notifications_server_image
+          variable-value: ${{ steps.push.outputs.docker_image }}
+          variable-value-required-prefix: xmtp/notifications-server

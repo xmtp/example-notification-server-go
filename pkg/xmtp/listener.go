@@ -131,7 +131,6 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	}
 
 	if len(subs) == 0 {
-		l.logger.Info("no subscriptions for topic", zap.String("topic", env.ContentTopic))
 		return nil
 	}
 
@@ -149,6 +148,8 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		l.logger.Info("No matching installations found for topic", zap.String("topic", env.ContentTopic))
 		return nil
 	}
+
+	l.logger.Info("active subscription found. sending message", zap.String("topic", env.ContentTopic))
 
 	return l.delivery.Send(
 		l.ctx,
