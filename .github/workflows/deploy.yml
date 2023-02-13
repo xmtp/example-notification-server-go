@@ -40,3 +40,4 @@ jobs:
           variable-name: notifications_server_image
           variable-value: ${{ steps.push.outputs.docker_image }}
           variable-value-required-prefix: xmtp/notifications-server
+          run-title-override: Update Notification Server (${{ github.sha }})
