@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"time"
 
@@ -34,6 +35,14 @@ func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDeliver
 	}
 
 	client, err := getApnsClient(bytes, opts.KeyId, opts.TeamId)
+
+	if opts.Mode == "production" {
+		client.Production()
+	} else if opts.Mode == "development" {
+		client.Development()
+	} else {
+		return nil, errors.New("invalid APNS mode")
+	}
 
 	if err != nil {
 		return nil, err
