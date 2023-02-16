@@ -78,7 +78,7 @@ func (l *Listener) startMessageListener() {
 		if err != nil {
 			l.logger.Error("error connecting to stream", zap.Error(err))
 			// sleep for a few seconds before retrying
-			time.Sleep(3 * time.Second)
+			time.Sleep(100 * time.Millisecond)
 			if err = l.refreshClient(); err != nil {
 				l.logger.Error("error refreshing client", zap.Error(err))
 			}
