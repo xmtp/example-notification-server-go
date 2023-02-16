@@ -24,6 +24,8 @@ type Listener struct {
 	installations  interfaces.Installations
 	delivery       interfaces.Delivery
 	subscriptions  interfaces.Subscriptions
+	clientVersion  string
+	appVersion     string
 }
 
 func NewListener(
@@ -53,6 +55,8 @@ func NewListener(
 		installations:  installations,
 		delivery:       delivery,
 		subscriptions:  subscriptions,
+		clientVersion:  clientVersion,
+		appVersion:     appVersion,
 	}, nil
 }
 
@@ -74,7 +78,10 @@ func (l *Listener) startMessageListener() {
 		if err != nil {
 			l.logger.Error("error connecting to stream", zap.Error(err))
 			// sleep for a few seconds before retrying
-			time.Sleep(3 * time.Second)
+			time.Sleep(100 * time.Millisecond)
+			if err = l.refreshClient(); err != nil {
+				l.logger.Error("error refreshing client", zap.Error(err))
+			}
 			continue
 		}
 	streamLoop:
@@ -92,6 +99,11 @@ func (l *Listener) startMessageListener() {
 
 				if err != nil {
 					l.logger.Error("error reading from stream", zap.Error(err))
+					// Wait 100ms to avoid hammering the API and getting rate limited
+					time.Sleep(100 * time.Millisecond)
+					if err = l.refreshClient(); err != nil {
+						l.logger.Error("error refreshing client", zap.Error(err))
+					}
 					break streamLoop
 				}
 
@@ -159,6 +171,16 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 			IdempotencyKey: buildIdempotencyKey(env),
 		},
 	)
+}
+
+func (l *Listener) refreshClient() error {
+	client, err := NewClient(l.ctx, l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
+	if err != nil {
+		return err
+	}
+	l.xmtpClient = client
+
+	return nil
 }
 
 func shouldIgnoreTopic(topic string) bool {
