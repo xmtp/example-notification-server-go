@@ -79,6 +79,9 @@ func (l *Listener) startMessageListener() {
 			l.logger.Error("error connecting to stream", zap.Error(err))
 			// sleep for a few seconds before retrying
 			time.Sleep(3 * time.Second)
+			if err = l.refreshClient(); err != nil {
+				l.logger.Error("error refreshing client", zap.Error(err))
+			}
 			continue
 		}
 	streamLoop:

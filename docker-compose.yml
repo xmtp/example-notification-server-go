@@ -5,6 +5,7 @@ services:
       - --ws
       - --store
       - --message-db-connection-string=postgres://postgres:xmtp@db:5432/postgres?sslmode=disable
+      - --message-db-reader-connection-string=postgres://postgres:xmtp@db:5432/postgres?sslmode=disable
       - --lightpush
       - --filter
       - --ws-port=9001
