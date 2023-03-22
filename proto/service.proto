@@ -4,6 +4,7 @@ package notifications.v1;
 import "google/protobuf/empty.proto";
 
 option go_package = "github.com/xmtp/example-notification-server-go/pkg/proto";
+option java_package = "org.xmtp.android.library.push";
 
 message DeliveryMechanism {
   oneof delivery_mechanism_type {
