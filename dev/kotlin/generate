@@ -15,13 +15,13 @@ docker run --platform linux/x86_64 --rm -i -v${PWD}:/code xmtp/protoc-kotlin \
     --proto_path=./proto \
     --plugin=protoc-gen-grpckt=dev/kotlin/protoc/protoc-gen-grpc-kotlin.sh \
     --plugin=protoc-gen-java_rpc=../../build/binaries/java_pluginExecutable/protoc-gen-grpc-java \
-    --grpc-java_out=./kotlin/lib/src/main/kotlin \
-    --java_out=./kotlin/lib/src/main/kotlin \
+    --grpc-java_out=lite:./kotlin/lib/src/main/kotlin \
+    --java_out=lite:./kotlin/lib/src/main/kotlin \
   proto/service.proto
 
 docker run --platform linux/x86_64 --rm -i -v${PWD}:/code xmtp/protoc-kotlin \
   -I=./proto \
   --proto_path=./proto \
   --experimental_allow_proto3_optional \
-  --java_out=./kotlin/lib/src/main/kotlin \
+  --java_out=lite:./kotlin/lib/src/main/kotlin \
   proto/service.proto
