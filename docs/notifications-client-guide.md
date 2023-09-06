@@ -92,7 +92,7 @@ import {
   buildUserIntroTopic,
   buildUserInviteTopic,
   //@ts-ignore
-} from "@xmtp/xmtp-js/dist/cjs/src/utils";
+} from "@xmtp/xmtp-js";
 
 export const updateSubscriptions = async (xmtp: Client) => {
   const conversations = await xmtp.conversations.list();
