@@ -1,15 +1,14 @@
 version: '3'
 
 services:
-  waku-node:
+  node:
     image: xmtp/node-go:latest
+    platform: linux/amd64
     command:
       - --ws
-      - --store
+      - --store.enable
       - --store.db-connection-string=postgres://postgres:xmtp@db:5432/postgres?sslmode=disable
       - --store.reader-db-connection-string=postgres://postgres:xmtp@db:5432/postgres?sslmode=disable
-      - --lightpush
-      - --filter
       - --ws-port=9001
       - --wait-for-db=30s
       - --api.authn.enable
