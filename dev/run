@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 
+source .env
 go run ./cmd/server/main.go "$@"
