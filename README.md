@@ -48,8 +48,7 @@ The server can be run using the `./dev/run` script. Both the `worker` (which lis
 ```sh
 ## Only has to be run once
 ./dev/up
-source .env
-./dev/run --xmtp-listener --api
+./dev/start
 ```
 
 ### Command line options

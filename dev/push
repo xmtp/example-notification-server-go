@@ -1,5 +1,5 @@
-#!/usr/bin/env sh
-set -e
+#!/bin/bash
+set -eou pipefail
 
 DOCKER_IMAGE_TAG="${DOCKER_IMAGE_TAG:-dev}"
 DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME:-xmtp/notifications-server}"
