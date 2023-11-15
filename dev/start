@@ -1,3 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/bash
+set -eou pipefail
 
 dev/run --xmtp-listener --api "$@"

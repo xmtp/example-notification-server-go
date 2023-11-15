@@ -1,4 +1,5 @@
-#!/usr/bin/env sh
+#!/bin/bash
+set -eou pipefail
+set -a; source .env.local; set +a
 
-source .env
 go run ./cmd/server/main.go "$@"

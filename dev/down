@@ -1,3 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/bash
+set -eou pipefail
 
 docker compose down
