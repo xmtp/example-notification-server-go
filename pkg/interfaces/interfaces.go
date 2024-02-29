@@ -41,6 +41,8 @@ type Subscription struct {
 	InstallationId string
 	Topic          string
 	IsActive       bool
+	IsSilent       bool
+	HmacKey        *HmacKey
 }
 
 type SendRequest struct {
@@ -49,7 +51,22 @@ type SendRequest struct {
 	Message        *v1.Envelope
 }
 
+type HmacKey struct {
+	ThirtyDayPeriodsSinceEpoch int
+	Key                        []byte
+}
+
+type SubscriptionInput struct {
+	Topic    string
+	IsSilent bool
+	HmacKeys []HmacKey
+}
+
+type HmacUpdates map[string][]HmacKey
+
 // Pluggable Installation Service interface
+//
+//go:generate mockery --dir ../interfaces --name Installations --output ../../mocks --outpkg mocks
 type Installations interface {
 	Register(ctx context.Context, installation Installation) (*RegisterResponse, error)
 	Delete(ctx context.Context, installationId string) error
@@ -57,10 +74,13 @@ type Installations interface {
 }
 
 // This interface is not expected to be pluggable
+//
+//go:generate mockery --dir ../interfaces --name Subscriptions --output ../../mocks --outpkg mocks
 type Subscriptions interface {
 	Subscribe(ctx context.Context, installationId string, topics []string) error
 	Unsubscribe(ctx context.Context, installationId string, topics []string) error
-	GetSubscriptions(ctx context.Context, topic string) ([]Subscription, error)
+	GetSubscriptions(ctx context.Context, topic string, thirtyDayPeriod int) ([]Subscription, error)
+	SubscribeWithMetadata(ctx context.Context, installationId string, subscriptions []SubscriptionInput) error
 }
 
 // Pluggable interface for sending push notifications

@@ -137,7 +137,7 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic)
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
 	}
