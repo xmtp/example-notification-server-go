@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	"github.com/xmtp/example-notification-server-go/pkg/proto"
-	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
+	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -37,7 +37,7 @@ func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations int
 
 func (s *ApiServer) Start() {
 	mux := http.NewServeMux()
-	path, handler := protoconnect.NewNotificationsHandler(s)
+	path, handler := notificationsv1connect.NewNotificationsHandler(s)
 	mux.Handle(path, handler)
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.port),
@@ -64,7 +64,6 @@ func (s *ApiServer) Stop() {
 	}
 
 	s.logger.Info("server stopped")
-	return
 }
 
 func (s *ApiServer) RegisterInstallation(

@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/mocks"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	"github.com/xmtp/example-notification-server-go/pkg/proto"
-	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
+	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
+	protoconnect "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
 )
 
 const INSTALLATION_ID = "install1"
