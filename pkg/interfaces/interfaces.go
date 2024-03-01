@@ -18,9 +18,9 @@ const (
 )
 
 type DeliveryMechanism struct {
-	Kind      DeliveryMechanismKind
-	Token     string
-	UpdatedAt time.Time
+	Kind      DeliveryMechanismKind `json:"kind"`
+	Token     string                `json:"token"`
+	UpdatedAt time.Time             `json:"-"`
 }
 
 type RegisterResponse struct {
@@ -34,33 +34,33 @@ An installation represents an app installed on a device. If the app is reinstall
 a new device it is expected to generate a fresh installation_id.
 */
 type Installation struct {
-	Id                string
-	DeliveryMechanism DeliveryMechanism
+	Id                string            `json:"id"`
+	DeliveryMechanism DeliveryMechanism `json:"delivery_mechanism"`
 }
 
 type Subscription struct {
-	Id             int64
-	CreatedAt      time.Time
-	InstallationId string
-	Topic          string
-	IsActive       bool
-	IsSilent       bool
-	HmacKey        *HmacKey
+	Id             int64     `json:"-"`
+	CreatedAt      time.Time `json:"created_at"`
+	InstallationId string    `json:"-"`
+	Topic          string    `json:"topic"`
+	IsActive       bool      `json:"-"`
+	IsSilent       bool      `json:"is_silent"`
+	HmacKey        *HmacKey  `json:"-"`
 }
 
 type SendRequest struct {
-	IdempotencyKey string
-	Message        *v1.Envelope
-	MessageContext MessageContext
-	Installation   Installation
-	Subscription   Subscription
+	IdempotencyKey string         `json:"idempotency_key"`
+	Message        *v1.Envelope   `json:"message"`
+	MessageContext MessageContext `json:"message_context"`
+	Installation   Installation   `json:"installation"`
+	Subscription   Subscription   `json:"subscription"`
 }
 
 type MessageContext struct {
-	MessageType topics.MessageType
-	ShouldPush  *bool
-	HmacInputs  *[]byte
-	SenderHmac  *[]byte
+	MessageType topics.MessageType `json:"message_type"`
+	ShouldPush  *bool              `json:"should_push,omitempty"`
+	HmacInputs  *[]byte            `json:"-"`
+	SenderHmac  *[]byte            `json:"-"`
 }
 
 func (m MessageContext) IsSender(hmacKey []byte) bool {

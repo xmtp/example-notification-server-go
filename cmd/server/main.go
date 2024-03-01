@@ -89,6 +89,10 @@ func main() {
 			deliveryServices = append(deliveryServices, fcm)
 		}
 
+		if opts.HttpDelivery.Enabled {
+			deliveryServices = append(deliveryServices, delivery.NewHttpDelivery(logger, opts.HttpDelivery))
+		}
+
 		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryServices, clientVersion, appVersion)
 		if err != nil {
 			logger.Fatal("failed to initialize listener", zap.Error(err))

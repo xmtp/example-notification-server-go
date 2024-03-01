@@ -28,11 +28,18 @@ type XmtpOptions struct {
 	NumWorkers      int    `long:"num-workers" description:"Number of workers used to process messages" default:"50"`
 }
 
+type HttpDeliveryOptions struct {
+	Enabled    bool   `long:"http-delivery"`
+	Address    string `long:"http-delivery-address"`
+	AuthHeader string `long:"http-auth-header"`
+}
+
 type Options struct {
-	Api  ApiOptions  `group:"API Options"`
-	Xmtp XmtpOptions `group:"Worker Options"`
-	Apns ApnsOptions `group:"APNS Options"`
-	Fcm  FcmOptions  `group:"FCM Options"`
+	Api          ApiOptions          `group:"API Options"`
+	Xmtp         XmtpOptions         `group:"Worker Options"`
+	Apns         ApnsOptions         `group:"APNS Options"`
+	Fcm          FcmOptions          `group:"FCM Options"`
+	HttpDelivery HttpDeliveryOptions `group:"HTTP Delivery Options"`
 
 	DbConnectionString string `short:"d" long:"db-connection-string" env:"DB_CONNECTION_STRING" description:"Address to database"`
 	LogEncoding        string `long:"log-encoding" env:"LOG_ENCODING" description:"Log encoding" choice:"console" choice:"json" default:"console"`
