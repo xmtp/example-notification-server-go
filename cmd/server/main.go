@@ -19,6 +19,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/db/migrations"
 	"github.com/xmtp/example-notification-server-go/pkg/delivery"
 	"github.com/xmtp/example-notification-server-go/pkg/installations"
+	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
@@ -69,26 +70,26 @@ func main() {
 	var apiServer *api.ApiServer
 
 	if opts.Xmtp.ListenerEnabled {
-		var apns *delivery.ApnsDelivery
-		var fcm *delivery.FcmDelivery
+		deliveryServices := []interfaces.Delivery{}
 		var err error
 
 		if opts.Apns.Enabled {
-			apns, err = delivery.NewApnsDelivery(logger, opts.Apns)
+			apns, err := delivery.NewApnsDelivery(logger, opts.Apns)
 			if err != nil {
 				logger.Fatal("failed to initialize APNS", zap.Error(err))
 			}
+			deliveryServices = append(deliveryServices, apns)
 		}
 
 		if opts.Fcm.Enabled {
-			fcm, err = delivery.NewFcmDelivery(ctx, logger, opts.Fcm)
+			fcm, err := delivery.NewFcmDelivery(ctx, logger, opts.Fcm)
 			if err != nil {
 				logger.Fatal("failed to initialize FCM", zap.Error(err))
 			}
+			deliveryServices = append(deliveryServices, fcm)
 		}
 
-		deliveryService := delivery.NewDeliveryService(logger, apns, fcm)
-		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryService, clientVersion, appVersion)
+		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryServices, clientVersion, appVersion)
 		if err != nil {
 			logger.Fatal("failed to initialize listener", zap.Error(err))
 		}

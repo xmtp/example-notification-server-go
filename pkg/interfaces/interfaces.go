@@ -2,9 +2,12 @@ package interfaces
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"time"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
 type DeliveryMechanismKind string
@@ -47,8 +50,27 @@ type Subscription struct {
 
 type SendRequest struct {
 	IdempotencyKey string
-	Installations  []Installation
 	Message        *v1.Envelope
+	MessageContext MessageContext
+	Installation   Installation
+	Subscription   Subscription
+}
+
+type MessageContext struct {
+	MessageType topics.MessageType
+	ShouldPush  *bool
+	HmacInputs  *[]byte
+	SenderHmac  *[]byte
+}
+
+func (m MessageContext) IsSender(hmacKey []byte) bool {
+	if m.SenderHmac == nil || m.HmacInputs == nil {
+		return false
+	}
+	hmacHash := hmac.New(sha256.New, hmacKey)
+	hmacHash.Write(*m.HmacInputs)
+	expectedHmac := hmacHash.Sum(nil)
+	return hmac.Equal(*m.SenderHmac, expectedHmac)
 }
 
 type HmacKey struct {
@@ -85,5 +107,6 @@ type Subscriptions interface {
 
 // Pluggable interface for sending push notifications
 type Delivery interface {
+	CanDeliver(req SendRequest) bool
 	Send(ctx context.Context, req SendRequest) error
 }

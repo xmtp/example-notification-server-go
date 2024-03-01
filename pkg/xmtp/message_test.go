@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -55,9 +56,9 @@ func getHmacKey(t *testing.T, fixture *rawFixture) []byte {
 func Test_IdentifyV2Invite(t *testing.T) {
 	rawFixture := getRawFixture(t, "v2-invite")
 	envelope := getEnvelope(t, rawFixture)
-	context := getContext(envelope, nil)
-	require.Equal(t, context.MessageType, V2Invite)
-	require.Nil(t, context.IsSender)
+	context := getContext(envelope)
+	require.Equal(t, context.MessageType, topics.V2Invite)
+	require.False(t, context.IsSender([]byte("key")))
 	require.Nil(t, context.ShouldPush)
 }
 
@@ -65,14 +66,14 @@ func Test_IdentifyV2Conversation(t *testing.T) {
 	rawFixture := getRawFixture(t, "v2-conversation")
 	envelope := getEnvelope(t, rawFixture)
 	hmacKey := getHmacKey(t, rawFixture)
-	context := getContext(envelope, &hmacKey)
-	require.True(t, *context.IsSender)
+	context := getContext(envelope)
+	require.True(t, context.IsSender(hmacKey))
 	require.True(t, *context.ShouldPush)
-	require.Equal(t, context.MessageType, V2Conversation)
+	require.Equal(t, context.MessageType, topics.V2Conversation)
 
 	wrongKey := []byte("foo")
-	contextWithWrongKey := getContext(envelope, &wrongKey)
-	require.False(t, *contextWithWrongKey.IsSender)
+	contextWithWrongKey := getContext(envelope)
+	require.False(t, contextWithWrongKey.IsSender(wrongKey))
 	require.True(t, *contextWithWrongKey.ShouldPush)
-	require.Equal(t, contextWithWrongKey.MessageType, V2Conversation)
+	require.Equal(t, contextWithWrongKey.MessageType, topics.V2Conversation)
 }

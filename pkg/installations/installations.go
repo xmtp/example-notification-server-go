@@ -99,6 +99,7 @@ func (s DefaultInstallationService) GetInstallations(ctx context.Context, instal
 		return nil, err
 	}
 	out := []interfaces.Installation{}
+
 	for i := range results {
 		transformed := transformResult(results[i])
 		if transformed != nil {
