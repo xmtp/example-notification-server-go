@@ -3,9 +3,8 @@ package xmtp
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 
-	v1 "github.com/xmtp/proto/go/message_api/v1"
+	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -18,10 +17,9 @@ const (
 )
 
 func newConn(ctx context.Context, apiAddress string, useTls bool) (*grpc.ClientConn, error) {
-	dialAddr := fmt.Sprintf(apiAddress)
 	return grpc.DialContext(
 		ctx,
-		dialAddr,
+		apiAddress,
 		grpc.WithTransportCredentials(getCredentials(useTls)),
 	)
 }

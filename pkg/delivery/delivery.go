@@ -9,10 +9,9 @@ import (
 )
 
 type DefaultDeliveryService struct {
-	logger            *zap.Logger
-	notificationTopic string
-	apns              *ApnsDelivery
-	fcm               *FcmDelivery
+	logger *zap.Logger
+	apns   *ApnsDelivery
+	fcm    *FcmDelivery
 }
 
 func NewDeliveryService(logger *zap.Logger, apns *ApnsDelivery, fcm *FcmDelivery) *DefaultDeliveryService {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/xmtp/proto/go/message_api/v1"
+	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 )
 
 type DeliveryMechanismKind string
@@ -25,7 +25,8 @@ type RegisterResponse struct {
 	ValidUntil     time.Time
 }
 
-/**
+/*
+*
 An installation represents an app installed on a device. If the app is reinstalled, or installed onto
 a new device it is expected to generate a fresh installation_id.
 */
