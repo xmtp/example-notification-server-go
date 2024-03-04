@@ -10,6 +10,7 @@ message DeliveryMechanism {
     oneof delivery_mechanism_type {
         string apns_device_token = 1;
         string firebase_device_token = 2;
+        string custom_token = 3;
     }
 }
 
