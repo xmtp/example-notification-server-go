@@ -140,6 +140,10 @@ func (s *ApiServer) Unsubscribe(
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
+func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, nil
+}
+
 func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.DeliveryMechanism {
 	if mechanism == nil {
 		return nil
@@ -152,3 +156,23 @@ func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.De
 		return &interfaces.DeliveryMechanism{Kind: interfaces.FCM, Token: fcmToken}
 	}
 }
+
+// func convertHmacUpdates(protoUpdates []*proto.Subscription_HmacKey) (interfaces.HmacUpdates, error) {
+// 	out := make(interfaces.HmacUpdates)
+// 	for _, update := range protoUpdates {
+// 		if update == nil {
+// 			continue
+// 		}
+// 		if _, exists := out[update.Topic]; exists {
+// 			return nil, fmt.Errorf("duplicate topic: %s", update.Topic)
+// 		}
+// 		for _, key := range update.HmacKey {
+// 			out[update.Topic] = append(out[update.Topic], interfaces.HmacKey{
+// 				ThirtyDayPeriodsSinceEpoch: int(key.ThirtyDayPeriodsSinceEpoch),
+// 				Key:                        key.Key,
+// 			})
+// 		}
+// 	}
+
+// 	return out, nil
+// }

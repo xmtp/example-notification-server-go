@@ -31,9 +31,20 @@ type DeviceDeliveryMechanism struct {
 type Subscription struct {
 	bun.BaseModel `bun:"table:subscriptions"`
 
-	Id             int64     `bun:",pk,autoincrement"`
-	CreatedAt      time.Time `bun:"created_at,notnull,default:current_timestamp"`
-	InstallationId string    `bun:"installation_id,notnull"`
-	Topic          string    `bun:"topic,notnull"`
-	IsActive       bool      `bun:"is_active,notnull"`
+	Id             int64                   `bun:",pk,autoincrement"`
+	CreatedAt      time.Time               `bun:"created_at,notnull"`
+	InstallationId string                  `bun:"installation_id,notnull"`
+	Topic          string                  `bun:"topic,notnull"`
+	IsActive       bool                    `bun:"is_active,notnull"`
+	IsSilent       bool                    `bun:"is_silent,notnull"`
+	HmacKeys       []*SubscriptionHmacKeys `bun:"rel:has-many,join:id=subscription_id"`
+}
+
+type SubscriptionHmacKeys struct {
+	bun.BaseModel              `bun:"table:subscription_hmac_keys"`
+	SubscriptionId             int64     `bun:"subscription_id,notnull,pk"`
+	ThirtyDayPeriodsSinceEpoch int32     `bun:"thirty_day_periods_since_epoch,notnull,pk"`
+	Key                        []byte    `bun:"key,notnull,type:bytea"`
+	CreatedAt                  time.Time `bun:"created_at,notnull"`
+	UpdatedAt                  time.Time `bun:"updated_at,notnull,default:current_timestamp"`
 }

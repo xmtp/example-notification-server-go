@@ -42,6 +42,9 @@ const (
 	NotificationsDeleteInstallationProcedure = "/notifications.v1.Notifications/DeleteInstallation"
 	// NotificationsSubscribeProcedure is the fully-qualified name of the Notifications's Subscribe RPC.
 	NotificationsSubscribeProcedure = "/notifications.v1.Notifications/Subscribe"
+	// NotificationsSubscribeWithMetadataProcedure is the fully-qualified name of the Notifications's
+	// SubscribeWithMetadata RPC.
+	NotificationsSubscribeWithMetadataProcedure = "/notifications.v1.Notifications/SubscribeWithMetadata"
 	// NotificationsUnsubscribeProcedure is the fully-qualified name of the Notifications's Unsubscribe
 	// RPC.
 	NotificationsUnsubscribeProcedure = "/notifications.v1.Notifications/Unsubscribe"
@@ -49,11 +52,12 @@ const (
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	notificationsServiceDescriptor                    = v1.File_notifications_v1_service_proto.Services().ByName("Notifications")
-	notificationsRegisterInstallationMethodDescriptor = notificationsServiceDescriptor.Methods().ByName("RegisterInstallation")
-	notificationsDeleteInstallationMethodDescriptor   = notificationsServiceDescriptor.Methods().ByName("DeleteInstallation")
-	notificationsSubscribeMethodDescriptor            = notificationsServiceDescriptor.Methods().ByName("Subscribe")
-	notificationsUnsubscribeMethodDescriptor          = notificationsServiceDescriptor.Methods().ByName("Unsubscribe")
+	notificationsServiceDescriptor                     = v1.File_notifications_v1_service_proto.Services().ByName("Notifications")
+	notificationsRegisterInstallationMethodDescriptor  = notificationsServiceDescriptor.Methods().ByName("RegisterInstallation")
+	notificationsDeleteInstallationMethodDescriptor    = notificationsServiceDescriptor.Methods().ByName("DeleteInstallation")
+	notificationsSubscribeMethodDescriptor             = notificationsServiceDescriptor.Methods().ByName("Subscribe")
+	notificationsSubscribeWithMetadataMethodDescriptor = notificationsServiceDescriptor.Methods().ByName("SubscribeWithMetadata")
+	notificationsUnsubscribeMethodDescriptor           = notificationsServiceDescriptor.Methods().ByName("Unsubscribe")
 )
 
 // NotificationsClient is a client for the notifications.v1.Notifications service.
@@ -61,6 +65,7 @@ type NotificationsClient interface {
 	RegisterInstallation(context.Context, *connect.Request[v1.RegisterInstallationRequest]) (*connect.Response[v1.RegisterInstallationResponse], error)
 	DeleteInstallation(context.Context, *connect.Request[v1.DeleteInstallationRequest]) (*connect.Response[emptypb.Empty], error)
 	Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[emptypb.Empty], error)
+	SubscribeWithMetadata(context.Context, *connect.Request[v1.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error)
 	Unsubscribe(context.Context, *connect.Request[v1.UnsubscribeRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
@@ -92,6 +97,12 @@ func NewNotificationsClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(notificationsSubscribeMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		subscribeWithMetadata: connect.NewClient[v1.SubscribeWithMetadataRequest, emptypb.Empty](
+			httpClient,
+			baseURL+NotificationsSubscribeWithMetadataProcedure,
+			connect.WithSchema(notificationsSubscribeWithMetadataMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		unsubscribe: connect.NewClient[v1.UnsubscribeRequest, emptypb.Empty](
 			httpClient,
 			baseURL+NotificationsUnsubscribeProcedure,
@@ -103,10 +114,11 @@ func NewNotificationsClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // notificationsClient implements NotificationsClient.
 type notificationsClient struct {
-	registerInstallation *connect.Client[v1.RegisterInstallationRequest, v1.RegisterInstallationResponse]
-	deleteInstallation   *connect.Client[v1.DeleteInstallationRequest, emptypb.Empty]
-	subscribe            *connect.Client[v1.SubscribeRequest, emptypb.Empty]
-	unsubscribe          *connect.Client[v1.UnsubscribeRequest, emptypb.Empty]
+	registerInstallation  *connect.Client[v1.RegisterInstallationRequest, v1.RegisterInstallationResponse]
+	deleteInstallation    *connect.Client[v1.DeleteInstallationRequest, emptypb.Empty]
+	subscribe             *connect.Client[v1.SubscribeRequest, emptypb.Empty]
+	subscribeWithMetadata *connect.Client[v1.SubscribeWithMetadataRequest, emptypb.Empty]
+	unsubscribe           *connect.Client[v1.UnsubscribeRequest, emptypb.Empty]
 }
 
 // RegisterInstallation calls notifications.v1.Notifications.RegisterInstallation.
@@ -124,6 +136,11 @@ func (c *notificationsClient) Subscribe(ctx context.Context, req *connect.Reques
 	return c.subscribe.CallUnary(ctx, req)
 }
 
+// SubscribeWithMetadata calls notifications.v1.Notifications.SubscribeWithMetadata.
+func (c *notificationsClient) SubscribeWithMetadata(ctx context.Context, req *connect.Request[v1.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.subscribeWithMetadata.CallUnary(ctx, req)
+}
+
 // Unsubscribe calls notifications.v1.Notifications.Unsubscribe.
 func (c *notificationsClient) Unsubscribe(ctx context.Context, req *connect.Request[v1.UnsubscribeRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.unsubscribe.CallUnary(ctx, req)
@@ -134,6 +151,7 @@ type NotificationsHandler interface {
 	RegisterInstallation(context.Context, *connect.Request[v1.RegisterInstallationRequest]) (*connect.Response[v1.RegisterInstallationResponse], error)
 	DeleteInstallation(context.Context, *connect.Request[v1.DeleteInstallationRequest]) (*connect.Response[emptypb.Empty], error)
 	Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[emptypb.Empty], error)
+	SubscribeWithMetadata(context.Context, *connect.Request[v1.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error)
 	Unsubscribe(context.Context, *connect.Request[v1.UnsubscribeRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
@@ -161,6 +179,12 @@ func NewNotificationsHandler(svc NotificationsHandler, opts ...connect.HandlerOp
 		connect.WithSchema(notificationsSubscribeMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	notificationsSubscribeWithMetadataHandler := connect.NewUnaryHandler(
+		NotificationsSubscribeWithMetadataProcedure,
+		svc.SubscribeWithMetadata,
+		connect.WithSchema(notificationsSubscribeWithMetadataMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	notificationsUnsubscribeHandler := connect.NewUnaryHandler(
 		NotificationsUnsubscribeProcedure,
 		svc.Unsubscribe,
@@ -175,6 +199,8 @@ func NewNotificationsHandler(svc NotificationsHandler, opts ...connect.HandlerOp
 			notificationsDeleteInstallationHandler.ServeHTTP(w, r)
 		case NotificationsSubscribeProcedure:
 			notificationsSubscribeHandler.ServeHTTP(w, r)
+		case NotificationsSubscribeWithMetadataProcedure:
+			notificationsSubscribeWithMetadataHandler.ServeHTTP(w, r)
 		case NotificationsUnsubscribeProcedure:
 			notificationsUnsubscribeHandler.ServeHTTP(w, r)
 		default:
@@ -196,6 +222,10 @@ func (UnimplementedNotificationsHandler) DeleteInstallation(context.Context, *co
 
 func (UnimplementedNotificationsHandler) Subscribe(context.Context, *connect.Request[v1.SubscribeRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.Notifications.Subscribe is not implemented"))
+}
+
+func (UnimplementedNotificationsHandler) SubscribeWithMetadata(context.Context, *connect.Request[v1.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notifications.v1.Notifications.SubscribeWithMetadata is not implemented"))
 }
 
 func (UnimplementedNotificationsHandler) Unsubscribe(context.Context, *connect.Request[v1.UnsubscribeRequest]) (*connect.Response[emptypb.Empty], error) {

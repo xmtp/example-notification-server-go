@@ -67,6 +67,60 @@ func (s SubscriptionsService) Subscribe(ctx context.Context, installationId stri
 	})
 }
 
+func (s SubscriptionsService) SubscribeWithMetadata(ctx context.Context, installationId string, subscriptions []interfaces.SubscriptionInput) error {
+	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		toUpdate := make([]*db.Subscription, len(subscriptions))
+		for idx, sub := range subscriptions {
+			toUpdate[idx] = &db.Subscription{
+				InstallationId: installationId,
+				Topic:          sub.Topic,
+				IsActive:       true,
+				IsSilent:       sub.IsSilent,
+			}
+		}
+
+		updated := make([]*db.Subscription, 0)
+		_, err := tx.NewInsert().
+			Model(&toUpdate).
+			On("CONFLICT (installation_id, topic) DO UPDATE").
+			Set("is_active = true").
+			Set("is_silent = EXCLUDED.is_silent").
+			Returning("id, topic").
+			Exec(ctx, &updated)
+
+		if err != nil {
+			return err
+		}
+
+		topicIdMap := makeTopicIdMap(updated)
+		hmacKeyUpdates := []db.SubscriptionHmacKeys{}
+		for _, sub := range subscriptions {
+			subscriptionId, exists := topicIdMap[sub.Topic]
+			if !exists {
+				s.logger.Info("Skipping topic because subscription not found", zap.String("topic", sub.Topic))
+				continue
+			}
+			for _, keyUpdate := range sub.HmacKeys {
+				hmacKeyUpdates = append(hmacKeyUpdates, db.SubscriptionHmacKeys{
+					SubscriptionId:             subscriptionId,
+					ThirtyDayPeriodsSinceEpoch: int32(keyUpdate.ThirtyDayPeriodsSinceEpoch),
+					Key:                        keyUpdate.Key,
+				})
+			}
+		}
+
+		if len(hmacKeyUpdates) > 0 {
+			_, err = tx.NewInsert().
+				Model(&hmacKeyUpdates).
+				On("CONFLICT (subscription_id, thirty_day_periods_since_epoch) DO UPDATE").
+				Set("key = EXCLUDED.key").
+				Exec(ctx)
+		}
+
+		return err
+	})
+}
+
 func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationId string, topics []string) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		_, err := tx.NewUpdate().
@@ -80,23 +134,34 @@ func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationId st
 	})
 }
 
-func (s SubscriptionsService) GetSubscriptions(ctx context.Context, topic string) (out []interfaces.Subscription, err error) {
+func (s SubscriptionsService) GetSubscriptions(ctx context.Context, topic string, thirtyDayPeriod int) (out []interfaces.Subscription, err error) {
 	results := make([]db.Subscription, 0)
 	err = s.db.NewSelect().
 		Model(&results).
 		Where("topic = ?", topic).
 		Where("is_active = TRUE").
+		Relation("HmacKeys", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.Where("thirty_day_periods_since_epoch = ?", thirtyDayPeriod)
+		}).
 		Scan(ctx)
 
 	if err != nil {
 		return nil, err
 	}
-
+	s.logger.Info("Results", zap.Any("results", results))
 	for _, result := range results {
 		out = append(out, transformResult(result))
 	}
 
 	return out, err
+}
+
+func makeTopicIdMap(subscriptions []*db.Subscription) map[string]int64 {
+	out := make(map[string]int64)
+	for _, sub := range subscriptions {
+		out[sub.Topic] = sub.Id
+	}
+	return out
 }
 
 func transformResult(dbSubscription db.Subscription) interfaces.Subscription {
@@ -106,5 +171,17 @@ func transformResult(dbSubscription db.Subscription) interfaces.Subscription {
 		InstallationId: dbSubscription.InstallationId,
 		Topic:          dbSubscription.Topic,
 		IsActive:       dbSubscription.IsActive,
+		IsSilent:       dbSubscription.IsSilent,
+		HmacKey:        extractHmacKey(dbSubscription.HmacKeys),
 	}
+}
+
+func extractHmacKey(dbKeys []*db.SubscriptionHmacKeys) *interfaces.HmacKey {
+	for _, key := range dbKeys {
+		return &interfaces.HmacKey{
+			ThirtyDayPeriodsSinceEpoch: int(key.ThirtyDayPeriodsSinceEpoch),
+			Key:                        key.Key,
+		}
+	}
+	return nil
 }
