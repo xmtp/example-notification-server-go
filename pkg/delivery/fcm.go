@@ -62,12 +62,21 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		"messageType":      string(req.MessageContext.MessageType),
 	}
 
+	apnsHeaders := map[string]string{}
+	androidPriority := "high"
+
+	if req.Subscription.IsSilent {
+		apnsHeaders["apns-push-type"] = "background"
+		apnsHeaders["apns-priority"] = "5"
+		androidPriority = "normal"
+	}
+
 	_, err := f.client.Send(ctx, &messaging.Message{
 		Token: req.Installation.DeliveryMechanism.Token,
 		Data:  data,
 		Android: &messaging.AndroidConfig{
 			Data:     data,
-			Priority: "high",
+			Priority: androidPriority,
 		},
 		Webpush: &messaging.WebpushConfig{
 			Data: data,
@@ -76,10 +85,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 			},
 		},
 		APNS: &messaging.APNSConfig{
-			Headers: map[string]string{
-				"apns-push-type": "background",
-				"apns-priority":  "5",
-			},
+			Headers: apnsHeaders,
 			Payload: &messaging.APNSPayload{
 				CustomData: map[string]interface {
 				}{
@@ -88,7 +94,8 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 					"messageType":      string(req.MessageContext.MessageType),
 				},
 				Aps: &messaging.Aps{
-					ContentAvailable: true,
+					ContentAvailable: req.Subscription.IsSilent,
+					MutableContent:   !req.Subscription.IsSilent,
 				},
 			},
 		},

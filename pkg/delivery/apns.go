@@ -62,18 +62,13 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 	if req.Message == nil {
 		return errors.New("missing message")
 	}
-	// TODO: Figure out the message format
-	notificationPayload := payload.NewPayload().
-		MutableContent().
-		Alert("New message from XMTP").
-		Custom("topic", req.Message.ContentTopic).
-		Custom("encryptedMessage", req.Message.Message)
 
-	notification := &apns2.Notification{
-		DeviceToken: req.Installation.DeliveryMechanism.Token,
-		Topic:       a.opts.Topic,
-		Payload:     notificationPayload,
-	}
+	notification := a.buildNotification(req.Subscription.IsSilent,
+		req.Installation.DeliveryMechanism.Token,
+		req.Message.ContentTopic,
+		string(req.MessageContext.MessageType),
+		req.Message.Message,
+	)
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)
 	if res != nil {
@@ -86,6 +81,27 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 	}
 
 	return err
+}
+
+func (a ApnsDelivery) buildNotification(isSilent bool, token string, contentTopic string, messageKind string, messageBytes []byte) *apns2.Notification {
+	notificationPayload := payload.NewPayload().
+		Custom("topic", contentTopic).
+		Custom("encryptedMessage", messageBytes).
+		Custom("messageKind", messageKind)
+
+	if isSilent {
+		notificationPayload = notificationPayload.ContentAvailable()
+	} else {
+		notificationPayload = notificationPayload.
+			Alert("New message from XMTP").
+			MutableContent()
+	}
+
+	return &apns2.Notification{
+		DeviceToken: token,
+		Topic:       a.opts.Topic,
+		Payload:     notificationPayload,
+	}
 }
 
 func getApnsClient(authKey []byte, keyId, teamId string) (*apns2.Client, error) {
