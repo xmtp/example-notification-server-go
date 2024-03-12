@@ -13,9 +13,12 @@ services:
       - --api.enable-mls
       - --wait-for-db=30s
     ports:
+      - 25555:5555
       - 25556:5556
     depends_on:
       - db
+      - mlsdb
+      - validation
 
   validation:
     image: ghcr.io/xmtp/mls-validation-service:main
@@ -32,3 +35,34 @@ services:
     image: postgres:13
     environment:
       POSTGRES_PASSWORD: xmtp
+
+  notification_server:
+    build:
+      context: .
+    env_file: .env.docker
+    depends_on:
+      - node
+    command:
+      - --xmtp-listener
+      - --api
+      - --http-delivery
+      - --http-delivery-address=http://integration:7777/post
+      - --api-port=8080
+
+  integration:
+    build:
+      context: ./integration
+      dockerfile: Dockerfile
+    expose:
+      - 7777
+    volumes:
+      - ./integration/src:/usr/app/src:ro
+    depends_on:
+      - node
+      - notification_server
+    environment:
+      - XMTP_NODE_URL=http://node:5555
+      - NOTIFICATION_SERVER_URL=http://notification_server:8080
+    command:
+      - bun
+      - test

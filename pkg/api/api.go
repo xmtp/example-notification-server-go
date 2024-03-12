@@ -76,6 +76,7 @@ func (s *ApiServer) RegisterInstallation(
 	if mechanism == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("missing delivery mechanism"))
 	}
+	s.logger.Info("got mechanism", zap.Any("mechanism", mechanism))
 	result, err := s.installations.Register(
 		ctx,
 		interfaces.Installation{
@@ -83,12 +84,11 @@ func (s *ApiServer) RegisterInstallation(
 			DeliveryMechanism: *mechanism,
 		},
 	)
-
 	if err != nil {
 		s.logger.Error("error registering installation", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-
+	s.logger.Info("sending response", zap.Any("result", result))
 	return connect.NewResponse(&proto.RegisterInstallationResponse{
 		InstallationId: req.Msg.InstallationId,
 		ValidUntil:     uint64(result.ValidUntil.UnixMilli()),
@@ -141,7 +141,37 @@ func (s *ApiServer) Unsubscribe(
 }
 
 func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, nil
+	log := s.logger.With(zap.String("method", "subscribeWithMetadata"))
+	log.Info("starting")
+	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, buildSubscriptionInputs(req.Msg.Subscriptions))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+func buildSubscriptionInputs(subs []*proto.Subscription) []interfaces.SubscriptionInput {
+	out := make([]interfaces.SubscriptionInput, len(subs))
+	for idx, sub := range subs {
+		out[idx] = interfaces.SubscriptionInput{
+			Topic:    sub.Topic,
+			IsSilent: sub.IsSilent,
+			HmacKeys: buildHmacKeys(sub.HmacKeys),
+		}
+	}
+	return out
+}
+
+func buildHmacKeys(protoKeys []*proto.Subscription_HmacKey) []interfaces.HmacKey {
+	out := make([]interfaces.HmacKey, len(protoKeys))
+	for idx, key := range protoKeys {
+		out[idx] = interfaces.HmacKey{
+			ThirtyDayPeriodsSinceEpoch: int(key.ThirtyDayPeriodsSinceEpoch),
+			Key:                        key.Key,
+		}
+	}
+	return out
 }
 
 func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.DeliveryMechanism {
