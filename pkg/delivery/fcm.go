@@ -2,10 +2,12 @@ package delivery
 
 import (
 	"context"
+	"encoding/base64"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
 	"github.com/pkg/errors"
+	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
@@ -43,18 +45,38 @@ func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOpt
 	}, nil
 }
 
-func (f *FcmDelivery) Send(ctx context.Context, token, topic, message string) error {
+func (f FcmDelivery) CanDeliver(req interfaces.SendRequest) bool {
+	return req.Installation.DeliveryMechanism.Kind == interfaces.FCM && req.Installation.DeliveryMechanism.Token != ""
+}
+
+func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error {
+	if req.Message == nil {
+		return errors.New("missing message")
+	}
+
+	message := base64.StdEncoding.EncodeToString(req.Message.Message)
+	topic := req.Message.ContentTopic
 	data := map[string]string{
 		"topic":            topic,
 		"encryptedMessage": message,
+		"messageType":      string(req.MessageContext.MessageType),
+	}
+
+	apnsHeaders := map[string]string{}
+	androidPriority := "high"
+
+	if req.Subscription.IsSilent {
+		apnsHeaders["apns-push-type"] = "background"
+		apnsHeaders["apns-priority"] = "5"
+		androidPriority = "normal"
 	}
 
 	_, err := f.client.Send(ctx, &messaging.Message{
-		Token: token,
+		Token: req.Installation.DeliveryMechanism.Token,
 		Data:  data,
 		Android: &messaging.AndroidConfig{
 			Data:     data,
-			Priority: "high",
+			Priority: androidPriority,
 		},
 		Webpush: &messaging.WebpushConfig{
 			Data: data,
@@ -63,18 +85,17 @@ func (f *FcmDelivery) Send(ctx context.Context, token, topic, message string) er
 			},
 		},
 		APNS: &messaging.APNSConfig{
-			Headers: map[string]string{
-				"apns-push-type": "background",
-				"apns-priority":  "5",
-			},
+			Headers: apnsHeaders,
 			Payload: &messaging.APNSPayload{
 				CustomData: map[string]interface {
 				}{
 					"topic":            topic,
 					"encryptedMessage": message,
+					"messageType":      string(req.MessageContext.MessageType),
 				},
 				Aps: &messaging.Aps{
-					ContentAvailable: true,
+					ContentAvailable: req.Subscription.IsSilent,
+					MutableContent:   !req.Subscription.IsSilent,
 				},
 			},
 		},

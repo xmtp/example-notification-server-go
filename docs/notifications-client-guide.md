@@ -2,11 +2,11 @@
 
 ## Summary
 
-This document aims to be a guide to implementing a notifications client in your language and framework of choice. I have implemented a [working example in React Native](https://github.com/xmtp/example-chat-react-native/pull/6), and all code samples will be in a RN context. With a bit of creativity, however, you should be able to figure out a way to implement a notifications client in your language of choice.
+This document aims to be a guide to implementing a notifications client in your language and framework of choice. The examples below are from this repositories integration tests (written for Node.js), which will need some adaptation to work in a React Native context and even more adaptation for Swift and Kotlin.
 
 ## Generating a client
 
-The Notification Server uses Protobuf/[Connect](https://connect.build/docs/introduction) for service definitions and contracts. The service definition is published [here](https://buf.build/nickxmtp/example-notification-server/docs/main:notifications.v1). This can be used to generate clients in a range of languages. You may wish to publish your own version of the contract to be used by your client, and this will be necessary if you change any of the protobuf contracts.
+The Notification Server uses Protobuf/[Connect](https://connectrpc.com/docs/introduction/) for service definitions and contracts. The service definition is published [here](https://buf.build/nickxmtp/example-notification-server). This can be used to generate clients in a range of languages. You may wish to publish your own version of the contract to be used by your client, and this will be necessary if you change any of the protobuf contracts.
 
 To generate a Typescript service client, create a `buf.gen.yaml` file in your project root like this:
 
@@ -15,54 +15,50 @@ version: v1
 plugins:
   - name: es
     out: gen
-    # With target=ts, we generate TypeScript files.
-    # Use target=js+dts to generate JavaScript and TypeScript declaration files
-    # like remote generation does.
     opt: target=ts
   - name: connect-web
     out: gen
-    # With target=ts, we generate TypeScript files.
     opt: target=ts
 ```
 
-You can then follow the Local Generation instructions [here](https://connect.build/docs/web/generating-code#local-generation) to install the required packages that will enable you to run `buf generate buf.build/nickxmtp/example-notification-server` and generate the client code.
+You can then follow the Local Generation instructions [here](https://connectrpc.com/docs/web/generating-code/#local-generation) to install the required packages that will enable you to run `buf generate buf.build/nickxmtp/example-notification-server` and generate the client code.
 
-You can create a client instance in your code with something like this:
+You can also use Buf Remote Plugins, which do not have any local dependencies other than the Buf CLI. See an example here [here](../proto/buf.gen.yaml), paying particular attention to the client code.
+
+You can create a client instance in your code using your generated service definitions.
 
 `client.ts`
 
 ```ts
-import { Notifications } from "../gen/service_connectweb";
-import {
-  createConnectTransport,
-  createPromiseClient,
-} from "@bufbuild/connect-web";
+import { createPromiseClient } from "@connectrpc/connect";
+import { Notifications } from "./gen/notifications/v1/service_connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
 
-const transport = createConnectTransport({
-  baseUrl: process.env.API_URL,
-});
+export function createNotificationClient() {
+  const transport = createConnectTransport({
+    baseUrl: config.notificationServerUrl,
+  });
 
-// Here we make the client itself, combining the service
-// definition with the transport.
-const client = createPromiseClient(Notifications, transport);
-
-export default client;
+  return createPromiseClient(Notifications, transport);
+}
 ```
 
-This will export a [Connect Client](https://connect.build/docs/web/using-clients#promises) with types matching the backend schema.
+This will export a [Connect Client](https://connectrpc.com/docs/web/using-clients/#promises) with types matching the backend schema.
 
 ## Register your installation
 
-In my example, I am using Firebase for both iOS and Android push notifications. Firebase provides easy methods for getting an `installationId` and `deviceToken` for the application. If you use a different push notifications service, any opaque string that is consistent for the lifetime of an install and unique between app installations will suffice as an `installationId`. `deviceToken` can be whatever is used in your notification server's delivery service to send a notification (for example, an APNS token or OneSignal device token).
-
-I have a [React Hook](https://github.com/xmtp/example-chat-react-native/blob/nm/add-firebase/hooks/useRegister.ts#L26) that does something like the following code on application startup:
+This example uses Firebase for both iOS and Android push notifications. Firebase provides easy methods for getting an `installationId` and `deviceToken` for the application. If you use a different push notifications service, any opaque string that is consistent for the lifetime of an install and unique between app installations will suffice as an `installationId`. `deviceToken` can be whatever is used in your notification server's delivery service to send a notification.
 
 ```ts
 import installations from "@react-native-firebase/installations";
 import messaging from "@react-native-firebase/messaging";
 
 async function register() {
+  // See example above for implementation of this function
+  const client = await createNotificationClient();
+  // Get the FCM device token
   const deviceToken = await messaging().getToken();
+  // Get the FCM installationId
   const installationId = await installations().getId();
   await client.registerInstallation(
     {
@@ -79,46 +75,95 @@ async function register() {
 }
 ```
 
-The Notification Server will expire device tokens that have not been updated in a configurable period of time, so the client should re-register tokens periodically. A good rule of thumb might be to run the above code on app startup, so long as the device has not been registered in the past 24 hours.
+The client should re-register tokens periodically. A good rule of thumb might be to run the above code on app startup, so long as the device has not been registered in the past 24 hours.
 
 ## Subscribe to topics
 
-Once your application has an instance of the `xmtp` client, you will want to subscribe to all topics so that the server will know what messages to forward to the client.
+Once your application has an instance of the `xmtp` client, you will want to subscribe to any topic to which you want to send push notifications.
+
+This is an opinionated example that uses silent notifications for intro and invite topics on iOS and regular notifications for conversation messages.
 
 ```ts
-import { Client } from "@xmtp/xmtp-js";
-import installations from "@react-native-firebase/installations";
 import {
+  Client,
   buildUserIntroTopic,
   buildUserInviteTopic,
-  //@ts-ignore
-} from "@xmtp/xmtp-js/dist/cjs/src/utils";
+} from "@xmtp/xmtp-js";
+import { type PromiseClient } from "@connectrpc/connect";
+import { Notifications } from "./gen/notifications/v1/service_connect";
+import {
+  Subscription,
+  Subscription_HmacKey,
+} from "./gen/notifications/v1/service_pb";
 
-export const updateSubscriptions = async (xmtp: Client) => {
-  const conversations = await xmtp.conversations.list();
-  const installationId = await installations().getId();
-  const convoTopics = conversations.map((convo) => convo.topic);
-  const topics = [
-    ...convoTopics,
-    buildUserIntroTopic(xmtp.address), // Used to receive V1 introductions
-    buildUserInviteTopic(xmtp.address), // Used to receive V2 invites
+export async function subscribeToTopics(
+  // The installationId we want to apply the subscription to
+  installationId: string,
+  // An XMTP Client. May require slight modifications when run in React Native
+  xmtpClient: Client,
+  // A notifications server client, like the one generated above.
+  notificationClient: PromiseClient<typeof Notifications>,
+  // We want to handle iOS subscriptions slightly differently because we can't filter regular notifications on the client
+  isIos: boolean
+) {
+  // Only subscribe to notifications which have a consent state of allowed
+  // to protect users from SPAM notifications
+  const consentedConversations = (await xmtpClient.conversations.list()).filter(
+    (c) => c.consentState === "allowed"
+  );
+
+  // Get the HMAC Keys for all conversations where the keys exist
+  const hmacKeys = (
+    await xmtpClient.keystore.getV2ConversationHmacKeys({
+      topics: consentedConversations.map((c) => c.topic),
+    })
+  ).hmacKeys;
+
+  // Convert the conversations to subscriptions
+  const conversationSubscriptions = consentedConversations.map(
+    (c) =>
+      new Subscription({
+        topic: c.topic,
+        // V1 conversations don't have isSender support.
+        // Use data only notifications here for iOS
+        isSilent: c.conversationVersion === "v1" && isIos,
+        hmacKeys: hmacKeys[c.topic]?.values.map(
+          (hmacKey) =>
+            new Subscription_HmacKey({
+              key: hmacKey.hmacKey,
+              thirtyDayPeriodsSinceEpoch: hmacKey.thirtyDayPeriodsSinceEpoch,
+            })
+        ),
+      })
+  );
+
+  const inviteAndIntroSubscriptions: Subscription[] = [
+    // Intro topic for new V1 conversations
+    new Subscription({
+      topic: buildUserIntroTopic(xmtpClient.address),
+      isSilent: isIos,
+    }),
+    // Invite topic for new V2 conversations
+    new Subscription({
+      topic: buildUserInviteTopic(xmtpClient.address),
+      isSilent: true,
+    }),
   ];
 
-  await apiClient.subscribe(
-    {
-      installationId,
-      topics,
-    },
-    {}
-  );
-};
+  await notificationClient.subscribeWithMetadata({
+    installationId,
+    subscriptions: conversationSubscriptions.concat(
+      inviteAndIntroSubscriptions
+    ),
+  });
+}
 ```
 
-Once the client is registered and the topics are subscribed, you should start receiving messages from the push server.
+Once the client is registered and the topics are subscribed, you should start receiving notifications from the push server.
 
 ## Revoke access on log out
 
-If your app has some ability to log out, or change accounts, you will want to revoke access for push notifications on that action. This can be accomplished with something like the following code:
+If your app has some ability to log out, or switch accounts, you will want to revoke access for push notifications on that action. This can be accomplished with something like the following code:
 
 ```ts
 async function revoke(installationId: string): Promise<void> {
@@ -130,44 +175,27 @@ async function revoke(installationId: string): Promise<void> {
 
 ## Listen for push notifications
 
-Each notification has two fields in the data payload that are required to decrypt the message.
+Each notification has three fields in the data payload that are useful for decrypting the message.
 
 1. `topic`
 2. `encryptedMessage`
+3. `messageType`
 
 In order to decrypt a message you must find the matching conversation for the message and then call `conversation.decodeMessage`.
 
-```ts
-for (const conversation of await client.conversations.list()) {
-  if (conversation.topic === topic) {
-    return conversation.decodeMessage({
-      contentTopic: topic,
-      message: message as unknown as any, // There is some weirdness with the generated types here
-    });
-  }
-}
-```
-
-Once decoded, you can create a local notification using the framework of your choice to display it to the user. You may also choose to enrich the payload by looking up the ENS reverse record for the sender address, and maybe adding an ENS avatar or Blockie as a profile image.
-
-In my example, I am using the React Native Firebase SDK to listen for notifications and handle them. I've implemented some basic caching of the conversation list and XMTP client to limit the number of network requests required to decrypt the message.
-
-You can see an extremely hacky but functional implementation [here](https://github.com/xmtp/example-chat-react-native/blob/nm/add-firebase/lib/notifications.ts).
+_TODO: Add code samples for decoding messages_
 
 ### Updating the conversation list
 
-Not all subscribed messages are meant to be displayed to the user. Topics with the prefix `/xmtp/0/invite-` are invitations, and should be used as an opportunity to refresh the conversation list for later. Topics with the prefix `/xmtp/0/intro-` are introduction messages and can be displayed to the user, but also may indicate the beginning of a new conversation. Those should trigger a refresh of the conversation list.
+_TODO: Add code samples for updating conversation list_
 
 ### Types of notifications
 
-The Notification Server, as currently configured, sends both iOS and Android notifications as "background notifications". That is to say that it has no Notification payload, and has the `content-available` flag set to true on iOS and the `priority` set to 5 on Android.
-
-This is probably the right approach for Android, but on iOS runs the risk of getting rate-limited when operating at scale. To implement this as regular notifications that do not get rate limited as aggressively, you could include a Notification element in the payload and set the `mutable-content` flag to true. The challenge here is that you will then require a [Notification Service Extension](https://developer.apple.com/documentation/usernotifications/modifying_content_in_newly_delivered_notifications) to handle the decryption of the content. You can read more about [Notification Service Extensions](https://www.strv.com/blog/app-extensions-introduction-to-notification-service-engineering) here.
+_TODO: Add code samples for handling different notification types differently_
 
 ### How to build a high-quality client
 
-- Some additional data fields will likely be useful in a production service. `id`, `type`, and `version` could all help build a high-quality client. Those can be configured in the Delivery Service. For example, you may want to dedupe notifications by ID, route to different handlers using type, and use the version field to ensure compatibility between the client and server notification schema.
-- `client.conversations.list()` can be a slow and expensive call with lots of heavy cryptographic operations. Especially for users with many ongoing chats. Caching the conversation list and only refreshing when necessary would make the notification handler far more performant.
 - You probably will want to set up a per-address [notification channel](https://developer.android.com/develop/ui/views/notifications/channels&sa=D&source=docs&ust=1670358576222497&usg=AOvVaw0Iw1wSN2CR-pPhCX5tCLQF) for Android. This will make it easier for users to filter certain notification types in their app-level settings.
 - [Requiring the device to be unlocked before displaying the notification](https://developer.android.com/develop/ui/views/notifications#ActionsRequireUnlockedDevice) likely makes the most sense from a privacy perspective, but that's your product decision.
 - [Expandable notifications](https://developer.android.com/develop/ui/views/notifications/expanded) feel like a superior UX.
+  /

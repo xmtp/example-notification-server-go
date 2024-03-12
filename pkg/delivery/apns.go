@@ -3,21 +3,20 @@ package delivery
 import (
 	"context"
 	"errors"
-	"io/ioutil"
-	"time"
+	"os"
 
 	"github.com/sideshow/apns2"
 	"github.com/sideshow/apns2/payload"
 	"github.com/sideshow/apns2/token"
+	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"go.uber.org/zap"
 )
 
 type ApnsDelivery struct {
-	logger            *zap.Logger
-	notificationTopic string
-	apnsClient        *apns2.Client
-	opts              options.ApnsOptions
+	logger     *zap.Logger
+	apnsClient *apns2.Client
+	opts       options.ApnsOptions
 }
 
 func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDelivery, error) {
@@ -25,7 +24,7 @@ func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDeliver
 	var err error
 
 	if opts.P8Certificate == "" {
-		bytes, err = ioutil.ReadFile(opts.P8CertificateFilePath)
+		bytes, err = os.ReadFile(opts.P8CertificateFilePath)
 
 		if err != nil {
 			return nil, err
@@ -55,22 +54,21 @@ func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDeliver
 	}, nil
 }
 
-func (a ApnsDelivery) Send(ctx context.Context, deviceToken, topic, message string) error {
-	// TODO: Figure out the message format
-	notificationPayload := payload.NewPayload().
-		MutableContent().
-		Alert("New message from XMTP").
-		Custom("topic", topic).
-		Custom("encryptedMessage", message)
+func (a ApnsDelivery) CanDeliver(req interfaces.SendRequest) bool {
+	return req.Installation.DeliveryMechanism.Kind == interfaces.APNS
+}
 
-	notification := &apns2.Notification{
-		DeviceToken: deviceToken,
-		Topic:       a.opts.Topic,
-		Payload:     notificationPayload,
+func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) error {
+	if req.Message == nil {
+		return errors.New("missing message")
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
+	notification := a.buildNotification(req.Subscription.IsSilent,
+		req.Installation.DeliveryMechanism.Token,
+		req.Message.ContentTopic,
+		string(req.MessageContext.MessageType),
+		req.Message.Message,
+	)
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)
 	if res != nil {
@@ -83,6 +81,27 @@ func (a ApnsDelivery) Send(ctx context.Context, deviceToken, topic, message stri
 	}
 
 	return err
+}
+
+func (a ApnsDelivery) buildNotification(isSilent bool, token string, contentTopic string, messageKind string, messageBytes []byte) *apns2.Notification {
+	notificationPayload := payload.NewPayload().
+		Custom("topic", contentTopic).
+		Custom("encryptedMessage", messageBytes).
+		Custom("messageKind", messageKind)
+
+	if isSilent {
+		notificationPayload = notificationPayload.ContentAvailable()
+	} else {
+		notificationPayload = notificationPayload.
+			Alert("New message from XMTP").
+			MutableContent()
+	}
+
+	return &apns2.Notification{
+		DeviceToken: token,
+		Topic:       a.opts.Topic,
+		Payload:     notificationPayload,
+	}
 }
 
 func getApnsClient(authKey []byte, keyId, teamId string) (*apns2.Client, error) {

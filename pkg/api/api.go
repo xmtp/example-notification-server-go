@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	"github.com/xmtp/example-notification-server-go/pkg/proto"
-	"github.com/xmtp/example-notification-server-go/pkg/proto/protoconnect"
+	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -37,7 +37,7 @@ func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations int
 
 func (s *ApiServer) Start() {
 	mux := http.NewServeMux()
-	path, handler := protoconnect.NewNotificationsHandler(s)
+	path, handler := notificationsv1connect.NewNotificationsHandler(s)
 	mux.Handle(path, handler)
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.port),
@@ -64,19 +64,19 @@ func (s *ApiServer) Stop() {
 	}
 
 	s.logger.Info("server stopped")
-	return
 }
 
 func (s *ApiServer) RegisterInstallation(
 	ctx context.Context,
 	req *connect.Request[proto.RegisterInstallationRequest],
 ) (*connect.Response[proto.RegisterInstallationResponse], error) {
-	s.logger.Info("RegisterInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("RegisterInstallation", zap.Any("req", req))
 
 	mechanism := convertDeliveryMechanism(req.Msg.DeliveryMechanism)
 	if mechanism == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("missing delivery mechanism"))
 	}
+	s.logger.Info("got mechanism", zap.Any("mechanism", mechanism))
 	result, err := s.installations.Register(
 		ctx,
 		interfaces.Installation{
@@ -84,12 +84,11 @@ func (s *ApiServer) RegisterInstallation(
 			DeliveryMechanism: *mechanism,
 		},
 	)
-
 	if err != nil {
 		s.logger.Error("error registering installation", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-
+	s.logger.Info("sending response", zap.Any("result", result))
 	return connect.NewResponse(&proto.RegisterInstallationResponse{
 		InstallationId: req.Msg.InstallationId,
 		ValidUntil:     uint64(result.ValidUntil.UnixMilli()),
@@ -100,7 +99,7 @@ func (s *ApiServer) DeleteInstallation(
 	ctx context.Context,
 	req *connect.Request[proto.DeleteInstallationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	s.logger.Info("DeleteInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("DeleteInstallation", zap.Any("req", req))
 
 	err := s.installations.Delete(ctx, req.Msg.InstallationId)
 	if err != nil {
@@ -115,7 +114,7 @@ func (s *ApiServer) Subscribe(
 	ctx context.Context,
 	req *connect.Request[proto.SubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	s.logger.Info("Subscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("Subscribe", zap.Any("req", req))
 
 	err := s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
 	if err != nil {
@@ -130,7 +129,7 @@ func (s *ApiServer) Unsubscribe(
 	ctx context.Context,
 	req *connect.Request[proto.UnsubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	s.logger.Info("Unsubscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("Unsubscribe", zap.Any("req", req))
 
 	err := s.subscriptions.Unsubscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
 	if err != nil {
@@ -139,6 +138,40 @@ func (s *ApiServer) Unsubscribe(
 	}
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
+	log := s.logger.With(zap.String("method", "subscribeWithMetadata"))
+	log.Info("starting")
+	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, buildSubscriptionInputs(req.Msg.Subscriptions))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+func buildSubscriptionInputs(subs []*proto.Subscription) []interfaces.SubscriptionInput {
+	out := make([]interfaces.SubscriptionInput, len(subs))
+	for idx, sub := range subs {
+		out[idx] = interfaces.SubscriptionInput{
+			Topic:    sub.Topic,
+			IsSilent: sub.IsSilent,
+			HmacKeys: buildHmacKeys(sub.HmacKeys),
+		}
+	}
+	return out
+}
+
+func buildHmacKeys(protoKeys []*proto.Subscription_HmacKey) []interfaces.HmacKey {
+	out := make([]interfaces.HmacKey, len(protoKeys))
+	for idx, key := range protoKeys {
+		out[idx] = interfaces.HmacKey{
+			ThirtyDayPeriodsSinceEpoch: int(key.ThirtyDayPeriodsSinceEpoch),
+			Key:                        key.Key,
+		}
+	}
+	return out
 }
 
 func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.DeliveryMechanism {

@@ -1,0 +1,26 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    # <module_name>   : name in go.mod
+    # <relative_path> : where generated code should be output
+    default: github.com/xmtp/example-notification-server-go/pkg/proto
+    # Remove `except` field if googleapis is not used
+    except:
+      - buf.build/googleapis/googleapis
+      - buf.build/grpc-ecosystem/grpc-gateway
+plugins:
+  # Client code for the integration tests
+  - plugin: buf.build/connectrpc/es:v1.4.0
+    out: integration/gen
+  - plugin: buf.build/bufbuild/es
+    out: integration/gen
+  # Go server code
+  - plugin: buf.build/protocolbuffers/go:v1.32.0
+    out: pkg/proto
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/connectrpc/go:v1.15.0
+    out: pkg/proto
+    opt:
+      - paths=source_relative

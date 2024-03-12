@@ -10,22 +10,25 @@ import (
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	v1 "github.com/xmtp/proto/go/message_api/v1"
+	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"go.uber.org/zap"
 )
 
+const STARTING_SLEEP_TIME = 100 * time.Millisecond
+const DELIVERY_TIMEOUT = 15 * time.Second
+
 type Listener struct {
-	logger         *zap.Logger
-	ctx            context.Context
-	cancelFunc     func()
-	xmtpClient     v1.MessageApiClient
-	opts           options.XmtpOptions
-	messageChannel chan *v1.Envelope
-	installations  interfaces.Installations
-	delivery       interfaces.Delivery
-	subscriptions  interfaces.Subscriptions
-	clientVersion  string
-	appVersion     string
+	logger           *zap.Logger
+	ctx              context.Context
+	cancelFunc       func()
+	xmtpClient       v1.MessageApiClient
+	opts             options.XmtpOptions
+	messageChannel   chan *v1.Envelope
+	installations    interfaces.Installations
+	deliveryServices []interfaces.Delivery
+	subscriptions    interfaces.Subscriptions
+	clientVersion    string
+	appVersion       string
 }
 
 func NewListener(
@@ -34,7 +37,7 @@ func NewListener(
 	opts options.XmtpOptions,
 	installations interfaces.Installations,
 	subscriptions interfaces.Subscriptions,
-	delivery interfaces.Delivery,
+	deliveryServices []interfaces.Delivery,
 	clientVersion string,
 	appVersion string,
 ) (*Listener, error) {
@@ -46,17 +49,17 @@ func NewListener(
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &Listener{
-		ctx:            ctx,
-		cancelFunc:     cancel,
-		logger:         logger.Named("xmtp-listener"),
-		xmtpClient:     client,
-		opts:           opts,
-		messageChannel: make(chan *v1.Envelope, 100),
-		installations:  installations,
-		delivery:       delivery,
-		subscriptions:  subscriptions,
-		clientVersion:  clientVersion,
-		appVersion:     appVersion,
+		ctx:              ctx,
+		cancelFunc:       cancel,
+		logger:           logger.Named("xmtp-listener"),
+		xmtpClient:       client,
+		opts:             opts,
+		messageChannel:   make(chan *v1.Envelope, 100),
+		installations:    installations,
+		deliveryServices: deliveryServices,
+		subscriptions:    subscriptions,
+		clientVersion:    clientVersion,
+		appVersion:       appVersion,
 	}, nil
 }
 
@@ -73,12 +76,13 @@ func (l *Listener) startMessageListener() {
 	l.logger.Info("starting message listener")
 	var stream v1.MessageApi_SubscribeAllClient
 	var err error
+	sleepTime := STARTING_SLEEP_TIME
 	for {
 		stream, err = l.xmtpClient.SubscribeAll(l.ctx, &v1.SubscribeAllRequest{})
 		if err != nil {
 			l.logger.Error("error connecting to stream", zap.Error(err))
-			// sleep for a few seconds before retrying
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(sleepTime)
+			sleepTime = sleepTime * 2
 			if err = l.refreshClient(); err != nil {
 				l.logger.Error("error refreshing client", zap.Error(err))
 			}
@@ -100,7 +104,8 @@ func (l *Listener) startMessageListener() {
 				if err != nil {
 					l.logger.Error("error reading from stream", zap.Error(err))
 					// Wait 100ms to avoid hammering the API and getting rate limited
-					time.Sleep(100 * time.Millisecond)
+					time.Sleep(sleepTime)
+					sleepTime = sleepTime * 2
 					if err = l.refreshClient(); err != nil {
 						l.logger.Error("error refreshing client", zap.Error(err))
 					}
@@ -108,6 +113,8 @@ func (l *Listener) startMessageListener() {
 				}
 
 				if msg != nil {
+					// Reset the sleep time on first successful message
+					sleepTime = STARTING_SLEEP_TIME
 					l.messageChannel <- msg
 				}
 			}
@@ -133,11 +140,11 @@ func (l *Listener) startMessageWorkers() {
 
 func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	if shouldIgnoreTopic(env.ContentTopic) {
-		l.logger.Info("ignoring message", zap.String("topic", env.ContentTopic))
+		l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
 		return nil
 	}
 
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic)
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
 	}
@@ -161,16 +168,47 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	l.logger.Info("active subscription found. sending message", zap.String("topic", env.ContentTopic))
+	sendRequests := buildSendRequests(env, installations, subs)
+	for _, request := range sendRequests {
+		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
+			l.logger.Info("Skipping delivery of request",
+				zap.Any("message_context", request.MessageContext),
+				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
+			)
+		}
+		if err = l.deliver(request); err != nil {
+			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
+			return err
+		}
+	}
+	return nil
+}
 
-	return l.delivery.Send(
-		l.ctx,
-		interfaces.SendRequest{
-			Installations:  installations,
-			Message:        env,
-			IdempotencyKey: buildIdempotencyKey(env),
-		},
-	)
+func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
+	if messageContext.ShouldPush != nil {
+		return *messageContext.ShouldPush
+	}
+	if subscription.HmacKey != nil && len(subscription.HmacKey.Key) > 0 {
+		isSender := messageContext.IsSender(subscription.HmacKey.Key)
+		return !isSender
+	}
+	return true
+}
+
+func (l *Listener) deliver(req interfaces.SendRequest) error {
+	ctx, cancel := context.WithTimeout(l.ctx, DELIVERY_TIMEOUT)
+	defer cancel()
+	for _, service := range l.deliveryServices {
+		if service.CanDeliver(req) && req.Message != nil {
+			l.logger.Info("active subscription found. sending message",
+				zap.String("topic", req.Message.ContentTopic),
+				zap.String("message_type", string(req.MessageContext.MessageType)),
+			)
+			return service.Send(ctx, req)
+		}
+	}
+	l.logger.Info("No delivery service matches request", zap.String("delivery_mechanism", string(req.Installation.DeliveryMechanism.Kind)))
+	return nil
 }
 
 func (l *Listener) refreshClient() error {
@@ -195,4 +233,28 @@ func buildIdempotencyKey(env *v1.Envelope) string {
 	h.Write([]byte(env.ContentTopic))
 	h.Write(env.Message)
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
+	idempotencyKey := buildIdempotencyKey(envelope)
+	messageContext := getContext(envelope)
+	out := []interfaces.SendRequest{}
+	installationMap := make(map[string]interfaces.Installation)
+	for _, installation := range installations {
+		installationMap[installation.Id] = installation
+	}
+
+	for _, subscription := range subscriptions {
+		if installation, exists := installationMap[subscription.InstallationId]; exists {
+			out = append(out, interfaces.SendRequest{
+				IdempotencyKey: idempotencyKey,
+				Message:        envelope,
+				MessageContext: messageContext,
+				Installation:   installation,
+				Subscription:   subscription,
+			})
+		}
+	}
+
+	return out
 }

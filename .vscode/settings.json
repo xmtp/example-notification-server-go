@@ -1,6 +1,4 @@
 {
-  "protoc": {
-    "compile_on_save": false,
-    "options": ["--proto_path=build/tmp/vendor"]
-  }
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": ["--fast", "--config=./dev/.golangci.yaml"]
 }

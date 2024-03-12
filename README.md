@@ -6,23 +6,13 @@ Example push notification server, written in Golang
 
 ![Status](https://camo.githubusercontent.com/47c9762c88d56b96ffa436e2af994dab07f6f61f2a0388cd08be7d42b1b8fef5/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563745f5374617475732d446576656c6f7065725f507265766965772d79656c6c6f77)
 
-This project is in Developer Preview status and ready to serve as a reference for you to start building. 
-
-However, we do NOT recommend using Developer Preview software in production apps. Software in this status may change based on feedback.
+This project is ready to serve as a reference for you to start building.
 
 Many applications will have different needs for push notifications (different delivery providers, different metadata attached to payloads, etc), and this repo is designed to be forked and customized for each application's needs.
 
-| Feature               | Status | Notes                                                                                                                                           |
-| --------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Installations Service | 🟢     | Some minor revisions will be needed, but looking pretty good                                                                                    |
-| Subscriptions Service | 🟢     |                                                                                                                                                 |
-| API Server            | 🟢     | Working as expected                                                                                                                             |
-| XMTP Worker           | 🟢     | Needs more testing, but works                                                                                                                   |
-| Delivery Service      | 🟢     | Basic implementation in place. You may want to adjust the notification payload, or add a new delivery service, to suit your application's needs |
-
 ## Prerequisites
 
-1. Go 1.18
+1. Go 1.20
 2. Docker and Docker Compose
 
 ## Local Setup
@@ -48,8 +38,7 @@ The server can be run using the `./dev/run` script. Both the `worker` (which lis
 ```sh
 ## Only has to be run once
 ./dev/up
-source .env
-./dev/run --xmtp-listener --api
+./dev/start
 ```
 
 ### Command line options
@@ -60,43 +49,49 @@ To see a full list of command line options run
 ./dev/run --help
 ```
 
-Here is the output as of 21/12/2021:
+Here is the output as of 03/01/2024:
 
 ```sh
 Usage:
   main [OPTIONS]
 
 Application Options:
-  -d, --db-connection-string=        Address to database [$DB_CONNECTION_STRING]
-      --log-encoding=[console|json]  Log encoding (default: console) [$LOG_ENCODING]
-      --log-level=[debug|info|error] log-level (default: info) [$LOG_LEVEL]
-      --create-migration=            create a migration with the given name
+  -d, --db-connection-string=              Address to database [$DB_CONNECTION_STRING]
+      --log-encoding=[console|json]        Log encoding (default: console) [$LOG_ENCODING]
+      --log-level=[debug|info|error]       log-level (default: info) [$LOG_LEVEL]
+      --create-migration=                  create a migration with the given name
 
 API Options:
-      --api                          Enable the GRPC API server
-  -p, --api-port=                    Port for the Connect GRPC API (default: 8080) [$API_PORT]
+      --api                                Enable the GRPC API server
+  -p, --api-port=                          Port for the Connect GRPC API (default: 8080) [$API_PORT]
 
 Worker Options:
-      --xmtp-listener                Enable the XMTP listener to actually send notifications. Requires APNSOptions to
-                                     be configured
-      --xmtp-listener-tls            Whether to connect to XMTP network using TLS
-  -x, --xmtp-address=                Address (including port) of XMTP GRPC server [$XMTP_GRPC_ADDRESS]
-      --num-workers=                 Number of workers used to process messages (default: 50)
+      --xmtp-listener                      Enable the XMTP listener to actually send notifications. Requires APNSOptions to be configured
+      --xmtp-listener-tls                  Whether to connect to XMTP network using TLS
+  -x, --xmtp-address=                      Address (including port) of XMTP GRPC server [$XMTP_GRPC_ADDRESS]
+      --num-workers=                       Number of workers used to process messages (default: 50)
 
 APNS Options:
-      --apns-enabled                 Enable APNS [$APNS_ENABLED]
-      --apns-p8-certificate=         .p8 certificate for APNS [$APNS_P8_CERTIFICATE]
-      --apns-key-id=                 Key ID associated with APNS credentials [$APNS_KEY_ID]
-      --apns-team-id=                APNS Team ID [$APNS_TEAM_ID]
-      --apns-topic=                  Topic to be used on all messages [$APNS_TOPIC]
+      --apns-enabled                       Enable APNS [$APNS_ENABLED]
+      --apns-p8-certificate=               .p8 certificate data for APNS [$APNS_P8_CERTIFICATE]
+      --apns-p8-certificate-file-path=     .p8 certificate file for APNS [$APNS_P8_CERTIFICATE_FILE_PATH]
+      --apns-key-id=                       Key ID associated with APNS credentials [$APNS_KEY_ID]
+      --apns-team-id=                      APNS Team ID [$APNS_TEAM_ID]
+      --apns-topic=                        Topic to be used on all messages [$APNS_TOPIC]
+      --apns-mode=[development|production] Which APNS servers to deliver to, development or production (default: development) [$APNS_MODE]
 
 FCM Options:
-      --fcm-enabled                  Enable FCM sending [$FCM_ENABLED]
-      --fcm-credentials-json=        FCM Credentials [$FCM_CREDENTIALS_JSON]
-      --fcm-project-id=              FCM Project ID [$FCM_PROJECT_ID]
+      --fcm-enabled                        Enable FCM sending [$FCM_ENABLED]
+      --fcm-credentials-json=              FCM Credentials [$FCM_CREDENTIALS_JSON]
+      --fcm-project-id=                    FCM Project ID [$FCM_PROJECT_ID]
+
+HTTP Delivery Options:
+      --http-delivery
+      --http-delivery-address=
+      --http-auth-header=
 
 Help Options:
-  -h, --help                         Show this help message
+  -h, --help                               Show this help message
 ```
 
 ### Generating code
@@ -107,7 +102,7 @@ If you have made a change to the files in the `proto` folder, you will need to r
 ./dev/gen-proto
 ```
 
-All required libraries should be installed as part of that process. YMMV.
+You must have the `Buf` CLI installed on your machine. Learn more [here](https://buf.build/docs/installation).
 
 ### Testing the API
 
@@ -131,11 +126,9 @@ go test -p 1 ./...
 
 ## Extending the server
 
-The implementations of the `Installations` service and the `Delivery` service are designed to be easily replaced. For a production application, you will likely want to replace them with a more robust set of tools for managing device tokens and sending notifications idempotently. To do that, you would modify `cmd/server/main.go` and replace those service interfaces with your custom implementation.
+The implementation of the `Delivery` service are designed to be easily extended. For a production application, you will likely want to replace them with a more robust set of tools for sending notifications idempotently. To do that, you would modify `cmd/server/main.go` and add a Delivery Service implementation.
 
 If you are using Firebase for push delivery, the only modifications needed (if any) may be to customize the payload sent to clients.
-
-The `Subscriptions` service has simpler requirements and will be developed to the point of suitability in a production environment.
 
 ## Deployment
 
