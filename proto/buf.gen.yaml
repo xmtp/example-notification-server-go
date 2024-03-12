@@ -10,10 +10,12 @@ managed:
       - buf.build/googleapis/googleapis
       - buf.build/grpc-ecosystem/grpc-gateway
 plugins:
+  # Client code for the integration tests
   - plugin: buf.build/connectrpc/es:v1.4.0
     out: integration/gen
   - plugin: buf.build/bufbuild/es
     out: integration/gen
+  # Go server code
   - plugin: buf.build/protocolbuffers/go:v1.32.0
     out: pkg/proto
     opt:
