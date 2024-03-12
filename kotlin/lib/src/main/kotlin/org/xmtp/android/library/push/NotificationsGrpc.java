@@ -6,7 +6,7 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  */
 @javax.annotation.Generated(
     value = "by gRPC proto compiler (version 1.45.1)",
-    comments = "Source: service.proto")
+    comments = "Source: notifications/v1/service.proto")
 @io.grpc.stub.annotations.GrpcGenerated
 public final class NotificationsGrpc {
 
@@ -103,6 +103,36 @@ public final class NotificationsGrpc {
       }
     }
     return getSubscribeMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest,
+      com.google.protobuf.Empty> getSubscribeWithMetadataMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SubscribeWithMetadata",
+      requestType = org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest,
+      com.google.protobuf.Empty> getSubscribeWithMetadataMethod() {
+    io.grpc.MethodDescriptor<org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest, com.google.protobuf.Empty> getSubscribeWithMetadataMethod;
+    if ((getSubscribeWithMetadataMethod = NotificationsGrpc.getSubscribeWithMetadataMethod) == null) {
+      synchronized (NotificationsGrpc.class) {
+        if ((getSubscribeWithMetadataMethod = NotificationsGrpc.getSubscribeWithMetadataMethod) == null) {
+          NotificationsGrpc.getSubscribeWithMetadataMethod = getSubscribeWithMetadataMethod =
+              io.grpc.MethodDescriptor.<org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SubscribeWithMetadata"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.lite.ProtoLiteUtils.marshaller(
+                  org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.lite.ProtoLiteUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .build();
+        }
+      }
+    }
+    return getSubscribeWithMetadataMethod;
   }
 
   private static volatile io.grpc.MethodDescriptor<org.xmtp.android.library.push.Service.UnsubscribeRequest,
@@ -206,6 +236,13 @@ public final class NotificationsGrpc {
 
     /**
      */
+    public void subscribeWithMetadata(org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSubscribeWithMetadataMethod(), responseObserver);
+    }
+
+    /**
+     */
     public void unsubscribe(org.xmtp.android.library.push.Service.UnsubscribeRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUnsubscribeMethod(), responseObserver);
@@ -234,6 +271,13 @@ public final class NotificationsGrpc {
                 org.xmtp.android.library.push.Service.SubscribeRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_SUBSCRIBE)))
+          .addMethod(
+            getSubscribeWithMetadataMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_SUBSCRIBE_WITH_METADATA)))
           .addMethod(
             getUnsubscribeMethod(),
             io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -285,6 +329,14 @@ public final class NotificationsGrpc {
 
     /**
      */
+    public void subscribeWithMetadata(org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSubscribeWithMetadataMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void unsubscribe(org.xmtp.android.library.push.Service.UnsubscribeRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
@@ -325,6 +377,13 @@ public final class NotificationsGrpc {
     public com.google.protobuf.Empty subscribe(org.xmtp.android.library.push.Service.SubscribeRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getSubscribeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty subscribeWithMetadata(org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSubscribeWithMetadataMethod(), getCallOptions(), request);
     }
 
     /**
@@ -375,6 +434,14 @@ public final class NotificationsGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> subscribeWithMetadata(
+        org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSubscribeWithMetadataMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> unsubscribe(
         org.xmtp.android.library.push.Service.UnsubscribeRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -385,7 +452,8 @@ public final class NotificationsGrpc {
   private static final int METHODID_REGISTER_INSTALLATION = 0;
   private static final int METHODID_DELETE_INSTALLATION = 1;
   private static final int METHODID_SUBSCRIBE = 2;
-  private static final int METHODID_UNSUBSCRIBE = 3;
+  private static final int METHODID_SUBSCRIBE_WITH_METADATA = 3;
+  private static final int METHODID_UNSUBSCRIBE = 4;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -414,6 +482,10 @@ public final class NotificationsGrpc {
           break;
         case METHODID_SUBSCRIBE:
           serviceImpl.subscribe((org.xmtp.android.library.push.Service.SubscribeRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_SUBSCRIBE_WITH_METADATA:
+          serviceImpl.subscribeWithMetadata((org.xmtp.android.library.push.Service.SubscribeWithMetadataRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         case METHODID_UNSUBSCRIBE:
@@ -448,6 +520,7 @@ public final class NotificationsGrpc {
               .addMethod(getRegisterInstallationMethod())
               .addMethod(getDeleteInstallationMethod())
               .addMethod(getSubscribeMethod())
+              .addMethod(getSubscribeWithMetadataMethod())
               .addMethod(getUnsubscribeMethod())
               .build();
         }
