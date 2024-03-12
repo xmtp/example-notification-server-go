@@ -10,11 +10,24 @@ managed:
       - buf.build/googleapis/googleapis
       - buf.build/grpc-ecosystem/grpc-gateway
 plugins:
-  - plugin: buf.build/grpc/go:v1.3.0
-    out: pkg/proto
+  # - plugin: buf.build/grpc/go:v1.3.0
+  #   out: pkg/proto
+  #   opt:
+  #     - paths=source_relative
+  # - plugin: buf.build/protocolbuffers/go
+  #   out: pkg/proto
+  #   opt:
+  #     - paths=source_relative
+
+  #     version: v1
+  - plugin: buf.build/connectrpc/swift
     opt:
-      - paths=source_relative
-  - plugin: buf.build/protocolbuffers/go
-    out: pkg/proto
+      - GenerateAsyncMethods=true
+      - GenerateCallbackMethods=true
+      - Visibility=Public
+    out: Generated
+  - plugin: buf.build/apple/swift
     opt:
-      - paths=source_relative
+      - Visibility=Public
+    out: Generated
+
