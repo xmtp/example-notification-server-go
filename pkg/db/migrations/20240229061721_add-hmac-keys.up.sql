@@ -17,6 +17,7 @@ CREATE TABLE subscription_hmac_keys (
 ALTER TABLE subscriptions ADD COLUMN is_silent BOOLEAN DEFAULT FALSE;
 
 --bun:split
+
 -- Ensure that no duplicate subscription rows exist before adding unique index
 DELETE FROM subscriptions
 WHERE id NOT IN (

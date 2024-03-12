@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"os"
-	"time"
 
 	"github.com/sideshow/apns2"
 	"github.com/sideshow/apns2/payload"
 	"github.com/sideshow/apns2/token"
+	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"go.uber.org/zap"
 )
@@ -54,22 +54,26 @@ func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDeliver
 	}, nil
 }
 
-func (a ApnsDelivery) Send(ctx context.Context, deviceToken, topic, message string) error {
+func (a ApnsDelivery) CanDeliver(req interfaces.SendRequest) bool {
+	return req.Installation.DeliveryMechanism.Kind == interfaces.APNS
+}
+
+func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) error {
+	if req.Message == nil {
+		return errors.New("missing message")
+	}
 	// TODO: Figure out the message format
 	notificationPayload := payload.NewPayload().
 		MutableContent().
 		Alert("New message from XMTP").
-		Custom("topic", topic).
-		Custom("encryptedMessage", message)
+		Custom("topic", req.Message.ContentTopic).
+		Custom("encryptedMessage", req.Message.Message)
 
 	notification := &apns2.Notification{
-		DeviceToken: deviceToken,
+		DeviceToken: req.Installation.DeliveryMechanism.Token,
 		Topic:       a.opts.Topic,
 		Payload:     notificationPayload,
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)
 	if res != nil {

@@ -70,7 +70,7 @@ func (s *ApiServer) RegisterInstallation(
 	ctx context.Context,
 	req *connect.Request[proto.RegisterInstallationRequest],
 ) (*connect.Response[proto.RegisterInstallationResponse], error) {
-	s.logger.Info("RegisterInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("RegisterInstallation", zap.Any("req", req))
 
 	mechanism := convertDeliveryMechanism(req.Msg.DeliveryMechanism)
 	if mechanism == nil {
@@ -99,7 +99,7 @@ func (s *ApiServer) DeleteInstallation(
 	ctx context.Context,
 	req *connect.Request[proto.DeleteInstallationRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	s.logger.Info("DeleteInstallation", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("DeleteInstallation", zap.Any("req", req))
 
 	err := s.installations.Delete(ctx, req.Msg.InstallationId)
 	if err != nil {
@@ -114,7 +114,7 @@ func (s *ApiServer) Subscribe(
 	ctx context.Context,
 	req *connect.Request[proto.SubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	s.logger.Info("Subscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("Subscribe", zap.Any("req", req))
 
 	err := s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
 	if err != nil {
@@ -129,7 +129,7 @@ func (s *ApiServer) Unsubscribe(
 	ctx context.Context,
 	req *connect.Request[proto.UnsubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	s.logger.Info("Unsubscribe", zap.Any("headers", req.Header()), zap.Any("req", req))
+	s.logger.Info("Unsubscribe", zap.Any("req", req))
 
 	err := s.subscriptions.Unsubscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
 	if err != nil {
@@ -156,23 +156,3 @@ func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.De
 		return &interfaces.DeliveryMechanism{Kind: interfaces.FCM, Token: fcmToken}
 	}
 }
-
-// func convertHmacUpdates(protoUpdates []*proto.Subscription_HmacKey) (interfaces.HmacUpdates, error) {
-// 	out := make(interfaces.HmacUpdates)
-// 	for _, update := range protoUpdates {
-// 		if update == nil {
-// 			continue
-// 		}
-// 		if _, exists := out[update.Topic]; exists {
-// 			return nil, fmt.Errorf("duplicate topic: %s", update.Topic)
-// 		}
-// 		for _, key := range update.HmacKey {
-// 			out[update.Topic] = append(out[update.Topic], interfaces.HmacKey{
-// 				ThirtyDayPeriodsSinceEpoch: int(key.ThirtyDayPeriodsSinceEpoch),
-// 				Key:                        key.Key,
-// 			})
-// 		}
-// 	}
-
-// 	return out, nil
-// }

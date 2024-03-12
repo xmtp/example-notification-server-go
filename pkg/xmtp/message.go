@@ -1,21 +1,14 @@
 package xmtp
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
 	"errors"
-	"fmt"
 
+	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	messageContents "github.com/xmtp/example-notification-server-go/pkg/proto/message_contents"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"google.golang.org/protobuf/proto"
 )
-
-type MessageContext struct {
-	MessageType MessageType
-	ShouldPush  *bool
-	IsSender    *bool
-}
 
 func parseConversationMessage(message []byte) (*messageContents.MessageV2, error) {
 	var msg messageContents.Message
@@ -30,32 +23,24 @@ func parseConversationMessage(message []byte) (*messageContents.MessageV2, error
 	return nil, errors.New("Not a V1 message")
 }
 
-func getIsSender(msg *messageContents.MessageV2, hmacKey *[]byte) *bool {
-	isSender := false
-	if len(msg.SenderHmac) > 0 && hmacKey != nil {
-		fmt.Printf("Got HMAC key %x and sender hmac %x", hmacKey, msg.SenderHmac)
-		// Calculate HMAC of the HeaderBytes using the provided key and compare it with the SenderHmac
-		hmacHash := hmac.New(sha256.New, *hmacKey)
-		hmacHash.Write(msg.HeaderBytes)
-		expectedHmac := hmacHash.Sum(nil)
-		isSender = hmac.Equal(msg.SenderHmac, expectedHmac)
-	}
-	return &isSender
-}
-
-func getContext(env *messageApi.Envelope, hmacKey *[]byte) MessageContext {
-	messageType := getMessageType(env)
-	var shouldPush, isSender *bool
-	if messageType == V2Conversation {
+func getContext(env *messageApi.Envelope) interfaces.MessageContext {
+	messageType := topics.GetMessageType(env)
+	var shouldPush *bool
+	var hmacInputs, senderHmac *[]byte
+	if messageType == topics.V2Conversation {
 		if parsed, err := parseConversationMessage(env.Message); err == nil {
 			shouldPush = parsed.ShouldPush
-			isSender = getIsSender(parsed, hmacKey)
+			hmacInputs = &parsed.HeaderBytes
+			if len(parsed.SenderHmac) > 0 {
+				senderHmac = &parsed.SenderHmac
+			}
 		}
 	}
 
-	return MessageContext{
+	return interfaces.MessageContext{
 		MessageType: messageType,
 		ShouldPush:  shouldPush,
-		IsSender:    isSender,
+		HmacInputs:  hmacInputs,
+		SenderHmac:  senderHmac,
 	}
 }

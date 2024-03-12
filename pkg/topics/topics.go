@@ -1,4 +1,4 @@
-package xmtp
+package topics
 
 import (
 	"strings"
@@ -8,21 +8,6 @@ import (
 
 const V1_PREFIX = "/xmtp/0/"
 const V3_PREFIX = "/xmtp/1/"
-
-type MessageType string
-
-const (
-	Test           MessageType = "test"
-	Private        MessageType = "private"
-	Contact        MessageType = "contact"
-	V1Intro        MessageType = "v1-intro"
-	V2Invite       MessageType = "v2-invite"
-	V1Conversation MessageType = "v1-conversation"
-	V2Conversation MessageType = "v2-conversation"
-	V3Welcome      MessageType = "v3-welcome"
-	V3Conversation MessageType = "v3-conversation"
-	Unknown        MessageType = "unknown"
-)
 
 var messageTypeByPrefix = map[string]MessageType{
 	"test":         Test,
@@ -36,7 +21,7 @@ var messageTypeByPrefix = map[string]MessageType{
 	"w":            V3Welcome,
 }
 
-func getMessageType(env *v1.Envelope) MessageType {
+func GetMessageType(env *v1.Envelope) MessageType {
 	topic := env.ContentTopic
 	if strings.HasPrefix(topic, "test-") {
 		return Test
