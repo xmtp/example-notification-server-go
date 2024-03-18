@@ -1,5 +1,5 @@
 version: v1
-name: buf.build/nickxmtp/example-notification-server
+name: buf.build/xmtp/example-notification-server-go
 breaking:
   use:
     - FILE

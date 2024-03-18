@@ -1,0 +1,23 @@
+name: Buf
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  buf:
+    runs-on: ubuntu-latest
+    steps:
+      # Run `git checkout`
+      - uses: actions/checkout@v2
+      # Install the `buf` CLI
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
+          buf_api_token: ${{ secrets.BUF_TOKEN }}
+      # Push only the Input in `proto` to the BSR
+      - uses: bufbuild/buf-push-action@v1
+        with:
+          input: proto
+          buf_token: ${{ secrets.BUF_TOKEN }}
+          draft: ${{ github.ref_name != 'main'}}
