@@ -6,7 +6,7 @@ This document aims to be a guide to implementing a notifications client in your 
 
 ## Generating a client
 
-The Notification Server uses Protobuf/[Connect](https://connectrpc.com/docs/introduction/) for service definitions and contracts. The service definition is published [here](https://buf.build/nickxmtp/example-notification-server). This can be used to generate clients in a range of languages. You may wish to publish your own version of the contract to be used by your client, and this will be necessary if you change any of the protobuf contracts.
+The Notification Server uses Protobuf/[Connect](https://connectrpc.com/docs/introduction/) for service definitions and contracts. The service definition is published [here](https://buf.build/xmtp/example-notification-server-go). This can be used to generate clients in a range of languages. You may wish to publish your own version of the contract to be used by your client, and this will be necessary if you change any of the protobuf contracts.
 
 To generate a Typescript service client, create a `buf.gen.yaml` file in your project root like this:
 
@@ -21,7 +21,7 @@ plugins:
     opt: target=ts
 ```
 
-You can then follow the Local Generation instructions [here](https://connectrpc.com/docs/web/generating-code/#local-generation) to install the required packages that will enable you to run `buf generate buf.build/nickxmtp/example-notification-server` and generate the client code.
+You can then follow the Local Generation instructions [here](https://connectrpc.com/docs/web/generating-code/#local-generation) to install the required packages that will enable you to run `buf generate buf.build/xmtp/example-notification-server-go` and generate the client code.
 
 You can also use Buf Remote Plugins, which do not have any local dependencies other than the Buf CLI. See an example here [here](../proto/buf.gen.yaml), paying particular attention to the client code.
 
