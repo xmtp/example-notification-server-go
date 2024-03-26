@@ -16,7 +16,7 @@
 /dist
 node_modules
 
-kotlin/org/xmtp/android/library/push/notifications
+kotlin/org/xmtp/android/library/push/xmtp
 swift/keystore_api
 swift/message_api
 swift/message_contents
