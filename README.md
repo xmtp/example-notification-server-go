@@ -108,6 +108,12 @@ You must have the `Buf` CLI installed on your machine. Learn more [here](https:/
 brew install bufbuild/buf/buf
 ```
 
+To just rebuild the notification protos run:
+
+```sh
+buf generate
+```
+
 ### Testing the API
 
 The API supports plain JSON and can be used via CURL
