@@ -18,3 +18,13 @@ plugins:
     out: pkg/proto
     opt:
       - paths=source_relative
+  - plugin: buf.build/connectrpc/swift
+    opt:
+      - GenerateAsyncMethods=true
+      - GenerateCallbackMethods=true
+      - Visibility=Public
+    out: Generated
+  - plugin: buf.build/apple/swift
+    opt:
+      - Visibility=Public
+    out: Generated
