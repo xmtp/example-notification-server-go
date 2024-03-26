@@ -1,6 +1,8 @@
 version: v1
 managed:
   enabled: true
+  java_package_prefix:
+      default: org.xmtp.android.library.push
   go_package_prefix:
     # <module_name>   : name in go.mod
     # <relative_path> : where generated code should be output
@@ -18,3 +20,17 @@ plugins:
     out: pkg/proto
     opt:
       - paths=source_relative
+  - plugin: buf.build/connectrpc/swift
+    opt:
+      - GenerateAsyncMethods=true
+      - GenerateCallbackMethods=true
+      - Visibility=Public
+    out: swift
+  - plugin: buf.build/apple/swift
+    opt:
+      - Visibility=Public
+    out: swift
+  - plugin: buf.build/protocolbuffers/java
+    out: kotlin
+  - plugin: buf.build/connectrpc/kotlin
+    out: kotlin
