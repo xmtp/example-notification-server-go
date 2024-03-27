@@ -132,7 +132,7 @@ func (l *Listener) startMessageWorkers() {
 					l.logger.Error("error processing envelope", zap.String("topic", msg.ContentTopic), zap.Error(err))
 					continue
 				}
-				l.logger.Info("processed a message", zap.String("topic", msg.ContentTopic))
+				// l.logger.Info("processed a message", zap.String("topic", msg.ContentTopic))
 			}
 		}()
 	}
@@ -175,6 +175,7 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 				zap.Any("message_context", request.MessageContext),
 				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
 			)
+			return nil
 		}
 		if err = l.deliver(request); err != nil {
 			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
@@ -185,12 +186,15 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 }
 
 func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
-	if messageContext.ShouldPush != nil {
-		return *messageContext.ShouldPush
-	}
 	if subscription.HmacKey != nil && len(subscription.HmacKey.Key) > 0 {
 		isSender := messageContext.IsSender(subscription.HmacKey.Key)
-		return !isSender
+		if (isSender) {
+			return !isSender
+		}
+	}
+	if messageContext.ShouldPush != nil {
+		shouldPush := messageContext.ShouldPush
+		return *shouldPush
 	}
 	return true
 }
