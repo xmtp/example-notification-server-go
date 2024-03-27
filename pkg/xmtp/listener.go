@@ -188,14 +188,12 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
 	if subscription.HmacKey != nil && len(subscription.HmacKey.Key) > 0 {
 		isSender := messageContext.IsSender(subscription.HmacKey.Key)
-		l.logger.Info("Has HMAC key", zap.Bool("is_sender", isSender))
 		if (isSender) {
 			return !isSender
 		}
 	}
 	if messageContext.ShouldPush != nil {
 		shouldPush := messageContext.ShouldPush
-		l.logger.Info("Has should push", zap.Bool("should_push", *shouldPush))
 		return *shouldPush
 	}
 	return true
