@@ -104,6 +104,16 @@ If you have made a change to the files in the `proto` folder, you will need to r
 
 You must have the `Buf` CLI installed on your machine. Learn more [here](https://buf.build/docs/installation).
 
+```sh
+brew install bufbuild/buf/buf
+```
+
+To just rebuild the notification protos run:
+
+```sh
+buf generate
+```
+
 ### Testing the API
 
 The API supports plain JSON and can be used via CURL
