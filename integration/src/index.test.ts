@@ -3,6 +3,8 @@ import { expect, test, beforeEach, afterAll, describe } from "bun:test";
 import { createNotificationClient, randomClient } from ".";
 import { buildUserInviteTopic, fromNanoString } from "@xmtp/xmtp-js";
 import type { NotificationResponse } from "./types";
+import { fetcher } from "@xmtp/proto";
+const { b64Decode } = fetcher;
 
 const PORT = 7777;
 
@@ -117,8 +119,13 @@ describe("notifications", () => {
     expect(notification.message.message).toBeString();
     expect(notification.subscription.is_silent).toBeFalse();
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
-    expect(
-      fromNanoString(notification.message.timestamp_ns.toString())
-    ).toEqual(boMessage.sent);
+
+    const decryptedMessage = await boConversation.decodeMessage({
+      timestampNs: notification.message.timestamp_ns.toString(),
+      message: b64Decode(notification.message.message),
+      contentTopic: notification.message.content_topic,
+    });
+
+    expect(decryptedMessage.content).toEqual("This should be delivered");
   });
 });
