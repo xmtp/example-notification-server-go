@@ -84,7 +84,6 @@ describe("notifications", () => {
         },
       },
     });
-    console.log("Installation registered");
     const conversation = await alix.conversations.newConversation(bo.address);
     const hmacKeys = await alix.keystore.getV2ConversationHmacKeys({
       topics: [conversation.topic],
