@@ -47,7 +47,6 @@ describe("notifications", () => {
         },
       },
     });
-    console.log("Installation registered");
     const alixInviteTopic = buildUserInviteTopic(alix.address);
     await alixNotificationClient.subscribeWithMetadata({
       installationId: alix.address,
