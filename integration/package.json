@@ -11,7 +11,7 @@
   "dependencies": {
     "@connectrpc/connect": "^1.4.0",
     "@connectrpc/connect-web": "^1.4.0",
-    "@xmtp/xmtp-js": "11.4.0-beta.1",
-    "viem": "^2.7.16"
+    "@xmtp/xmtp-js": "11.5.0",
+    "viem": "^2.7.15"
   }
 }
