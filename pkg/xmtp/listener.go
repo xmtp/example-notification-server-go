@@ -175,14 +175,13 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 				zap.Any("message_context", request.MessageContext),
 				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
 			)
-			return nil
+			continue
 		}
 		if err = l.deliver(request); err != nil {
 			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
-			return err
 		}
 	}
-	return nil
+	return err
 }
 
 func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
