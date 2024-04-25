@@ -106,6 +106,8 @@ type Subscriptions interface {
 }
 
 // Pluggable interface for sending push notifications
+//
+//go:generate mockery --dir ../interfaces --name Delivery --output ../../mocks --outpkg mocks
 type Delivery interface {
 	CanDeliver(req SendRequest) bool
 	Send(ctx context.Context, req SendRequest) error
