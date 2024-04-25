@@ -2,6 +2,7 @@ package xmtp
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -88,4 +89,24 @@ func Test_BasicDelivery(t *testing.T) {
 	mockDeliveryService.AssertCalled(t, "CanDeliver", mock.Anything)
 	mockDeliveryService.AssertCalled(t, "Send", mock.Anything, mock.Anything)
 	mockDeliveryService.AssertNumberOfCalls(t, "Send", 1)
+}
+
+func Test_MultipleDeliveries(t *testing.T) {
+	mockDeliveryService := mocks.NewDelivery(t)
+	l, cleanup := buildTestListener(t, mockDeliveryService)
+	defer cleanup()
+
+	mockDeliveryService.On("CanDeliver", mock.Anything).Return(true)
+	mockDeliveryService.On("Send", mock.Anything, mock.Anything).Once().Return(errors.New("failed"))
+	mockDeliveryService.On("Send", mock.Anything, mock.Anything).Once().Return(nil)
+
+	subscribeToTopic(t, l, INSTALLATION_ID, TEST_TOPIC, false)
+	subscribeToTopic(t, l, INSTALLATION_ID_2, TEST_TOPIC, false)
+
+	sendMessage(t, l, TEST_TOPIC, []byte("test"))
+	time.Sleep(2 * time.Second)
+
+	mockDeliveryService.AssertCalled(t, "CanDeliver", mock.Anything)
+	mockDeliveryService.AssertCalled(t, "Send", mock.Anything, mock.Anything)
+	mockDeliveryService.AssertNumberOfCalls(t, "Send", 2)
 }
