@@ -62,6 +62,9 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		"messageType":      string(req.MessageContext.MessageType),
 	}
 
+	webpushHeaders := map[string]string{}
+	webpushHeaders["Urgency"] = "high"
+
 	apnsHeaders := map[string]string{}
 	androidPriority := "high"
 
@@ -69,6 +72,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		apnsHeaders["apns-push-type"] = "background"
 		apnsHeaders["apns-priority"] = "5"
 		androidPriority = "normal"
+		webpushHeaders["Urgency"] = "normal"
 	}
 
 	_, err := f.client.Send(ctx, &messaging.Message{
@@ -79,7 +83,8 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 			Priority: androidPriority,
 		},
 		Webpush: &messaging.WebpushConfig{
-			Data: data,
+			Data: data
+			Headers: webpushHeaders,
 			Notification: &messaging.WebpushNotification{
 				Title: "New message from XMTP",
 			},
