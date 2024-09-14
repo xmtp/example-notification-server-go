@@ -1,0 +1,60 @@
+
+#!/usr/bin/env groovy
+
+@Library('trade.hopscotch.jenkins@multibranch-multienv') _
+
+properties([
+  buildDiscarder(logRotator(numToKeepStr: '5')),
+  disableConcurrentBuilds()
+])
+
+node {
+
+  stage('Checkout') {
+    checkout scm
+    verifyIam()
+  }
+
+  stage('Pre-pipeline') {
+
+    loginToECR()
+
+    def buildNo = getNextBuildNumber({ project: "xmtp-notification-server-go" , branchName: env.BRANCH_NAME })
+
+    def version = "${env.BRANCH_NAME}.${buildNo.trim()}"
+
+    notify(message: "Building xmtp-notification-server-go version ${version}: ${env.BUILD_URL}")
+
+    stage('Build') {
+
+      def dockerRepository = "xmtp-notification-server-go"
+      checkECR(dockerRepository)
+
+      withCredentials([string(credentialsId: 'hopscotch-devops-token', variable: 'token')]) {
+
+        try {
+
+          sh"""
+          set -xe
+          set -o pipefail
+
+          echo "[build] building image"
+          IMAGE_TAG="\${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/${dockerRepository}:${version}" XMTP_GO_CLIENT_VERSION=${version} ./dev/build-docker
+          docker push "\${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/${dockerRepository}:${version}"
+          """
+
+        } catch (err) {
+          notifyError(message: "@here Failed to build image for ${params.project}/${name}: ${env.BUILD_URL}")
+          throw err
+        }
+
+      }
+
+      commitBuild({ project: "xmtp-notification-server-go" , branchName: env.BRANCH_NAME }, buildNo)
+      notifySuccess(message: "Built xmtp-notification-server-go/${params.version}: ${env.BUILD_URL}")
+
+    }
+
+  }
+
+}
