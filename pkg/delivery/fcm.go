@@ -45,7 +45,7 @@ func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOpt
 	return &FcmDelivery{
 		logger: logger,
 		client: messaging,
-		env: env
+		env: env,
 	}, nil
 }
 
@@ -100,7 +100,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 			Data: data,
 			Headers: webpushHeaders,
 			FCMOptions: &messaging.WebpushFCMOptions{
-				Link: link
+				Link: link,
 			},
 		},
 		APNS: &messaging.APNSConfig{
