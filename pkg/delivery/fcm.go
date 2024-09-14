@@ -84,7 +84,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		},
 		Webpush: &messaging.WebpushConfig{
 			Data: data,
-			Headers: webpushHeaders
+			Headers: webpushHeaders,
 		},
 		APNS: &messaging.APNSConfig{
 			Headers: apnsHeaders,
