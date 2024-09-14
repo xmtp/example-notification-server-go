@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 GIT_COMMIT="$(git rev-parse HEAD)"
-XMTP_GO_CLIENT_VERSION="$(go list -json -m all | jq -r '. | select(.Path == "github.com/xmtp/proto") | .Version')"
+# XMTP_GO_CLIENT_VERSION="$(go list -json -m all | jq -r '. | select(.Path == "github.com/xmtp/proto") | .Version')"
 
 docker build \
     -t xmtp/example-notification-server-go \
