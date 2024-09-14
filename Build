@@ -51,14 +51,14 @@ node {
           """
 
         } catch (err) {
-          notifyError(message: "@here Failed to build image for ${params.project}/${name}: ${env.BUILD_URL}")
+          notifyError(message: "@here Failed to build image for ${params.project} version ${version}: ${env.BUILD_URL}")
           throw err
         }
 
       }
 
       commitBuild(params, buildNo)
-      notifySuccess(message: "@here Built ${params.project}/${params.version}: ${env.BUILD_URL}")
+      notifySuccess(message: "@here Built ${params.project} version ${version}: ${env.BUILD_URL}")
 
     }
 
