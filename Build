@@ -21,6 +21,9 @@ node {
     def params = [:]
     params.project = "xmtp-notification-server-go"
     params.branchName = env.BRANCH_NAME
+    if (!params.branchName) {
+      params.branchName = "main"
+    }
 
     def buildNo = getNextBuildNumber(params)
 
