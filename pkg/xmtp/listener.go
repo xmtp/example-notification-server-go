@@ -29,6 +29,7 @@ type Listener struct {
 	subscriptions    interfaces.Subscriptions
 	clientVersion    string
 	appVersion       string
+	env		 string
 }
 
 func NewListener(
@@ -40,6 +41,7 @@ func NewListener(
 	deliveryServices []interfaces.Delivery,
 	clientVersion string,
 	appVersion string,
+	env string,
 ) (*Listener, error) {
 	client, err := NewClient(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
 	if err != nil {
@@ -60,6 +62,7 @@ func NewListener(
 		subscriptions:    subscriptions,
 		clientVersion:    clientVersion,
 		appVersion:       appVersion,
+		env:		  env,
 	}, nil
 }
 

@@ -48,8 +48,9 @@ func main() {
 
 	clientVersion := "example-notifications-server-go/" + shortGitCommit()
 	appVersion := "xmtp-go/" + shortXMTPGoClientVersion()
+	env := opts.HsEnv
 
-	logger.Info("starting", zap.String("client-version", clientVersion), zap.String("app-version", appVersion))
+	logger.Info("starting", zap.String("client-version", clientVersion), zap.String("app-version", appVersion), zap.String("env", env))
 
 	if opts.CreateMigration != "" {
 		if err = createMigration(); err != nil {
@@ -82,7 +83,7 @@ func main() {
 		}
 
 		if opts.Fcm.Enabled {
-			fcm, err := delivery.NewFcmDelivery(ctx, logger, opts.Fcm)
+			fcm, err := delivery.NewFcmDelivery(ctx, logger, opts.Fcm, env)
 			if err != nil {
 				logger.Fatal("failed to initialize FCM", zap.Error(err))
 			}
@@ -93,7 +94,7 @@ func main() {
 			deliveryServices = append(deliveryServices, delivery.NewHttpDelivery(logger, opts.HttpDelivery))
 		}
 
-		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryServices, clientVersion, appVersion)
+		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryServices, clientVersion, appVersion, env)
 		if err != nil {
 			logger.Fatal("failed to initialize listener", zap.Error(err))
 		}

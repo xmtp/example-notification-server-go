@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"fmt"
 	"context"
 	"encoding/base64"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
 )
@@ -16,9 +18,10 @@ import (
 type FcmDelivery struct {
 	logger *zap.Logger
 	client *messaging.Client
+	env string
 }
 
-func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOptions) (*FcmDelivery, error) {
+func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOptions, env string) (*FcmDelivery, error) {
 	creds := option.WithCredentialsJSON([]byte(opts.CredentialsJson))
 	app, err := firebase.NewApp(ctx, &firebase.Config{
 		ProjectID: opts.ProjectId,
@@ -42,6 +45,7 @@ func NewFcmDelivery(ctx context.Context, logger *zap.Logger, opts options.FcmOpt
 	return &FcmDelivery{
 		logger: logger,
 		client: messaging,
+		env: env
 	}, nil
 }
 
@@ -60,6 +64,16 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		"topic":            topic,
 		"encryptedMessage": message,
 		"messageType":      string(req.MessageContext.MessageType),
+	}
+
+	prefix := ""
+	if f.env != "prod" {
+		prefix = fmt.Sprintf("%s.", env)
+	}
+
+	link := fmt.Sprintf("https://%shopscotch.trade/chat", prefix)
+	if req.MessageContext.MessageType == topics.V2Invite || req.MessageContext.MessageType == topics.V1Intro {
+		link = fmt.Sprintf("https://%shopscotch.trade/chat/invites", prefix)
 	}
 
 	webpushHeaders := map[string]string{}
@@ -85,6 +99,9 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		Webpush: &messaging.WebpushConfig{
 			Data: data,
 			Headers: webpushHeaders,
+			FCMOptions: &messaging.WebpushFCMOptions{
+				Link: link
+			},
 		},
 		APNS: &messaging.APNSConfig{
 			Headers: apnsHeaders,
