@@ -84,10 +84,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		},
 		Webpush: &messaging.WebpushConfig{
 			Data: data
-			Headers: webpushHeaders,
-			Notification: &messaging.WebpushNotification{
-				Title: "New message from XMTP",
-			},
+			Headers: webpushHeaders
 		},
 		APNS: &messaging.APNSConfig{
 			Headers: apnsHeaders,
