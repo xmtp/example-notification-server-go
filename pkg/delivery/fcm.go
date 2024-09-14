@@ -68,7 +68,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 
 	prefix := ""
 	if f.env != "prod" {
-		prefix = fmt.Sprintf("%s.", env)
+		prefix = fmt.Sprintf("%s.", f.env)
 	}
 
 	link := fmt.Sprintf("https://%shopscotch.trade/chat", prefix)
