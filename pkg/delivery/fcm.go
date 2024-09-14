@@ -83,7 +83,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 			Priority: androidPriority,
 		},
 		Webpush: &messaging.WebpushConfig{
-			Data: data
+			Data: data,
 			Headers: webpushHeaders
 		},
 		APNS: &messaging.APNSConfig{
