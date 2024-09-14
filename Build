@@ -28,6 +28,7 @@ node {
     def buildNo = getNextBuildNumber(params)
 
     def version = "${params.branchName}.${buildNo.trim()}"
+    currentBuild.displayName = version
 
     notify(message: "Building ${params.project} version ${version}: ${env.BUILD_URL}")
 
