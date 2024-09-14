@@ -58,7 +58,7 @@ node {
       }
 
       commitBuild(params, buildNo)
-      notifySuccess(message: "Built ${params.project}/${params.version}: ${env.BUILD_URL}")
+      notifySuccess(message: "@here Built ${params.project}/${params.version}: ${env.BUILD_URL}")
 
     }
 
