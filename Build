@@ -18,15 +18,19 @@ node {
 
     loginToECR()
 
-    def buildNo = getNextBuildNumber({ project: "xmtp-notification-server-go" , branchName: env.BRANCH_NAME })
+    def params = [:]
+    params.project = "xmtp-notification-server-go"
+    params.branchName = env.BRANCH_NAME
+
+    def buildNo = getNextBuildNumber(params)
 
     def version = "${env.BRANCH_NAME}.${buildNo.trim()}"
 
-    notify(message: "Building xmtp-notification-server-go version ${version}: ${env.BUILD_URL}")
+    notify(message: "Building ${params.project} version ${version}: ${env.BUILD_URL}")
 
     stage('Build') {
 
-      def dockerRepository = "xmtp-notification-server-go"
+      def dockerRepository = "${params.project}"
       checkECR(dockerRepository)
 
       withCredentials([string(credentialsId: 'hopscotch-devops-token', variable: 'token')]) {
@@ -49,8 +53,8 @@ node {
 
       }
 
-      commitBuild({ project: "xmtp-notification-server-go" , branchName: env.BRANCH_NAME }, buildNo)
-      notifySuccess(message: "Built xmtp-notification-server-go/${params.version}: ${env.BUILD_URL}")
+      commitBuild(params, buildNo)
+      notifySuccess(message: "Built ${params.project}/${params.version}: ${env.BUILD_URL}")
 
     }
 
