@@ -237,7 +237,7 @@ func (x *MessageV2) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MessageV2) ProtoMessage() {}
+
 
 func (x *MessageV2) ProtoReflect() protoreflect.Message {
 	mi := &file_message_contents_message_proto_msgTypes[3]
