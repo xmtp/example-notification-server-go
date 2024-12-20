@@ -4,10 +4,11 @@ import (
 	"strings"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	"go.uber.org/zap"
 )
 
 const V1_PREFIX = "/xmtp/0/"
-const V3_PREFIX = "/xmtp/1/"
+const V3_PREFIX = "/xmtp/mls/1/"
 
 var messageTypeByPrefix = map[string]MessageType{
 	"test":         Test,
