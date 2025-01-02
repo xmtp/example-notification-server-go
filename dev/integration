@@ -1,6 +1,6 @@
 #!/bin/bash
 set -eou pipefail
 
-docker-compose up -d node
-docker-compose up integration
+docker compose up -d node
+docker compose up integration
 exit $?

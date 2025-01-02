@@ -3,7 +3,9 @@ import {
   buildUserIntroTopic,
   buildUserInviteTopic,
 } from "@xmtp/xmtp-js";
-import { createWalletClient, http } from "viem";
+import { Client as NodeClient, type Signer } from "@xmtp/node-sdk";
+import { join } from "node:path";
+import { createWalletClient, http, toBytes } from "viem";
 import { mainnet } from "viem/chains";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { createPromiseClient, type PromiseClient } from "@connectrpc/connect";
@@ -14,6 +16,7 @@ import {
   Subscription,
   Subscription_HmacKey,
 } from "./gen/notifications/v1/service_pb";
+import { getRandomValues } from "node:crypto";
 
 export function randomWallet() {
   const account = privateKeyToAccount(generatePrivateKey());
@@ -27,6 +30,24 @@ export function randomWallet() {
 export function randomClient() {
   const wallet = randomWallet();
   return Client.create(wallet, { env: "local", apiUrl: config.nodeUrl });
+}
+
+export async function randomNodeClient() {
+  const wallet = randomWallet();
+  const signer: Signer = {
+    getAddress: () => wallet.account.address,
+    signMessage: async (message) => {
+      const signature = await wallet.signMessage({ message });
+      return toBytes(signature);
+    },
+  };
+
+  const encKey = getRandomValues(new Uint8Array(32));
+  return await NodeClient.create(signer, encKey, {
+    env: "local",
+    disableAutoRegister: true,
+    dbPath: join(__dirname, `./test-${wallet.account.address}.db3`),
+  });
 }
 
 export function createNotificationClient() {
