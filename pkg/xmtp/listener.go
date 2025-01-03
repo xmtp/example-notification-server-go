@@ -168,7 +168,7 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	sendRequests := buildSendRequests(env, installations, subs)
+	sendRequests := buildSendRequests(env, installations, subs, l.logger)
 	for _, request := range sendRequests {
 		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
 			l.logger.Info("Skipping delivery of request",
@@ -186,7 +186,8 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 
 func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
 	if subscription.HmacKey != nil && len(subscription.HmacKey.Key) > 0 {
-		isSender := messageContext.IsSender(subscription.HmacKey.Key)
+		l.logger.Info("has HMAC Keys", zap.ByteString("hmac key", subscription.HmacKey.Key))
+		isSender := messageContext.IsSender(subscription.HmacKey.Key, l.logger)
 		if isSender {
 			return false
 		}
@@ -238,9 +239,9 @@ func buildIdempotencyKey(env *v1.Envelope) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
+func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Installation, subscriptions []interfaces.Subscription, logger *zap.Logger) []interfaces.SendRequest {
 	idempotencyKey := buildIdempotencyKey(envelope)
-	messageContext := getContext(envelope)
+	messageContext := getContext(envelope, logger)
 	out := []interfaces.SendRequest{}
 	installationMap := make(map[string]interfaces.Installation)
 	for _, installation := range installations {

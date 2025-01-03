@@ -8,6 +8,7 @@ import (
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
+	"go.uber.org/zap"
 )
 
 type DeliveryMechanismKind string
@@ -63,14 +64,27 @@ type MessageContext struct {
 	SenderHmac  *[]byte            `json:"-"`
 }
 
-func (m MessageContext) IsSender(hmacKey []byte) bool {
-	if m.SenderHmac == nil || m.HmacInputs == nil {
+func (m MessageContext) IsSender(hmacKey []byte, logger *zap.Logger) bool {
+	if m.SenderHmac == nil {
+		logger.Info("SenderHmac is nil, returning false")
+		return false
+	}
+
+	if m.HmacInputs == nil {
+		logger.Info("HmacInputs is nil, returning false")
 		return false
 	}
 	hmacHash := hmac.New(sha256.New, hmacKey)
 	hmacHash.Write(*m.HmacInputs)
 	expectedHmac := hmacHash.Sum(nil)
-	return hmac.Equal(*m.SenderHmac, expectedHmac)
+	if !hmac.Equal(*m.SenderHmac, expectedHmac) {
+		logger.Info("HMAC validation failed", 
+			zap.ByteString("provided HMAC", *m.SenderHmac), 
+			zap.ByteString("expected HMAC", expectedHmac),
+		)
+		return false
+	}
+	return true
 }
 
 type HmacKey struct {

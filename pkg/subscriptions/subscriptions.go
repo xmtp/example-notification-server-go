@@ -101,6 +101,7 @@ func (s SubscriptionsService) SubscribeWithMetadata(ctx context.Context, install
 				continue
 			}
 			for _, keyUpdate := range sub.HmacKeys {
+				s.logger.Info("Subscribes with HMAC", zap.ByteString("key", keyUpdate.Key))
 				hmacKeyUpdates = append(hmacKeyUpdates, db.SubscriptionHmacKeys{
 					SubscriptionId:             subscriptionId,
 					ThirtyDayPeriodsSinceEpoch: int32(keyUpdate.ThirtyDayPeriodsSinceEpoch),
