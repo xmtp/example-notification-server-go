@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	messageContents "github.com/xmtp/example-notification-server-go/pkg/proto/message_contents"
@@ -45,13 +44,9 @@ func parseConversationMessage(message []byte) (*messageContents.MessageV2, error
 }
 
 func getContext(env *messageApi.Envelope) interfaces.MessageContext {
-	fmt.Println("1")
 	messageType := topics.GetMessageType(env)
 	var shouldPush *bool
 	var hmacInputs, senderHmac *[]byte
-
-	spew.Dump(messageType)
-	spew.Dump(topics.V3Conversation)
 
 	if messageType == topics.V2Conversation {
 		if parsed, err := parseConversationMessage(env.Message); err == nil {
@@ -62,15 +57,12 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 			}
 		}
 	} else {
-		fmt.Println("2")
+
 		if message, err := parseGroupMessage(env.Message); err == nil {
-			fmt.Println("3")
 			push := true
 			shouldPush = &push
 			hmacInputs = &message.Data
-			spew.Dump(message.SenderHmac)
 			if len(message.SenderHmac) > 0 {
-				fmt.Println("4")
 				senderHmac = &message.SenderHmac
 			}
 		}
