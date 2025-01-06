@@ -2,7 +2,9 @@ package xmtp
 
 import (
 	"errors"
+	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	messageContents "github.com/xmtp/example-notification-server-go/pkg/proto/message_contents"
@@ -28,6 +30,7 @@ func parseGroupMessage(groupMessage []byte) (*mlsV1.GroupMessage_V1, error) {
 }
 
 func parseConversationMessage(message []byte) (*messageContents.MessageV2, error) {
+	fmt.Println("parseConversationMessage")
 	var msg messageContents.Message
 	err := proto.Unmarshal(message, &msg)
 	if err != nil {
@@ -42,9 +45,14 @@ func parseConversationMessage(message []byte) (*messageContents.MessageV2, error
 }
 
 func getContext(env *messageApi.Envelope) interfaces.MessageContext {
+	fmt.Println("1")
 	messageType := topics.GetMessageType(env)
 	var shouldPush *bool
 	var hmacInputs, senderHmac *[]byte
+
+	spew.Dump(messageType)
+	spew.Dump(topics.V3Conversation)
+
 	if messageType == topics.V2Conversation {
 		if parsed, err := parseConversationMessage(env.Message); err == nil {
 			shouldPush = parsed.ShouldPush
@@ -53,11 +61,16 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 				senderHmac = &parsed.SenderHmac
 			}
 		}
-	} else if messageType == topics.V3Conversation {
+	} else {
+		fmt.Println("2")
 		if message, err := parseGroupMessage(env.Message); err == nil {
-			*shouldPush = true
+			fmt.Println("3")
+			push := true
+			shouldPush = &push
 			hmacInputs = &message.Data
+			spew.Dump(message.SenderHmac)
 			if len(message.SenderHmac) > 0 {
+				fmt.Println("4")
 				senderHmac = &message.SenderHmac
 			}
 		}

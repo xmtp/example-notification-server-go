@@ -45,7 +45,7 @@ describe("notifications", () => {
       },
     });
 
-    const alixInviteTopic = `invite-${alix.accountAddress}`;
+    const alixInviteTopic = `/xmtp/mls/1/g-${alix.accountAddress}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
       installationId: alix.accountAddress,
       subscriptions: [
@@ -56,7 +56,7 @@ describe("notifications", () => {
       ],
     });
 
-    const notificationPromise = waitForNextRequest(10000);
+    const notificationPromise = waitForNextRequest(1000);
     await alix.conversations.newDm(bo.accountAddress);
     const notification = await notificationPromise;
 
@@ -91,18 +91,19 @@ describe("notifications", () => {
       thirtyDayPeriodsSinceEpoch: Number(v.epoch),
       key: Uint8Array.from(v.key),
     }));
+    const topic = `/xmtp/mls/1/g-${alixConversation.id}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
       installationId: alix.accountAddress,
       subscriptions: [
         {
-          topic: alixConversation.id,
+          topic,
           isSilent: false,
           hmacKeys: matchingKeys,
         },
       ],
     });
 
-    const notificationPromise = waitForNextRequest(10000);
+    const notificationPromise = waitForNextRequest(1000);
     await alixConversation.send("This should never be delivered");
     const boConversation = await bo.conversations.newDm(alix.accountAddress);
     const boMessage = await boConversation.send("This should be delivered");

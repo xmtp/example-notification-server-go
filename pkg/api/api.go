@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
@@ -142,8 +143,10 @@ func (s *ApiServer) Unsubscribe(
 
 func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
 	log := s.logger.With(zap.String("method", "subscribeWithMetadata"))
-	log.Info("starting")
-	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, buildSubscriptionInputs(req.Msg.Subscriptions))
+	log.Info("Subscribing")
+	inputs := buildSubscriptionInputs(req.Msg.Subscriptions)
+	spew.Dump(inputs)
+	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, inputs)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

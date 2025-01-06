@@ -1,5 +1,4 @@
 import { Client, type Signer } from "@xmtp/node-sdk";
-import { join } from "node:path";
 import { createWalletClient, http, toBytes } from "viem";
 import { mainnet } from "viem/chains";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
@@ -35,7 +34,7 @@ export async function randomClient() {
   const encKey = getRandomValues(new Uint8Array(32));
   return await Client.create(signer, encKey, {
     env: "dev",
-    disableAutoRegister: false,
+    apiUrl: "http://localhost:25556",
     dbPath: `/tmp/test-${wallet.account.address}.db3`,
   });
 }
