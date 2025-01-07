@@ -4,12 +4,10 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
@@ -146,17 +144,14 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	spew.Dump(env.ContentTopic)
 	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
 	}
 
 	if len(subs) == 0 {
-		l.logger.Info(fmt.Sprintf("No subs for %+v", env.ContentTopic))
 		return nil
 	}
-	l.logger.Info("Found a sub!")
 
 	installationIds := make([]string, len(subs))
 	for i, sub := range subs {
@@ -173,7 +168,7 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	sendRequests :=  buildSendRequests(env, installations, subs)
+	sendRequests := buildSendRequests(env, installations, subs)
 	for _, request := range sendRequests {
 		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
 			l.logger.Info("Skipping delivery of request",

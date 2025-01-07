@@ -74,7 +74,7 @@ describe("notifications", () => {
 
     const alixNotificationClient = createNotificationClient();
     await alixNotificationClient.registerInstallation({
-      installationId: alix.accountAddress,
+      installationId: alix.installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           value: "token",
@@ -83,17 +83,26 @@ describe("notifications", () => {
       },
     });
 
-    const alixConversation = await alix.conversations.newDm(bo.accountAddress);
+    const boGroup = await bo.conversations.newGroup([alix.accountAddress]);
+
+    expect((await alix.conversations.list()).length).toEqual(0);
+    await alix.conversations.syncAll();
+    const alixGroups = await alix.conversations.list();
+    expect(alixGroups.length).toEqual(1);
+    const alixGroup = alixGroups[0];
+
     const hmacKeys = alix.conversations.hmacKeys();
-    const conversationHmacKeys = hmacKeys[alixConversation.id];
+    expect(Object.keys(hmacKeys).length).toEqual(1);
+    const conversationHmacKeys = hmacKeys[alixGroup.id];
+    expect(conversationHmacKeys.length).toEqual(3);
 
     const matchingKeys = conversationHmacKeys.map((v) => ({
       thirtyDayPeriodsSinceEpoch: Number(v.epoch),
       key: Uint8Array.from(v.key),
     }));
-    const topic = `/xmtp/mls/1/g-${alixConversation.id}/proto`;
+    const topic = `/xmtp/mls/1/g-${alixGroup.id}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
-      installationId: alix.accountAddress,
+      installationId: alix.installationId,
       subscriptions: [
         {
           topic,
@@ -103,16 +112,17 @@ describe("notifications", () => {
       ],
     });
 
-    const notificationPromise = waitForNextRequest(1000);
-    await alixConversation.send("This should never be delivered");
-    const boConversation = await bo.conversations.newDm(alix.accountAddress);
-    const boMessage = await boConversation.send("This should be delivered");
+    const notificationPromise = waitForNextRequest(10000);
+    await alixGroup.send("This should never be delivered");
+    const boMessage = await boGroup.send("This should be delivered");
     // expect(boConversation.id).toEqual(conversation.id);
 
+    console.log("before");
     const notification = await notificationPromise;
+    console.log("after");
 
     expect(notification.idempotency_key).toBeString();
-    expect(notification.message.content_topic).toEqual(alixConversation.id);
+    expect(notification.message.content_topic).toEqual(topic);
     expect(notification.message.message).toBeString();
     expect(notification.subscription.is_silent).toBeFalse();
     expect(notification.installation.delivery_mechanism.token).toEqual("token");

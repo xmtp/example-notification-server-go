@@ -2,7 +2,6 @@ package xmtp
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
@@ -29,7 +28,6 @@ func parseGroupMessage(groupMessage []byte) (*mlsV1.GroupMessage_V1, error) {
 }
 
 func parseConversationMessage(message []byte) (*messageContents.MessageV2, error) {
-	fmt.Println("parseConversationMessage")
 	var msg messageContents.Message
 	err := proto.Unmarshal(message, &msg)
 	if err != nil {
@@ -47,7 +45,6 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 	messageType := topics.GetMessageType(env)
 	var shouldPush *bool
 	var hmacInputs, senderHmac *[]byte
-
 	if messageType == topics.V2Conversation {
 		if parsed, err := parseConversationMessage(env.Message); err == nil {
 			shouldPush = parsed.ShouldPush
@@ -57,7 +54,6 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 			}
 		}
 	} else {
-
 		if message, err := parseGroupMessage(env.Message); err == nil {
 			push := true
 			shouldPush = &push
