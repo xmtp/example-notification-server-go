@@ -7,18 +7,18 @@ import (
 )
 
 const V1_PREFIX = "/xmtp/0/"
-const V3_PREFIX = "/xmtp/1/"
+const V3_PREFIX = "/xmtp/mls/1/"
 
 var messageTypeByPrefix = map[string]MessageType{
-	"test":          Test,
-	"privatestore":  Private,
-	"contact":       Contact,
-	"intro":         V1Intro,
-	"dm":            V1Conversation,
-	"invite":        V2Invite,
-	"m":             V2Conversation,
-	"/xmtp/mls/1/g": V3Conversation,
-	"w":             V3Welcome,
+	"test":         Test,
+	"privatestore": Private,
+	"contact":      Contact,
+	"intro":        V1Intro,
+	"dm":           V1Conversation,
+	"invite":       V2Invite,
+	"m":            V2Conversation,
+	"g":            V3Conversation,
+	"w":            V3Welcome,
 }
 
 func GetMessageType(env *v1.Envelope) MessageType {
