@@ -1,10 +1,7 @@
 import { serve } from "bun";
-import { expect, test, beforeEach, afterAll, describe } from "bun:test";
+import { expect, test, afterAll, describe } from "bun:test";
 import { createNotificationClient, randomClient } from ".";
-import { buildUserInviteTopic, fromNanoString } from "@xmtp/xmtp-js";
 import type { NotificationResponse } from "./types";
-import { fetcher } from "@xmtp/proto";
-const { b64Decode } = fetcher;
 
 const PORT = 7777;
 
@@ -39,7 +36,7 @@ describe("notifications", () => {
     const bo = await randomClient();
     const alixNotificationClient = createNotificationClient();
     await alixNotificationClient.registerInstallation({
-      installationId: alix.address,
+      installationId: alix.accountAddress,
       deliveryMechanism: {
         deliveryMechanismType: {
           value: "token",
@@ -47,9 +44,10 @@ describe("notifications", () => {
         },
       },
     });
-    const alixInviteTopic = buildUserInviteTopic(alix.address);
+
+    const alixInviteTopic = `/xmtp/mls/1/g-${alix.accountAddress}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
-      installationId: alix.address,
+      installationId: alix.accountAddress,
       subscriptions: [
         {
           topic: alixInviteTopic,
@@ -58,8 +56,8 @@ describe("notifications", () => {
       ],
     });
 
-    const notificationPromise = waitForNextRequest(10000);
-    await alix.conversations.newConversation(bo.address);
+    const notificationPromise = waitForNextRequest(1000);
+    await alix.conversations.newDm(bo.accountAddress);
     const notification = await notificationPromise;
 
     expect(notification.idempotency_key).toBeString();
@@ -73,9 +71,10 @@ describe("notifications", () => {
   test("hmac keys", async () => {
     const alix = await randomClient();
     const bo = await randomClient();
+
     const alixNotificationClient = createNotificationClient();
     await alixNotificationClient.registerInstallation({
-      installationId: alix.address,
+      installationId: alix.installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           value: "token",
@@ -83,21 +82,30 @@ describe("notifications", () => {
         },
       },
     });
-    const conversation = await alix.conversations.newConversation(bo.address);
-    const hmacKeys = await alix.keystore.getV2ConversationHmacKeys({
-      topics: [conversation.topic],
-    });
-    const matchingKeys = hmacKeys.hmacKeys[conversation.topic].values.map(
-      (v) => ({
-        thirtyDayPeriodsSinceEpoch: v.thirtyDayPeriodsSinceEpoch,
-        key: v.hmacKey,
-      })
-    );
+
+    const boGroup = await bo.conversations.newGroup([alix.accountAddress]);
+
+    expect((await alix.conversations.list()).length).toEqual(0);
+    await alix.conversations.syncAll();
+    const alixGroups = await alix.conversations.list();
+    expect(alixGroups.length).toEqual(1);
+    const alixGroup = alixGroups[0];
+
+    const hmacKeys = alix.conversations.hmacKeys();
+    expect(Object.keys(hmacKeys).length).toEqual(1);
+    const conversationHmacKeys = hmacKeys[alixGroup.id];
+    expect(conversationHmacKeys.length).toEqual(3);
+
+    const matchingKeys = conversationHmacKeys.map((v) => ({
+      thirtyDayPeriodsSinceEpoch: Number(v.epoch),
+      key: Uint8Array.from(v.key),
+    }));
+    const topic = `/xmtp/mls/1/g-${alixGroup.id}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
-      installationId: alix.address,
+      installationId: alix.installationId,
       subscriptions: [
         {
-          topic: conversation.topic,
+          topic,
           isSilent: false,
           hmacKeys: matchingKeys,
         },
@@ -105,25 +113,15 @@ describe("notifications", () => {
     });
 
     const notificationPromise = waitForNextRequest(10000);
-    await conversation.send("This should never be delivered");
-    const boConversation = await bo.conversations.newConversation(alix.address);
-    const boMessage = await boConversation.send("This should be delivered");
-    expect(boConversation.topic).toEqual(conversation.topic);
+    await alixGroup.send("This should never be delivered");
+    await boGroup.send("This should be delivered");
 
     const notification = await notificationPromise;
 
     expect(notification.idempotency_key).toBeString();
-    expect(notification.message.content_topic).toEqual(conversation.topic);
+    expect(notification.message.content_topic).toEqual(topic);
     expect(notification.message.message).toBeString();
     expect(notification.subscription.is_silent).toBeFalse();
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
-
-    const decryptedMessage = await boConversation.decodeMessage({
-      timestampNs: notification.message.timestamp_ns.toString(),
-      message: b64Decode(notification.message.message),
-      contentTopic: notification.message.content_topic,
-    });
-
-    expect(decryptedMessage.content).toEqual("This should be delivered");
   });
 });

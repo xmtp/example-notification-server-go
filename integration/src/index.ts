@@ -1,9 +1,5 @@
-import {
-  Client,
-  buildUserIntroTopic,
-  buildUserInviteTopic,
-} from "@xmtp/xmtp-js";
-import { createWalletClient, http } from "viem";
+import { Client, type Signer } from "@xmtp/node-sdk";
+import { createWalletClient, http, toBytes } from "viem";
 import { mainnet } from "viem/chains";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { createPromiseClient, type PromiseClient } from "@connectrpc/connect";
@@ -14,6 +10,7 @@ import {
   Subscription,
   Subscription_HmacKey,
 } from "./gen/notifications/v1/service_pb";
+import { getRandomValues } from "node:crypto";
 
 export function randomWallet() {
   const account = privateKeyToAccount(generatePrivateKey());
@@ -24,9 +21,22 @@ export function randomWallet() {
   });
 }
 
-export function randomClient() {
+export async function randomClient() {
   const wallet = randomWallet();
-  return Client.create(wallet, { env: "local", apiUrl: config.nodeUrl });
+  const signer: Signer = {
+    getAddress: () => wallet.account.address,
+    signMessage: async (message) => {
+      const signature = await wallet.signMessage({ message });
+      return toBytes(signature);
+    },
+  };
+
+  const encKey = getRandomValues(new Uint8Array(32));
+  return await Client.create(signer, encKey, {
+    env: "dev",
+    apiUrl: "http://localhost:25556",
+    dbPath: `/tmp/test-${wallet.account.address}.db3`,
+  });
 }
 
 export function createNotificationClient() {
@@ -50,51 +60,39 @@ export async function subscribeToTopics(
   // Only subscribe to notifications which have a consent state of allowed
   // to protect users from SPAM notifications
   const consentedConversations = (await xmtpClient.conversations.list()).filter(
-    (c) => c.consentState === "allowed"
+    (c) => c.consentState === 1
   );
 
   // Get the HMAC Keys for all conversations where the keys exist
-  const hmacKeys = (
-    await xmtpClient.keystore.getV2ConversationHmacKeys({
-      topics: consentedConversations.map((c) => c.topic),
-    })
-  ).hmacKeys;
+  const hmacKeys = xmtpClient.conversations.hmacKeys();
+  // const hmacKeys = (
+  // await xmtpClient.keystore.getV2ConversationHmacKeys({
+  // topics: consentedConversations.map((c) => c.id),
+  // })
+  // ).hmacKeys;
 
   // Convert the conversations to subscriptions
   const conversationSubscriptions = consentedConversations.map(
     (c): Subscription =>
       new Subscription({
-        topic: c.topic,
+        topic: c.id,
         // V1 conversations don't have isSender support.
         // Use data only notifications here for iOS
-        isSilent: c.conversationVersion === "v1" && isIos,
-        hmacKeys: hmacKeys[c.topic]?.values.map(
-          (hmacKey) =>
+        isSilent: false,
+        hmacKeys: hmacKeys[c.id]?.map(
+          (v) =>
             new Subscription_HmacKey({
-              key: hmacKey.hmacKey,
-              thirtyDayPeriodsSinceEpoch: hmacKey.thirtyDayPeriodsSinceEpoch,
+              thirtyDayPeriodsSinceEpoch: Number(v.epoch),
+              key: Uint8Array.from(v.key),
             })
         ),
       })
   );
 
-  const inviteAndIntroSubscriptions: Subscription[] = [
-    // Intro topic for new V1 conversations
-    new Subscription({
-      topic: buildUserIntroTopic(xmtpClient.address),
-      isSilent: isIos,
-    }),
-    // Invite topic for new V2 conversations
-    new Subscription({
-      topic: buildUserInviteTopic(xmtpClient.address),
-      isSilent: true,
-    }),
-  ];
+  const inviteAndIntroSubscriptions: Subscription[] = [];
 
   await notificationClient.subscribeWithMetadata({
     installationId,
-    subscriptions: conversationSubscriptions.concat(
-      inviteAndIntroSubscriptions
-    ),
+    subscriptions: conversationSubscriptions,
   });
 }

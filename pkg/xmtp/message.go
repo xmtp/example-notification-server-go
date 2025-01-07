@@ -6,9 +6,26 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	messageContents "github.com/xmtp/example-notification-server-go/pkg/proto/message_contents"
+	mlsV1 "github.com/xmtp/example-notification-server-go/pkg/proto/mls/api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"google.golang.org/protobuf/proto"
 )
+
+func parseGroupMessage(groupMessage []byte) (*mlsV1.GroupMessage_V1, error) {
+	var msg mlsV1.GroupMessage
+	err := proto.Unmarshal(groupMessage, &msg)
+	if err != nil {
+		return nil, err
+	}
+
+	v1Message := msg.GetV1()
+
+	if v1Message == nil {
+		return nil, errors.New("Not a V1 message")
+	}
+
+	return v1Message, nil
+}
 
 func parseConversationMessage(message []byte) (*messageContents.MessageV2, error) {
 	var msg messageContents.Message
@@ -16,6 +33,7 @@ func parseConversationMessage(message []byte) (*messageContents.MessageV2, error
 	if err != nil {
 		return nil, err
 	}
+
 	v2Message := msg.GetV2()
 	if v2Message != nil {
 		return v2Message, nil
@@ -33,6 +51,15 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 			hmacInputs = &parsed.HeaderBytes
 			if len(parsed.SenderHmac) > 0 {
 				senderHmac = &parsed.SenderHmac
+			}
+		}
+	} else if messageType == topics.V3Conversation {
+		if message, err := parseGroupMessage(env.Message); err == nil {
+			push := true
+			shouldPush = &push
+			hmacInputs = &message.Data
+			if len(message.SenderHmac) > 0 {
+				senderHmac = &message.SenderHmac
 			}
 		}
 	}

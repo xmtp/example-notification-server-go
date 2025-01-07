@@ -7,7 +7,7 @@ import (
 )
 
 const V1_PREFIX = "/xmtp/0/"
-const V3_PREFIX = "/xmtp/1/"
+const V3_PREFIX = "/xmtp/mls/1/"
 
 var messageTypeByPrefix = map[string]MessageType{
 	"test":         Test,

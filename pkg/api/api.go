@@ -142,8 +142,9 @@ func (s *ApiServer) Unsubscribe(
 
 func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
 	log := s.logger.With(zap.String("method", "subscribeWithMetadata"))
-	log.Info("starting")
-	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, buildSubscriptionInputs(req.Msg.Subscriptions))
+	log.Info("Subscribing")
+	inputs := buildSubscriptionInputs(req.Msg.Subscriptions)
+	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, inputs)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
