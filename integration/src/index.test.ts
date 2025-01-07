@@ -114,25 +114,14 @@ describe("notifications", () => {
 
     const notificationPromise = waitForNextRequest(10000);
     await alixGroup.send("This should never be delivered");
-    const boMessage = await boGroup.send("This should be delivered");
-    // expect(boConversation.id).toEqual(conversation.id);
+    await boGroup.send("This should be delivered");
 
-    console.log("before");
     const notification = await notificationPromise;
-    console.log("after");
 
     expect(notification.idempotency_key).toBeString();
     expect(notification.message.content_topic).toEqual(topic);
     expect(notification.message.message).toBeString();
     expect(notification.subscription.is_silent).toBeFalse();
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
-
-    // const decryptedMessage = await boConversation.decodeMessage({
-    // timestampNs: notification.message.timestamp_ns.toString(),
-    // message: b64Decode(notification.message.message),
-    // contentTopic: notification.message.content_topic,
-    // });
-
-    // expect(decryptedMessage.content).toEqual("This should be delivered");
   });
 });
