@@ -97,7 +97,6 @@ func main() {
 		if err != nil {
 			logger.Fatal("failed to initialize listener", zap.Error(err))
 		}
-
 		listener.Start()
 	}
 

@@ -53,7 +53,7 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 				senderHmac = &parsed.SenderHmac
 			}
 		}
-	} else {
+	} else if messageType == topics.V3Conversation {
 		if message, err := parseGroupMessage(env.Message); err == nil {
 			push := true
 			shouldPush = &push
