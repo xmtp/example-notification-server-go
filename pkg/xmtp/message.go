@@ -35,6 +35,11 @@ func getContext(env *messageApi.Envelope, logger *zap.Logger) interfaces.Message
 
 	if messageType == topics.V3Conversation {
 		if message, err := parseGroupMessage(env.Message); err == nil {
+			logger.Info("MESSAGE PARSED LOPI",
+				zap.Any("should_push", message.ShouldPush),
+				zap.Any("hmac", message.SenderHmac),
+
+			)
 			shouldPush = message.ShouldPush
 
 			hmacInputs = &message.Data

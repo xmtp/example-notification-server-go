@@ -164,6 +164,11 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 
 	sendRequests := buildSendRequests(env, installations, subs, l.logger)
 	for _, request := range sendRequests {
+			l.logger.Info("HELP",
+				zap.Any("message_context", request.MessageContext),
+				zap.Any("subscription", request.Subscription),
+				zap.Any("request", request),
+			)
 		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
 			l.logger.Info("Skipping delivery of request",
 				zap.Any("message_context", request.MessageContext),
