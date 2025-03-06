@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
@@ -138,6 +139,10 @@ func (l *Listener) startMessageWorkers() {
 }
 
 func (l *Listener) processEnvelope(env *v1.Envelope) error {
+	if !isV3Topic(env.ContentTopic) {
+			l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
+		return nil
+	}
 	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
@@ -216,6 +221,13 @@ func (l *Listener) refreshClient() error {
 	l.xmtpClient = client
 
 	return nil
+}
+
+func isV3Topic(topic string) bool {
+	if strings.HasPrefix(topic, "/xmtp/mls/1/g-") || strings.HasPrefix(topic, "/xmtp/mls/1/w-") {
+		return true
+	}
+	return false
 }
 
 func buildIdempotencyKey(env *v1.Envelope) string {
