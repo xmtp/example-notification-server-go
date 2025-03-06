@@ -53,27 +53,18 @@ func getHmacKey(t *testing.T, fixture *rawFixture) []byte {
 	return hmacKey
 }
 
-func Test_IdentifyV2Invite(t *testing.T) {
-	rawFixture := getRawFixture(t, "v2-invite")
-	envelope := getEnvelope(t, rawFixture)
-	context := getContext(envelope)
-	require.Equal(t, context.MessageType, topics.V2Invite)
-	require.False(t, context.IsSender([]byte("key")))
-	require.Nil(t, context.ShouldPush)
-}
-
-func Test_IdentifyV2Conversation(t *testing.T) {
-	rawFixture := getRawFixture(t, "v2-conversation")
+func Test_IdentifyV3Conversation(t *testing.T) {
+	rawFixture := getRawFixture(t, "v3-conversation")
 	envelope := getEnvelope(t, rawFixture)
 	hmacKey := getHmacKey(t, rawFixture)
 	context := getContext(envelope)
-	require.True(t, context.IsSender(hmacKey))
+	require.False(t, context.IsSender(hmacKey))
 	require.True(t, *context.ShouldPush)
-	require.Equal(t, context.MessageType, topics.V2Conversation)
+	require.Equal(t, context.MessageType, topics.V3Conversation)
 
 	wrongKey := []byte("foo")
 	contextWithWrongKey := getContext(envelope)
 	require.False(t, contextWithWrongKey.IsSender(wrongKey))
 	require.True(t, *contextWithWrongKey.ShouldPush)
-	require.Equal(t, contextWithWrongKey.MessageType, topics.V2Conversation)
+	require.Equal(t, contextWithWrongKey.MessageType, topics.V3Conversation)
 }

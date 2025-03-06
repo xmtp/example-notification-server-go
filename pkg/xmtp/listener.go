@@ -139,11 +139,10 @@ func (l *Listener) startMessageWorkers() {
 }
 
 func (l *Listener) processEnvelope(env *v1.Envelope) error {
-	if shouldIgnoreTopic(env.ContentTopic) {
+	if !isV3Topic(env.ContentTopic) {
 		l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
 		return nil
 	}
-
 	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
@@ -224,8 +223,8 @@ func (l *Listener) refreshClient() error {
 	return nil
 }
 
-func shouldIgnoreTopic(topic string) bool {
-	if strings.HasPrefix(topic, "/xmtp/0/contact-") || strings.HasPrefix(topic, "/xmtp/0/privatestore-") {
+func isV3Topic(topic string) bool {
+	if strings.HasPrefix(topic, "/xmtp/mls/1/g-") || strings.HasPrefix(topic, "/xmtp/mls/1/w-") {
 		return true
 	}
 	return false

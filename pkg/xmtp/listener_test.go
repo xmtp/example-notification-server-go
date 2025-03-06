@@ -22,7 +22,7 @@ const (
 	XMTP_ADDRESS      = "localhost:25556"
 	INSTALLATION_ID   = "test_installation"
 	INSTALLATION_ID_2 = "test_installation_2"
-	TEST_TOPIC        = "/xmtp/0/test_topic/proto"
+	TEST_TOPIC        = "/xmtp/mls/1/g-test_topic/proto"
 	DELIVERY_TOKEN    = "test_token"
 )
 
