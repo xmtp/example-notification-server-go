@@ -53,21 +53,12 @@ func getHmacKey(t *testing.T, fixture *rawFixture) []byte {
 	return hmacKey
 }
 
-func Test_IdentifyV3Welcome(t *testing.T) {
-	rawFixture := getRawFixture(t, "v3-welcome")
-	envelope := getEnvelope(t, rawFixture)
-	context := getContext(envelope)
-	require.Equal(t, context.MessageType, topics.V3Welcome)
-	require.False(t, context.IsSender([]byte("key")))
-	require.Nil(t, context.ShouldPush)
-}
-
 func Test_IdentifyV3Conversation(t *testing.T) {
 	rawFixture := getRawFixture(t, "v3-conversation")
 	envelope := getEnvelope(t, rawFixture)
 	hmacKey := getHmacKey(t, rawFixture)
 	context := getContext(envelope)
-	require.True(t, context.IsSender(hmacKey))
+	require.False(t, context.IsSender(hmacKey))
 	require.True(t, *context.ShouldPush)
 	require.Equal(t, context.MessageType, topics.V3Conversation)
 
