@@ -53,7 +53,7 @@ func getHmacKey(t *testing.T, fixture *rawFixture) []byte {
 	return hmacKey
 }
 
-func Test_IdentifyV2Invite(t *testing.T) {
+func Test_IdentifyV3Welcome(t *testing.T) {
 	rawFixture := getRawFixture(t, "v3-welcome")
 	envelope := getEnvelope(t, rawFixture)
 	context := getContext(envelope)
@@ -62,7 +62,7 @@ func Test_IdentifyV2Invite(t *testing.T) {
 	require.Nil(t, context.ShouldPush)
 }
 
-func Test_IdentifyV2Conversation(t *testing.T) {
+func Test_IdentifyV3Conversation(t *testing.T) {
 	rawFixture := getRawFixture(t, "v3-conversation")
 	envelope := getEnvelope(t, rawFixture)
 	hmacKey := getHmacKey(t, rawFixture)
