@@ -40,7 +40,7 @@ func getContext(env *messageApi.Envelope, logger *zap.Logger) interfaces.Message
 				zap.Any("hmac", message.SenderHmac),
 
 			)
-			shouldPush = message.ShouldPush
+			shouldPush = &message.ShouldPush
 
 			hmacInputs = &message.Data
 			if len(message.SenderHmac) > 0 {
