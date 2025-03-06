@@ -140,7 +140,7 @@ func (l *Listener) startMessageWorkers() {
 
 func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	if !isV3Topic(env.ContentTopic) {
-			l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
+		l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
 		return nil
 	}
 	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
