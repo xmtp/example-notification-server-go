@@ -162,13 +162,8 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	sendRequests := buildSendRequests(env, installations, subs, l.logger)
+	sendRequests := buildSendRequests(env, installations, subs)
 	for _, request := range sendRequests {
-			l.logger.Info("HELP",
-				zap.Any("message_context", request.MessageContext),
-				zap.Any("subscription", request.Subscription),
-				zap.Any("request", request),
-			)
 		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
 			l.logger.Info("Skipping delivery of request",
 				zap.Any("message_context", request.MessageContext),
@@ -230,9 +225,9 @@ func buildIdempotencyKey(env *v1.Envelope) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Installation, subscriptions []interfaces.Subscription, logger *zap.Logger) []interfaces.SendRequest {
+func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
 	idempotencyKey := buildIdempotencyKey(envelope)
-	messageContext := getContext(envelope, logger)
+	messageContext := getContext(envelope)
 	out := []interfaces.SendRequest{}
 	installationMap := make(map[string]interfaces.Installation)
 	for _, installation := range installations {
