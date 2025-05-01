@@ -20,7 +20,7 @@ func parseGroupMessage(groupMessage []byte) (*mlsV1.GroupMessage_V1, error) {
 	v1Message := msg.GetV1()
 
 	if v1Message == nil {
-		return nil, errors.New("Not a V1 message")
+		return nil, errors.New("not a V1 message")
 	}
 
 	return v1Message, nil

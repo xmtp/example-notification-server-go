@@ -14,7 +14,6 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
 	"github.com/xmtp/example-notification-server-go/pkg/api"
-	"github.com/xmtp/example-notification-server-go/pkg/db"
 	database "github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/migrations"
 	"github.com/xmtp/example-notification-server-go/pkg/delivery"
@@ -140,7 +139,7 @@ func initDb() *bun.DB {
 }
 
 func createMigration() error {
-	db, err := db.CreateBunDB(opts.DbConnectionString, 30*time.Second)
+	db, err := database.CreateBunDB(opts.DbConnectionString, 30*time.Second)
 	if err != nil {
 		return err
 	}

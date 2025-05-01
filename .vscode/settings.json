@@ -1,4 +1,5 @@
 {
   "go.lintTool": "golangci-lint",
-  "go.lintFlags": ["--fast", "--config=./dev/.golangci.yaml"]
+  "go.lintFlags": ["--fast", "--config=./dev/.golangci.yaml"],
+  "go.useLanguageServer": true
 }

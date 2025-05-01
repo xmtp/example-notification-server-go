@@ -20,7 +20,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.54
+          version: v2.0.2
           args: --timeout=5m --config dev/.golangci.yaml

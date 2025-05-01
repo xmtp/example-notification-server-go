@@ -54,7 +54,9 @@ func (h HttpDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	// Check the response status code
 	if response.StatusCode != http.StatusOK {

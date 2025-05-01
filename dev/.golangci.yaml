@@ -1,10 +1,14 @@
+version: "2"
 linters:
-  Default: true
+  default: "standard"
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
   enable:
     - nakedret
     - nilerr
-issues:
-  exclude:
-    - SA5008
+
+  exclusions:
+    rules:
+      - linters:
+          - staticcheck
+        text: SA5008

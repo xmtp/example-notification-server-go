@@ -1,5 +1,5 @@
 # BUILD IMAGE --------------------------------------------------------
-FROM golang:1.20-alpine as builder
+FROM golang:1.24-alpine AS builder
 
 # Get build tools and required header files
 RUN apk add --no-cache build-base
@@ -17,7 +17,7 @@ RUN go build \
 
 # ACTUAL IMAGE -------------------------------------------------------
 
-FROM alpine:3.12
+FROM alpine:3
 
 LABEL maintainer="engineering@xmtp.com"
 LABEL source="https://github.com/xmtp/example-notification-server-go"
