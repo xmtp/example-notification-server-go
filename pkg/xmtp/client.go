@@ -3,6 +3,7 @@ package xmtp
 import (
 	"context"
 	"crypto/tls"
+	"time"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"google.golang.org/grpc"
@@ -16,11 +17,18 @@ const (
 	appVersionMetadataKey    = "x-app-version"
 )
 
-func newConn(ctx context.Context, apiAddress string, useTls bool) (*grpc.ClientConn, error) {
-	return grpc.DialContext(
-		ctx,
+func newConn(apiAddress string, useTls bool, clientVersion, appVersion string) (*grpc.ClientConn, error) {
+	return grpc.NewClient(
 		apiAddress,
 		grpc.WithTransportCredentials(getCredentials(useTls)),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			MinConnectTimeout: 5 * time.Second,
+		}),
+		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			ctx = metadata.AppendToOutgoingContext(ctx, clientVersionMetadataKey, clientVersion)
+			ctx = metadata.AppendToOutgoingContext(ctx, appVersionMetadataKey, appVersion)
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
 	)
 }
 
@@ -34,9 +42,7 @@ func getCredentials(useTls bool) credentials.TransportCredentials {
 }
 
 func NewClient(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (v1.MessageApiClient, error) {
-	ctx = metadata.AppendToOutgoingContext(ctx, clientVersionMetadataKey, clientVersion)
-	ctx = metadata.AppendToOutgoingContext(ctx, appVersionMetadataKey, appVersion)
-	conn, err := newConn(ctx, apiAddress, useTls)
+	conn, err := newConn(apiAddress, useTls, clientVersion, appVersion)
 	if err != nil {
 		return nil, err
 	}
