@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"errors"
+	"strings"
 	"os"
 
 	"github.com/sideshow/apns2"
@@ -30,7 +31,7 @@ func NewApnsDelivery(logger *zap.Logger, opts options.ApnsOptions) (*ApnsDeliver
 			return nil, err
 		}
 	} else {
-		bytes = []byte(opts.P8Certificate)
+		bytes = []byte(strings.ReplaceAll(opts.P8Certificate, "\\n", "\n"))
 	}
 
 	client, err := getApnsClient(bytes, opts.KeyId, opts.TeamId)
