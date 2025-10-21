@@ -15,6 +15,7 @@ type DeliveryMechanismKind string
 const (
 	APNS DeliveryMechanismKind = "apns"
 	FCM  DeliveryMechanismKind = "fcm"
+	EXPO DeliveryMechanismKind = "expo"
 )
 
 type DeliveryMechanism struct {

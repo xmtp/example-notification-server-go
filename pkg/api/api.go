@@ -88,6 +88,7 @@ func (s *ApiServer) RegisterInstallation(
 		s.logger.Error("error registering installation", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+
 	s.logger.Info("sending response", zap.Any("result", result))
 	return connect.NewResponse(&proto.RegisterInstallationResponse{
 		InstallationId: req.Msg.InstallationId,
@@ -181,9 +182,15 @@ func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.De
 	}
 	apnsToken := mechanism.GetApnsDeviceToken()
 	fcmToken := mechanism.GetFirebaseDeviceToken()
+	customToken := mechanism.GetCustomToken()
+
 	if apnsToken != "" {
 		return &interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: apnsToken}
-	} else {
+	} else if fcmToken != "" {
 		return &interfaces.DeliveryMechanism{Kind: interfaces.FCM, Token: fcmToken}
+	} else if customToken != "" {
+		// For Expo tokens (ExponentPushToken[...])
+		return &interfaces.DeliveryMechanism{Kind: interfaces.EXPO, Token: customToken}
 	}
+	return nil
 }

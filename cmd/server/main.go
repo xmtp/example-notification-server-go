@@ -88,6 +88,9 @@ func main() {
 			deliveryServices = append(deliveryServices, fcm)
 		}
 
+		expo := delivery.NewExpoDelivery(logger, opts.Expo)
+		deliveryServices = append(deliveryServices, expo)
+
 		if opts.HttpDelivery.Enabled {
 			deliveryServices = append(deliveryServices, delivery.NewHttpDelivery(logger, opts.HttpDelivery))
 		}
