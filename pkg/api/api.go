@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/xmtp/example-notification-server-go/pkg/delivery"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
+	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
 	"go.uber.org/zap"
@@ -24,14 +26,16 @@ type ApiServer struct {
 	subscriptions interfaces.Subscriptions
 	httpServer    *http.Server
 	port          int
+	expoOpts      options.ExpoOptions
 }
 
-func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
+func NewApiServer(logger *zap.Logger, opts options.ApiOptions, expoOpts options.ExpoOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
 	return &ApiServer{
 		logger:        logger.Named("api"),
 		installations: installations,
 		subscriptions: subscriptions,
 		port:          opts.Port,
+		expoOpts:      expoOpts,
 	}
 }
 
@@ -88,6 +92,13 @@ func (s *ApiServer) RegisterInstallation(
 		s.logger.Error("error registering installation", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+
+	// Send test notification for Expo registrations
+	if mechanism.Kind == interfaces.EXPO {
+		s.logger.Info("Sending test Expo notification")
+		go s.sendTestNotification(context.Background(), req.Msg.InstallationId, *mechanism)
+	}
+
 	s.logger.Info("sending response", zap.Any("result", result))
 	return connect.NewResponse(&proto.RegisterInstallationResponse{
 		InstallationId: req.Msg.InstallationId,
@@ -181,9 +192,51 @@ func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.De
 	}
 	apnsToken := mechanism.GetApnsDeviceToken()
 	fcmToken := mechanism.GetFirebaseDeviceToken()
+	customToken := mechanism.GetCustomToken()
+
 	if apnsToken != "" {
 		return &interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: apnsToken}
-	} else {
+	} else if fcmToken != "" {
 		return &interfaces.DeliveryMechanism{Kind: interfaces.FCM, Token: fcmToken}
+	} else if customToken != "" {
+		// For Expo tokens (ExponentPushToken[...])
+		return &interfaces.DeliveryMechanism{Kind: interfaces.EXPO, Token: customToken}
+	}
+	return nil
+}
+
+func (s *ApiServer) sendTestNotification(ctx context.Context, installationId string, mechanism interfaces.DeliveryMechanism) {
+	s.logger.Info("Preparing test notification",
+		zap.String("installationId", installationId),
+		zap.String("token", mechanism.Token))
+
+	// Create Expo delivery instance
+	expoDelivery := delivery.NewExpoDelivery(s.logger, s.expoOpts)
+
+	// Create a test message
+	testMessage := []byte("Welcome to XMTP notifications!")
+
+	// Create a dummy send request for the test notification
+	testRequest := interfaces.SendRequest{
+		Installation: interfaces.Installation{
+			Id:                installationId,
+			DeliveryMechanism: mechanism,
+		},
+		Subscription: interfaces.Subscription{
+			IsSilent: false,
+		},
+		MessageContext: interfaces.MessageContext{},
+		Message: &v1.Envelope{
+			ContentTopic: "/xmtp/test",
+			Message:      testMessage,
+		},
+	}
+
+	// Send the test notification
+	err := expoDelivery.Send(ctx, testRequest)
+	if err != nil {
+		s.logger.Error("Failed to send test notification", zap.Error(err))
+	} else {
+		s.logger.Info("Test notification sent successfully!", zap.String("installationId", installationId))
 	}
 }

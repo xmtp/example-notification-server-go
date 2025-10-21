@@ -21,6 +21,11 @@ type FcmOptions struct {
 	ProjectId       string `long:"fcm-project-id" env:"FCM_PROJECT_ID" description:"FCM Project ID"`
 }
 
+type ExpoOptions struct {
+	Enabled     bool   `long:"expo-enabled" env:"EXPO_ENABLED" description:"Enable Expo push notifications"`
+	AccessToken string `long:"expo-token" env:"EXPO_TOKEN" description:"Expo access token for authentication"`
+}
+
 type XmtpOptions struct {
 	ListenerEnabled bool   `long:"xmtp-listener" description:"Enable the XMTP listener to actually send notifications. Requires APNSOptions to be configured"`
 	UseTls          bool   `long:"xmtp-listener-tls" description:"Whether to connect to XMTP network using TLS"`
@@ -39,6 +44,7 @@ type Options struct {
 	Xmtp         XmtpOptions         `group:"Worker Options"`
 	Apns         ApnsOptions         `group:"APNS Options"`
 	Fcm          FcmOptions          `group:"FCM Options"`
+	Expo         ExpoOptions         `group:"Expo Options"`
 	HttpDelivery HttpDeliveryOptions `group:"HTTP Delivery Options"`
 
 	DbConnectionString string `short:"d" long:"db-connection-string" env:"DB_CONNECTION_STRING" description:"Address to database"`
