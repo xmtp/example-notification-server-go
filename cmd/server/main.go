@@ -88,7 +88,6 @@ func main() {
 			deliveryServices = append(deliveryServices, fcm)
 		}
 
-		// Expo is always enabled
 		expo := delivery.NewExpoDelivery(logger, opts.Expo)
 		deliveryServices = append(deliveryServices, expo)
 
