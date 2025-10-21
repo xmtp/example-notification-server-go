@@ -88,10 +88,9 @@ func main() {
 			deliveryServices = append(deliveryServices, fcm)
 		}
 
-		if opts.Expo.Enabled {
-			expo := delivery.NewExpoDelivery(logger, opts.Expo)
-			deliveryServices = append(deliveryServices, expo)
-		}
+		// Expo is always enabled
+		expo := delivery.NewExpoDelivery(logger, opts.Expo)
+		deliveryServices = append(deliveryServices, expo)
 
 		if opts.HttpDelivery.Enabled {
 			deliveryServices = append(deliveryServices, delivery.NewHttpDelivery(logger, opts.HttpDelivery))
@@ -105,7 +104,7 @@ func main() {
 	}
 
 	if opts.Api.Enabled {
-		apiServer = api.NewApiServer(logger, opts.Api, opts.Expo, installationsService, subscriptionsService)
+		apiServer = api.NewApiServer(logger, opts.Api, installationsService, subscriptionsService)
 		apiServer.Start()
 	}
 

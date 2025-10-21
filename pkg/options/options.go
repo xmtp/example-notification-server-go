@@ -22,7 +22,6 @@ type FcmOptions struct {
 }
 
 type ExpoOptions struct {
-	Enabled     bool   `long:"expo-enabled" env:"EXPO_ENABLED" description:"Enable Expo push notifications"`
 	AccessToken string `long:"expo-token" env:"EXPO_TOKEN" description:"Expo access token for authentication"`
 }
 
