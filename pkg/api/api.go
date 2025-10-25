@@ -70,13 +70,26 @@ func (s *ApiServer) RegisterInstallation(
 	ctx context.Context,
 	req *connect.Request[proto.RegisterInstallationRequest],
 ) (*connect.Response[proto.RegisterInstallationResponse], error) {
-	s.logger.Info("RegisterInstallation", zap.Any("req", req))
+	s.logger.Info("📱 RegisterInstallation request received",
+		zap.String("installation_id", req.Msg.InstallationId),
+	)
 
 	mechanism := convertDeliveryMechanism(req.Msg.DeliveryMechanism)
 	if mechanism == nil {
+		s.logger.Error("❌ Missing delivery mechanism")
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("missing delivery mechanism"))
 	}
-	s.logger.Info("got mechanism", zap.Any("mechanism", mechanism))
+
+	tokenPreview := mechanism.Token
+	if len(tokenPreview) > 30 {
+		tokenPreview = tokenPreview[:30] + "..."
+	}
+
+	s.logger.Info("Delivery mechanism parsed",
+		zap.String("kind", string(mechanism.Kind)),
+		zap.String("token_preview", tokenPreview),
+	)
+
 	result, err := s.installations.Register(
 		ctx,
 		interfaces.Installation{
@@ -85,11 +98,16 @@ func (s *ApiServer) RegisterInstallation(
 		},
 	)
 	if err != nil {
-		s.logger.Error("error registering installation", zap.Error(err))
+		s.logger.Error("❌ Error registering installation", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	s.logger.Info("sending response", zap.Any("result", result))
+	s.logger.Info("✅ Installation registered successfully",
+		zap.String("installation_id", req.Msg.InstallationId),
+		zap.String("delivery_mechanism", string(mechanism.Kind)),
+		zap.Time("valid_until", result.ValidUntil),
+	)
+
 	return connect.NewResponse(&proto.RegisterInstallationResponse{
 		InstallationId: req.Msg.InstallationId,
 		ValidUntil:     uint64(result.ValidUntil.UnixMilli()),
@@ -115,13 +133,24 @@ func (s *ApiServer) Subscribe(
 	ctx context.Context,
 	req *connect.Request[proto.SubscribeRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	s.logger.Info("Subscribe", zap.Any("req", req))
+	s.logger.Info("📝 Subscribe request received",
+		zap.String("installation_id", req.Msg.InstallationId),
+		zap.Int("topic_count", len(req.Msg.Topics)),
+		zap.Strings("topics", req.Msg.Topics),
+	)
 
 	err := s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
 	if err != nil {
-		s.logger.Error("error subscribing", zap.Error(err))
+		s.logger.Error("❌ Error subscribing",
+			zap.String("installation_id", req.Msg.InstallationId),
+			zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+
+	s.logger.Info("✅ Successfully subscribed",
+		zap.String("installation_id", req.Msg.InstallationId),
+		zap.Int("topic_count", len(req.Msg.Topics)),
+	)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
@@ -143,12 +172,35 @@ func (s *ApiServer) Unsubscribe(
 
 func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
 	log := s.logger.With(zap.String("method", "subscribeWithMetadata"))
-	log.Info("Subscribing")
+
+	log.Info("📝 SubscribeWithMetadata request received",
+		zap.String("installation_id", req.Msg.InstallationId),
+		zap.Int("subscription_count", len(req.Msg.Subscriptions)),
+	)
+
+	// Log each subscription detail
+	for i, sub := range req.Msg.Subscriptions {
+		log.Info("Subscription details",
+			zap.Int("index", i+1),
+			zap.String("topic", sub.Topic),
+			zap.Bool("is_silent", sub.IsSilent),
+			zap.Int("hmac_key_count", len(sub.HmacKeys)),
+		)
+	}
+
 	inputs := buildSubscriptionInputs(req.Msg.Subscriptions)
 	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, inputs)
 	if err != nil {
+		log.Error("❌ Error subscribing with metadata",
+			zap.String("installation_id", req.Msg.InstallationId),
+			zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+
+	log.Info("✅ Successfully subscribed with metadata",
+		zap.String("installation_id", req.Msg.InstallationId),
+		zap.Int("subscription_count", len(req.Msg.Subscriptions)),
+	)
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }

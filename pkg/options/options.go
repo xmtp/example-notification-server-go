@@ -22,7 +22,8 @@ type FcmOptions struct {
 }
 
 type ExpoOptions struct {
-	AccessToken string `long:"expo-token" env:"EXPO_TOKEN" description:"Expo access token for authentication"`
+	AccessToken                            string `long:"expo-token" env:"EXPO_TOKEN" description:"Expo access token for authentication"`
+	EnableSendAdditionalDebugNotifications bool   `long:"expo-enable-send-additional-debug-notifications" env:"EXPO_ENABLE_SEND_ADDITIONAL_DEBUG_NOTIFICATIONS" description:"Enable sending an additional regular notification for debugging (defaults to false)"`
 }
 
 type XmtpOptions struct {

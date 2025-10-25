@@ -21,19 +21,21 @@ import (
 const expoAPIURL = "https://exp.host/--/api/v2/push/send?useFcmV1=true"
 
 type ExpoDelivery struct {
-	logger      *zap.Logger
-	httpClient  *http.Client
-	accessToken string
+	logger                                 *zap.Logger
+	httpClient                             *http.Client
+	accessToken                            string
+	enableSendAdditionalDebugNotifications bool
 }
 
 type expoPushMessage struct {
-	To       string            `json:"to"`
-	Title    string            `json:"title,omitempty"`
-	Body     string            `json:"body,omitempty"`
-	Data     map[string]string `json:"data"`
-	Priority string            `json:"priority,omitempty"`
-	Sound    string            `json:"sound,omitempty"`
-	Badge    int               `json:"badge"`
+	To               string            `json:"to"`
+	Title            string            `json:"title,omitempty"`
+	Body             string            `json:"body,omitempty"`
+	Data             map[string]string `json:"data"`
+	Priority         string            `json:"priority,omitempty"`
+	Sound            string            `json:"sound,omitempty"`
+	Badge            int               `json:"badge,omitempty"`
+	ContentAvailable bool              `json:"_contentAvailable,omitempty"`
 }
 
 type expoResponse struct {
@@ -48,8 +50,9 @@ type expoResponse struct {
 
 func NewExpoDelivery(logger *zap.Logger, opts options.ExpoOptions) *ExpoDelivery {
 	return &ExpoDelivery{
-		logger:      logger,
-		accessToken: opts.AccessToken,
+		logger:                                 logger,
+		accessToken:                            opts.AccessToken,
+		enableSendAdditionalDebugNotifications: opts.EnableSendAdditionalDebugNotifications,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -82,41 +85,45 @@ func (e *ExpoDelivery) Send(ctx context.Context, req interfaces.SendRequest) err
 		"messageType":      string(req.MessageContext.MessageType),
 	}
 
-	// Determine priority and notification fields based on silent mode
-	priority := "high"
-	title := ""
-	body := ""
-	sound := ""
-
-	if !req.Subscription.IsSilent {
-		title = "New XMTP Message"
-		body = "You have a new message"
-		sound = "default"
-	} else {
-		priority = "normal"
-	}
-
-	pushMessage := expoPushMessage{
-		To:       req.Installation.DeliveryMechanism.Token,
-		Title:    title,
-		Body:     body,
-		Data:     data,
-		Priority: priority,
-		Sound:    sound,
-		Badge:    0,
+	// Silent notification (background/headless) - requires _contentAvailable: true
+	// and NO interactive fields (title, body, sound) according to Expo docs
+	silentMessage := expoPushMessage{
+		To:               req.Installation.DeliveryMechanism.Token,
+		Data:             data,
+		Priority:         "normal",
+		ContentAvailable: true,
 	}
 
 	// Expo API expects an array of messages
-	messages := []expoPushMessage{pushMessage}
+	messages := []expoPushMessage{silentMessage}
+
+	// Optionally send an additional regular notification for debugging
+	if e.enableSendAdditionalDebugNotifications {
+		regularMessage := expoPushMessage{
+			To:       req.Installation.DeliveryMechanism.Token,
+			Title:    "New XMTP Message (DEBUG)",
+			Body:     "You have a new message",
+			Data:     data,
+			Priority: "high",
+			Sound:    "default",
+			Badge:    1,
+		}
+		messages = append(messages, regularMessage)
+		e.logger.Debug("Debug mode: Sending additional regular notification",
+			zap.String("device_token", req.Installation.DeliveryMechanism.Token),
+		)
+	}
 	payload, err := json.Marshal(messages)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal expo push message")
 	}
 
-	e.logger.Info("sending expo push notification",
+	e.logger.Info("sending expo push notification(s)",
 		zap.String("device_token", req.Installation.DeliveryMechanism.Token),
 		zap.String("topic", topic),
 		zap.Bool("has_access_token", e.accessToken != ""),
+		zap.Int("message_count", len(messages)),
+		zap.Bool("debug_mode", e.enableSendAdditionalDebugNotifications),
 	)
 
 	// Retry logic with exponential backoff
@@ -241,9 +248,10 @@ func (e *ExpoDelivery) Send(ctx context.Context, req interfaces.SendRequest) err
 		}
 	}
 
-	e.logger.Info("expo push notification sent successfully",
+	e.logger.Info("expo push notification(s) sent successfully",
 		zap.String("token", req.Installation.DeliveryMechanism.Token),
 		zap.String("topic", topic),
+		zap.Int("message_count", len(messages)),
 	)
 
 	return nil

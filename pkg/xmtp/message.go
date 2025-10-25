@@ -42,10 +42,12 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 		}
 	}
 
-	return interfaces.MessageContext{
+	context := interfaces.MessageContext{
 		MessageType: messageType,
 		ShouldPush:  shouldPush,
 		HmacInputs:  hmacInputs,
 		SenderHmac:  senderHmac,
 	}
+
+	return context
 }
