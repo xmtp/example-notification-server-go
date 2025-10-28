@@ -190,13 +190,6 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	// Generate unique message ID for tracking
 	messageId := buildIdempotencyKey(env)
 
-	l.logger.Info("🔍 Processing message for topic",
-		zap.String("topic", env.ContentTopic),
-		zap.String("message_id", messageId),
-		zap.Uint64("timestamp_ns", env.TimestampNs),
-		zap.Int("message_size", len(env.Message)),
-	)
-
 	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
