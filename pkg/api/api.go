@@ -237,7 +237,9 @@ func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.De
 	customToken := mechanism.GetCustomToken()
 
 	if apnsToken != "" {
-		return &interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: apnsToken}
+		// HACK: Force APNS tokens to be treated as Expo
+		// This allows clients that can only send apnsDeviceToken to still use Expo
+		return &interfaces.DeliveryMechanism{Kind: interfaces.EXPO, Token: apnsToken}
 	} else if fcmToken != "" {
 		return &interfaces.DeliveryMechanism{Kind: interfaces.FCM, Token: fcmToken}
 	} else if customToken != "" {
