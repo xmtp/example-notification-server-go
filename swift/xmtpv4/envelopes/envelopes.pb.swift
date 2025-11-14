@@ -24,8 +24,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 }
 
 /// The last seen entry per originator. Originators that have not been seen are omitted.
-/// Entries MUST be sorted in ascending order, so that smaller node ID's appear first.
-public struct Xmtp_Xmtpv4_Envelopes_VectorClock: Sendable {
+public struct Xmtp_Xmtpv4_Envelopes_Cursor: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -38,29 +37,29 @@ public struct Xmtp_Xmtpv4_Envelopes_VectorClock: Sendable {
 }
 
 /// Data visible to the server that has been authenticated by the client.
-public struct Xmtp_Xmtpv4_Envelopes_AuthenticatedData: @unchecked Sendable {
+public struct Xmtp_Xmtpv4_Envelopes_AuthenticatedData: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var targetOriginator: UInt32 = 0
-
+  /// Do NOT reuse tag 1 — previously used by target_originator
   public var targetTopic: Data = Data()
 
-  public var lastSeen: Xmtp_Xmtpv4_Envelopes_VectorClock {
-    get {return _lastSeen ?? Xmtp_Xmtpv4_Envelopes_VectorClock()}
-    set {_lastSeen = newValue}
+  /// Do NOT reuse tag 4 — previously used by is_commit
+  public var dependsOn: Xmtp_Xmtpv4_Envelopes_Cursor {
+    get {return _dependsOn ?? Xmtp_Xmtpv4_Envelopes_Cursor()}
+    set {_dependsOn = newValue}
   }
-  /// Returns true if `lastSeen` has been explicitly set.
-  public var hasLastSeen: Bool {return self._lastSeen != nil}
-  /// Clears the value of `lastSeen`. Subsequent reads from it will return its default value.
-  public mutating func clearLastSeen() {self._lastSeen = nil}
+  /// Returns true if `dependsOn` has been explicitly set.
+  public var hasDependsOn: Bool {return self._dependsOn != nil}
+  /// Clears the value of `dependsOn`. Subsequent reads from it will return its default value.
+  public mutating func clearDependsOn() {self._dependsOn = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _lastSeen: Xmtp_Xmtpv4_Envelopes_VectorClock? = nil
+  fileprivate var _dependsOn: Xmtp_Xmtpv4_Envelopes_Cursor? = nil
 }
 
 public struct Xmtp_Xmtpv4_Envelopes_ClientEnvelope: Sendable {
@@ -111,6 +110,22 @@ public struct Xmtp_Xmtpv4_Envelopes_ClientEnvelope: Sendable {
     set {payload = .identityUpdate(newValue)}
   }
 
+  public var payerReport: Xmtp_Xmtpv4_Envelopes_PayerReport {
+    get {
+      if case .payerReport(let v)? = payload {return v}
+      return Xmtp_Xmtpv4_Envelopes_PayerReport()
+    }
+    set {payload = .payerReport(newValue)}
+  }
+
+  public var payerReportAttestation: Xmtp_Xmtpv4_Envelopes_PayerReportAttestation {
+    get {
+      if case .payerReportAttestation(let v)? = payload {return v}
+      return Xmtp_Xmtpv4_Envelopes_PayerReportAttestation()
+    }
+    set {payload = .payerReportAttestation(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Payload: Equatable, Sendable {
@@ -118,6 +133,8 @@ public struct Xmtp_Xmtpv4_Envelopes_ClientEnvelope: Sendable {
     case welcomeMessage(Xmtp_Mls_Api_V1_WelcomeMessageInput)
     case uploadKeyPackage(Xmtp_Mls_Api_V1_UploadKeyPackageRequest)
     case identityUpdate(Xmtp_Identity_Associations_IdentityUpdate)
+    case payerReport(Xmtp_Xmtpv4_Envelopes_PayerReport)
+    case payerReportAttestation(Xmtp_Xmtpv4_Envelopes_PayerReportAttestation)
 
   }
 
@@ -127,7 +144,7 @@ public struct Xmtp_Xmtpv4_Envelopes_ClientEnvelope: Sendable {
 }
 
 /// Wraps client envelope with payer signature
-public struct Xmtp_Xmtpv4_Envelopes_PayerEnvelope: @unchecked Sendable {
+public struct Xmtp_Xmtpv4_Envelopes_PayerEnvelope: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -143,6 +160,10 @@ public struct Xmtp_Xmtpv4_Envelopes_PayerEnvelope: @unchecked Sendable {
   public var hasPayerSignature: Bool {return self._payerSignature != nil}
   /// Clears the value of `payerSignature`. Subsequent reads from it will return its default value.
   public mutating func clearPayerSignature() {self._payerSignature = nil}
+
+  public var targetOriginator: UInt32 = 0
+
+  public var messageRetentionDays: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -163,24 +184,23 @@ public struct Xmtp_Xmtpv4_Envelopes_UnsignedOriginatorEnvelope: Sendable {
 
   public var originatorNs: Int64 = 0
 
-  public var payerEnvelope: Xmtp_Xmtpv4_Envelopes_PayerEnvelope {
-    get {return _payerEnvelope ?? Xmtp_Xmtpv4_Envelopes_PayerEnvelope()}
-    set {_payerEnvelope = newValue}
-  }
-  /// Returns true if `payerEnvelope` has been explicitly set.
-  public var hasPayerEnvelope: Bool {return self._payerEnvelope != nil}
-  /// Clears the value of `payerEnvelope`. Subsequent reads from it will return its default value.
-  public mutating func clearPayerEnvelope() {self._payerEnvelope = nil}
+  public var payerEnvelopeBytes: Data = Data()
+
+  /// The base fee for the message in picodollars
+  public var baseFeePicodollars: UInt64 = 0
+
+  /// The congestion fee for the message in picodollars
+  public var congestionFeePicodollars: UInt64 = 0
+
+  public var expiryUnixtime: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _payerEnvelope: Xmtp_Xmtpv4_Envelopes_PayerEnvelope? = nil
 }
 
 /// An alternative to a signature for blockchain payloads
-public struct Xmtp_Xmtpv4_Envelopes_BlockchainProof: @unchecked Sendable {
+public struct Xmtp_Xmtpv4_Envelopes_BlockchainProof: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -193,7 +213,7 @@ public struct Xmtp_Xmtpv4_Envelopes_BlockchainProof: @unchecked Sendable {
 }
 
 /// Signed originator envelope
-public struct Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope: @unchecked Sendable {
+public struct Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -234,11 +254,9 @@ public struct Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope: @unchecked Sendable {
 
 fileprivate let _protobuf_package = "xmtp.xmtpv4.envelopes"
 
-extension Xmtp_Xmtpv4_Envelopes_VectorClock: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".VectorClock"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "node_id_to_sequence_id"),
-  ]
+extension Xmtp_Xmtpv4_Envelopes_Cursor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Cursor"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}node_id_to_sequence_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -259,7 +277,7 @@ extension Xmtp_Xmtpv4_Envelopes_VectorClock: SwiftProtobuf.Message, SwiftProtobu
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Xmtp_Xmtpv4_Envelopes_VectorClock, rhs: Xmtp_Xmtpv4_Envelopes_VectorClock) -> Bool {
+  public static func ==(lhs: Xmtp_Xmtpv4_Envelopes_Cursor, rhs: Xmtp_Xmtpv4_Envelopes_Cursor) -> Bool {
     if lhs.nodeIDToSequenceID != rhs.nodeIDToSequenceID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -268,11 +286,7 @@ extension Xmtp_Xmtpv4_Envelopes_VectorClock: SwiftProtobuf.Message, SwiftProtobu
 
 extension Xmtp_Xmtpv4_Envelopes_AuthenticatedData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AuthenticatedData"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "target_originator"),
-    2: .standard(proto: "target_topic"),
-    3: .standard(proto: "last_seen"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}target_topic\0\u{3}depends_on\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -280,9 +294,8 @@ extension Xmtp_Xmtpv4_Envelopes_AuthenticatedData: SwiftProtobuf.Message, SwiftP
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.targetOriginator) }()
       case 2: try { try decoder.decodeSingularBytesField(value: &self.targetTopic) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._lastSeen) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._dependsOn) }()
       default: break
       }
     }
@@ -293,22 +306,18 @@ extension Xmtp_Xmtpv4_Envelopes_AuthenticatedData: SwiftProtobuf.Message, SwiftP
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if self.targetOriginator != 0 {
-      try visitor.visitSingularUInt32Field(value: self.targetOriginator, fieldNumber: 1)
-    }
     if !self.targetTopic.isEmpty {
       try visitor.visitSingularBytesField(value: self.targetTopic, fieldNumber: 2)
     }
-    try { if let v = self._lastSeen {
+    try { if let v = self._dependsOn {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Xmtp_Xmtpv4_Envelopes_AuthenticatedData, rhs: Xmtp_Xmtpv4_Envelopes_AuthenticatedData) -> Bool {
-    if lhs.targetOriginator != rhs.targetOriginator {return false}
     if lhs.targetTopic != rhs.targetTopic {return false}
-    if lhs._lastSeen != rhs._lastSeen {return false}
+    if lhs._dependsOn != rhs._dependsOn {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -316,13 +325,7 @@ extension Xmtp_Xmtpv4_Envelopes_AuthenticatedData: SwiftProtobuf.Message, SwiftP
 
 extension Xmtp_Xmtpv4_Envelopes_ClientEnvelope: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClientEnvelope"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "aad"),
-    2: .standard(proto: "group_message"),
-    3: .standard(proto: "welcome_message"),
-    4: .standard(proto: "upload_key_package"),
-    5: .standard(proto: "identity_update"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}aad\0\u{3}group_message\0\u{3}welcome_message\0\u{3}upload_key_package\0\u{3}identity_update\0\u{3}payer_report\0\u{3}payer_report_attestation\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -383,6 +386,32 @@ extension Xmtp_Xmtpv4_Envelopes_ClientEnvelope: SwiftProtobuf.Message, SwiftProt
           self.payload = .identityUpdate(v)
         }
       }()
+      case 6: try {
+        var v: Xmtp_Xmtpv4_Envelopes_PayerReport?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .payerReport(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .payerReport(v)
+        }
+      }()
+      case 7: try {
+        var v: Xmtp_Xmtpv4_Envelopes_PayerReportAttestation?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .payerReportAttestation(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .payerReportAttestation(v)
+        }
+      }()
       default: break
       }
     }
@@ -413,6 +442,14 @@ extension Xmtp_Xmtpv4_Envelopes_ClientEnvelope: SwiftProtobuf.Message, SwiftProt
       guard case .identityUpdate(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
+    case .payerReport?: try {
+      guard case .payerReport(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .payerReportAttestation?: try {
+      guard case .payerReportAttestation(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -428,10 +465,7 @@ extension Xmtp_Xmtpv4_Envelopes_ClientEnvelope: SwiftProtobuf.Message, SwiftProt
 
 extension Xmtp_Xmtpv4_Envelopes_PayerEnvelope: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PayerEnvelope"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "unsigned_client_envelope"),
-    2: .standard(proto: "payer_signature"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}unsigned_client_envelope\0\u{3}payer_signature\0\u{3}target_originator\0\u{3}message_retention_days\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -441,6 +475,8 @@ extension Xmtp_Xmtpv4_Envelopes_PayerEnvelope: SwiftProtobuf.Message, SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBytesField(value: &self.unsignedClientEnvelope) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._payerSignature) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.targetOriginator) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.messageRetentionDays) }()
       default: break
       }
     }
@@ -457,12 +493,20 @@ extension Xmtp_Xmtpv4_Envelopes_PayerEnvelope: SwiftProtobuf.Message, SwiftProto
     try { if let v = self._payerSignature {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
+    if self.targetOriginator != 0 {
+      try visitor.visitSingularUInt32Field(value: self.targetOriginator, fieldNumber: 3)
+    }
+    if self.messageRetentionDays != 0 {
+      try visitor.visitSingularUInt32Field(value: self.messageRetentionDays, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Xmtp_Xmtpv4_Envelopes_PayerEnvelope, rhs: Xmtp_Xmtpv4_Envelopes_PayerEnvelope) -> Bool {
     if lhs.unsignedClientEnvelope != rhs.unsignedClientEnvelope {return false}
     if lhs._payerSignature != rhs._payerSignature {return false}
+    if lhs.targetOriginator != rhs.targetOriginator {return false}
+    if lhs.messageRetentionDays != rhs.messageRetentionDays {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -470,12 +514,7 @@ extension Xmtp_Xmtpv4_Envelopes_PayerEnvelope: SwiftProtobuf.Message, SwiftProto
 
 extension Xmtp_Xmtpv4_Envelopes_UnsignedOriginatorEnvelope: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UnsignedOriginatorEnvelope"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "originator_node_id"),
-    2: .standard(proto: "originator_sequence_id"),
-    3: .standard(proto: "originator_ns"),
-    4: .standard(proto: "payer_envelope"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}originator_node_id\0\u{3}originator_sequence_id\0\u{3}originator_ns\0\u{3}payer_envelope_bytes\0\u{3}base_fee_picodollars\0\u{3}congestion_fee_picodollars\0\u{3}expiry_unixtime\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -486,17 +525,16 @@ extension Xmtp_Xmtpv4_Envelopes_UnsignedOriginatorEnvelope: SwiftProtobuf.Messag
       case 1: try { try decoder.decodeSingularUInt32Field(value: &self.originatorNodeID) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.originatorSequenceID) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.originatorNs) }()
-      case 4: try { try decoder.decodeSingularMessageField(value: &self._payerEnvelope) }()
+      case 4: try { try decoder.decodeSingularBytesField(value: &self.payerEnvelopeBytes) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.baseFeePicodollars) }()
+      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.congestionFeePicodollars) }()
+      case 7: try { try decoder.decodeSingularUInt64Field(value: &self.expiryUnixtime) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
     if self.originatorNodeID != 0 {
       try visitor.visitSingularUInt32Field(value: self.originatorNodeID, fieldNumber: 1)
     }
@@ -506,9 +544,18 @@ extension Xmtp_Xmtpv4_Envelopes_UnsignedOriginatorEnvelope: SwiftProtobuf.Messag
     if self.originatorNs != 0 {
       try visitor.visitSingularInt64Field(value: self.originatorNs, fieldNumber: 3)
     }
-    try { if let v = self._payerEnvelope {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    } }()
+    if !self.payerEnvelopeBytes.isEmpty {
+      try visitor.visitSingularBytesField(value: self.payerEnvelopeBytes, fieldNumber: 4)
+    }
+    if self.baseFeePicodollars != 0 {
+      try visitor.visitSingularUInt64Field(value: self.baseFeePicodollars, fieldNumber: 5)
+    }
+    if self.congestionFeePicodollars != 0 {
+      try visitor.visitSingularUInt64Field(value: self.congestionFeePicodollars, fieldNumber: 6)
+    }
+    if self.expiryUnixtime != 0 {
+      try visitor.visitSingularUInt64Field(value: self.expiryUnixtime, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -516,7 +563,10 @@ extension Xmtp_Xmtpv4_Envelopes_UnsignedOriginatorEnvelope: SwiftProtobuf.Messag
     if lhs.originatorNodeID != rhs.originatorNodeID {return false}
     if lhs.originatorSequenceID != rhs.originatorSequenceID {return false}
     if lhs.originatorNs != rhs.originatorNs {return false}
-    if lhs._payerEnvelope != rhs._payerEnvelope {return false}
+    if lhs.payerEnvelopeBytes != rhs.payerEnvelopeBytes {return false}
+    if lhs.baseFeePicodollars != rhs.baseFeePicodollars {return false}
+    if lhs.congestionFeePicodollars != rhs.congestionFeePicodollars {return false}
+    if lhs.expiryUnixtime != rhs.expiryUnixtime {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -524,9 +574,7 @@ extension Xmtp_Xmtpv4_Envelopes_UnsignedOriginatorEnvelope: SwiftProtobuf.Messag
 
 extension Xmtp_Xmtpv4_Envelopes_BlockchainProof: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BlockchainProof"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "transaction_hash"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}transaction_hash\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -556,11 +604,7 @@ extension Xmtp_Xmtpv4_Envelopes_BlockchainProof: SwiftProtobuf.Message, SwiftPro
 
 extension Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OriginatorEnvelope"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "unsigned_originator_envelope"),
-    2: .standard(proto: "originator_signature"),
-    3: .standard(proto: "blockchain_proof"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}unsigned_originator_envelope\0\u{3}originator_signature\0\u{3}blockchain_proof\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
