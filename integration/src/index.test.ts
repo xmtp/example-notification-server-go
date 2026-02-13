@@ -36,7 +36,7 @@ describe("notifications", () => {
     const bo = await randomClient();
     const alixNotificationClient = createNotificationClient();
     await alixNotificationClient.registerInstallation({
-      installationId: alix.accountAddress,
+      installationId: alix.installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           value: "token",
@@ -45,9 +45,9 @@ describe("notifications", () => {
       },
     });
 
-    const alixInviteTopic = `/xmtp/mls/1/g-${alix.accountAddress}/proto`;
+    const alixInviteTopic = `/xmtp/mls/1/g-${alix.installationId}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
-      installationId: alix.accountAddress,
+      installationId: alix.installationId,
       subscriptions: [
         {
           topic: alixInviteTopic,
@@ -57,7 +57,7 @@ describe("notifications", () => {
     });
 
     const notificationPromise = waitForNextRequest(1000);
-    await alix.conversations.newDm(bo.accountAddress);
+    await alix.conversations.createDm(bo.inboxId);
     const notification = await notificationPromise;
 
     expect(notification.idempotency_key).toBeString();
@@ -83,7 +83,7 @@ describe("notifications", () => {
       },
     });
 
-    const boGroup = await bo.conversations.newGroup([alix.accountAddress]);
+    const boGroup = await bo.conversations.createGroup([alix.inboxId]);
 
     expect((await alix.conversations.list()).length).toEqual(0);
     await alix.conversations.syncAll();
@@ -113,8 +113,8 @@ describe("notifications", () => {
     });
 
     const notificationPromise = waitForNextRequest(10000);
-    await alixGroup.send("This should never be delivered");
-    await boGroup.send("This should be delivered");
+    await alixGroup.sendText("This should never be delivered");
+    await boGroup.sendText("This should be delivered");
 
     const notification = await notificationPromise;
 
