@@ -16,11 +16,11 @@ plugins:
   - plugin: buf.build/bufbuild/es
     out: integration/gen
   # Go server code
-  - plugin: buf.build/protocolbuffers/go:v1.32.0
+  - plugin: buf.build/protocolbuffers/go:v1.36.6
     out: pkg/proto
     opt:
       - paths=source_relative
-  - plugin: buf.build/connectrpc/go:v1.15.0
+  - plugin: buf.build/connectrpc/go:v1.19.1
     out: pkg/proto
     opt:
       - paths=source_relative

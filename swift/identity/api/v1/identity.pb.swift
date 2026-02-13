@@ -35,7 +35,7 @@ public struct Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesRequest: S
   public init() {}
 }
 
-public struct Xmtp_Identity_Api_V1_VerifySmartContractWalletSignatureRequestSignature: @unchecked Sendable {
+public struct Xmtp_Identity_Api_V1_VerifySmartContractWalletSignatureRequestSignature: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -46,11 +46,11 @@ public struct Xmtp_Identity_Api_V1_VerifySmartContractWalletSignatureRequestSign
 
   /// Specify the block number to verify the signature against
   public var blockNumber: UInt64 {
-    get {return _blockNumber ?? 0}
+    get {_blockNumber ?? 0}
     set {_blockNumber = newValue}
   }
   /// Returns true if `blockNumber` has been explicitly set.
-  public var hasBlockNumber: Bool {return self._blockNumber != nil}
+  public var hasBlockNumber: Bool {self._blockNumber != nil}
   /// Clears the value of `blockNumber`. Subsequent reads from it will return its default value.
   public mutating func clearBlockNumber() {self._blockNumber = nil}
 
@@ -83,20 +83,20 @@ public struct Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesResponse: 
     public var isValid: Bool = false
 
     public var blockNumber: UInt64 {
-      get {return _blockNumber ?? 0}
+      get {_blockNumber ?? 0}
       set {_blockNumber = newValue}
     }
     /// Returns true if `blockNumber` has been explicitly set.
-    public var hasBlockNumber: Bool {return self._blockNumber != nil}
+    public var hasBlockNumber: Bool {self._blockNumber != nil}
     /// Clears the value of `blockNumber`. Subsequent reads from it will return its default value.
     public mutating func clearBlockNumber() {self._blockNumber = nil}
 
     public var error: String {
-      get {return _error ?? String()}
+      get {_error ?? String()}
       set {_error = newValue}
     }
     /// Returns true if `error` has been explicitly set.
-    public var hasError: Bool {return self._error != nil}
+    public var hasError: Bool {self._error != nil}
     /// Clears the value of `error`. Subsequent reads from it will return its default value.
     public mutating func clearError() {self._error = nil}
 
@@ -118,11 +118,11 @@ public struct Xmtp_Identity_Api_V1_PublishIdentityUpdateRequest: Sendable {
   // methods supported on all messages.
 
   public var identityUpdate: Xmtp_Identity_Associations_IdentityUpdate {
-    get {return _identityUpdate ?? Xmtp_Identity_Associations_IdentityUpdate()}
+    get {_identityUpdate ?? Xmtp_Identity_Associations_IdentityUpdate()}
     set {_identityUpdate = newValue}
   }
   /// Returns true if `identityUpdate` has been explicitly set.
-  public var hasIdentityUpdate: Bool {return self._identityUpdate != nil}
+  public var hasIdentityUpdate: Bool {self._identityUpdate != nil}
   /// Clears the value of `identityUpdate`. Subsequent reads from it will return its default value.
   public mutating func clearIdentityUpdate() {self._identityUpdate = nil}
 
@@ -194,11 +194,11 @@ public struct Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse: Sendable {
     public var serverTimestampNs: UInt64 = 0
 
     public var update: Xmtp_Identity_Associations_IdentityUpdate {
-      get {return _update ?? Xmtp_Identity_Associations_IdentityUpdate()}
+      get {_update ?? Xmtp_Identity_Associations_IdentityUpdate()}
       set {_update = newValue}
     }
     /// Returns true if `update` has been explicitly set.
-    public var hasUpdate: Bool {return self._update != nil}
+    public var hasUpdate: Bool {self._update != nil}
     /// Clears the value of `update`. Subsequent reads from it will return its default value.
     public mutating func clearUpdate() {self._update = nil}
 
@@ -243,7 +243,9 @@ public struct Xmtp_Identity_Api_V1_GetInboxIdsRequest: Sendable {
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    public var address: String = String()
+    public var identifier: String = String()
+
+    public var identifierKind: Xmtp_Identity_Associations_IdentifierKind = .unspecified
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -269,16 +271,18 @@ public struct Xmtp_Identity_Api_V1_GetInboxIdsResponse: Sendable {
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    public var address: String = String()
+    public var identifier: String = String()
 
     public var inboxID: String {
-      get {return _inboxID ?? String()}
+      get {_inboxID ?? String()}
       set {_inboxID = newValue}
     }
     /// Returns true if `inboxID` has been explicitly set.
-    public var hasInboxID: Bool {return self._inboxID != nil}
+    public var hasInboxID: Bool {self._inboxID != nil}
     /// Clears the value of `inboxID`. Subsequent reads from it will return its default value.
     public mutating func clearInboxID() {self._inboxID = nil}
+
+    public var identifierKind: Xmtp_Identity_Associations_IdentifierKind = .unspecified
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -296,9 +300,7 @@ fileprivate let _protobuf_package = "xmtp.identity.api.v1"
 
 extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".VerifySmartContractWalletSignaturesRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "signatures"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}signatures\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -328,12 +330,7 @@ extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesRequest: Swift
 
 extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignatureRequestSignature: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".VerifySmartContractWalletSignatureRequestSignature"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "account_id"),
-    2: .standard(proto: "block_number"),
-    3: .same(proto: "signature"),
-    4: .same(proto: "hash"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}account_id\0\u{3}block_number\0\u{1}signature\0\u{1}hash\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -382,9 +379,7 @@ extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignatureRequestSignatur
 
 extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".VerifySmartContractWalletSignaturesResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "responses"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}responses\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -414,11 +409,7 @@ extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesResponse: Swif
 
 extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesResponse.ValidationResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesResponse.protoMessageName + ".ValidationResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "is_valid"),
-    2: .standard(proto: "block_number"),
-    3: .same(proto: "error"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}is_valid\0\u{3}block_number\0\u{1}error\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -462,9 +453,7 @@ extension Xmtp_Identity_Api_V1_VerifySmartContractWalletSignaturesResponse.Valid
 
 extension Xmtp_Identity_Api_V1_PublishIdentityUpdateRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PublishIdentityUpdateRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "identity_update"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_update\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -517,9 +506,7 @@ extension Xmtp_Identity_Api_V1_PublishIdentityUpdateResponse: SwiftProtobuf.Mess
 
 extension Xmtp_Identity_Api_V1_GetIdentityUpdatesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetIdentityUpdatesRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "requests"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}requests\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -549,10 +536,7 @@ extension Xmtp_Identity_Api_V1_GetIdentityUpdatesRequest: SwiftProtobuf.Message,
 
 extension Xmtp_Identity_Api_V1_GetIdentityUpdatesRequest.Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Identity_Api_V1_GetIdentityUpdatesRequest.protoMessageName + ".Request"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "inbox_id"),
-    2: .standard(proto: "sequence_id"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}inbox_id\0\u{3}sequence_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -587,9 +571,7 @@ extension Xmtp_Identity_Api_V1_GetIdentityUpdatesRequest.Request: SwiftProtobuf.
 
 extension Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetIdentityUpdatesResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "responses"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}responses\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -619,11 +601,7 @@ extension Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse: SwiftProtobuf.Message
 
 extension Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse.IdentityUpdateLog: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse.protoMessageName + ".IdentityUpdateLog"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "sequence_id"),
-    2: .standard(proto: "server_timestamp_ns"),
-    3: .same(proto: "update"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}sequence_id\0\u{3}server_timestamp_ns\0\u{1}update\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -667,10 +645,7 @@ extension Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse.IdentityUpdateLog: Swi
 
 extension Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse.Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse.protoMessageName + ".Response"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "inbox_id"),
-    2: .same(proto: "updates"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}inbox_id\0\u{1}updates\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -705,9 +680,7 @@ extension Xmtp_Identity_Api_V1_GetIdentityUpdatesResponse.Response: SwiftProtobu
 
 extension Xmtp_Identity_Api_V1_GetInboxIdsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInboxIdsRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "requests"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}requests\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -737,9 +710,7 @@ extension Xmtp_Identity_Api_V1_GetInboxIdsRequest: SwiftProtobuf.Message, SwiftP
 
 extension Xmtp_Identity_Api_V1_GetInboxIdsRequest.Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Identity_Api_V1_GetInboxIdsRequest.protoMessageName + ".Request"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "address"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}identifier\0\u{3}identifier_kind\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -747,21 +718,26 @@ extension Xmtp_Identity_Api_V1_GetInboxIdsRequest.Request: SwiftProtobuf.Message
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.address) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.identifier) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.identifierKind) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.address.isEmpty {
-      try visitor.visitSingularStringField(value: self.address, fieldNumber: 1)
+    if !self.identifier.isEmpty {
+      try visitor.visitSingularStringField(value: self.identifier, fieldNumber: 1)
+    }
+    if self.identifierKind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.identifierKind, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Xmtp_Identity_Api_V1_GetInboxIdsRequest.Request, rhs: Xmtp_Identity_Api_V1_GetInboxIdsRequest.Request) -> Bool {
-    if lhs.address != rhs.address {return false}
+    if lhs.identifier != rhs.identifier {return false}
+    if lhs.identifierKind != rhs.identifierKind {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -769,9 +745,7 @@ extension Xmtp_Identity_Api_V1_GetInboxIdsRequest.Request: SwiftProtobuf.Message
 
 extension Xmtp_Identity_Api_V1_GetInboxIdsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInboxIdsResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "responses"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}responses\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -801,10 +775,7 @@ extension Xmtp_Identity_Api_V1_GetInboxIdsResponse: SwiftProtobuf.Message, Swift
 
 extension Xmtp_Identity_Api_V1_GetInboxIdsResponse.Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Identity_Api_V1_GetInboxIdsResponse.protoMessageName + ".Response"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "address"),
-    2: .standard(proto: "inbox_id"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}identifier\0\u{3}inbox_id\0\u{3}identifier_kind\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -812,8 +783,9 @@ extension Xmtp_Identity_Api_V1_GetInboxIdsResponse.Response: SwiftProtobuf.Messa
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.address) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.identifier) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self._inboxID) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.identifierKind) }()
       default: break
       }
     }
@@ -824,18 +796,22 @@ extension Xmtp_Identity_Api_V1_GetInboxIdsResponse.Response: SwiftProtobuf.Messa
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.address.isEmpty {
-      try visitor.visitSingularStringField(value: self.address, fieldNumber: 1)
+    if !self.identifier.isEmpty {
+      try visitor.visitSingularStringField(value: self.identifier, fieldNumber: 1)
     }
     try { if let v = self._inboxID {
       try visitor.visitSingularStringField(value: v, fieldNumber: 2)
     } }()
+    if self.identifierKind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.identifierKind, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Xmtp_Identity_Api_V1_GetInboxIdsResponse.Response, rhs: Xmtp_Identity_Api_V1_GetInboxIdsResponse.Response) -> Bool {
-    if lhs.address != rhs.address {return false}
+    if lhs.identifier != rhs.identifier {return false}
     if lhs._inboxID != rhs._inboxID {return false}
+    if lhs.identifierKind != rhs.identifierKind {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
