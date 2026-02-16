@@ -38,7 +38,7 @@ export async function randomClient() {
 
   const encKey = getRandomValues(new Uint8Array(32));
   return await Client.create(signer, {
-    env: "local",
+    env: "dev",
     apiUrl: config.nodeUrl,
     dbEncryptionKey: encKey,
     dbPath: `/tmp/test-${wallet.account.address}.db3`,
