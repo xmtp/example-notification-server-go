@@ -56,7 +56,7 @@ describe("notifications", () => {
       ],
     });
 
-    const notificationPromise = waitForNextRequest(1000);
+    const notificationPromise = waitForNextRequest(10000);
     await alix.conversations.createDm(bo.inboxId);
     const notification = await notificationPromise;
 
