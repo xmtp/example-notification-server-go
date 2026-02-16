@@ -1,5 +1,6 @@
-import { serve } from "bun";
-import { expect, test, afterAll, describe } from "bun:test";
+import Koa from "koa";
+import { bodyParser } from "@koa/bodyparser";
+import { expect, test, afterAll, describe } from "vitest";
 import { createNotificationClient, randomClient } from ".";
 import type { NotificationResponse } from "./types";
 
@@ -8,19 +9,18 @@ const PORT = 7777;
 describe("notifications", () => {
   let onRequest = (req: NotificationResponse) =>
     console.log("No request handler set for", req);
-  // Set up a server to receive messages from the HttpDelivery service
-  const server = serve({
-    port: PORT,
-    async fetch(req: Request) {
-      const body = (await req.json()) as NotificationResponse;
-      onRequest(body);
-      return new Response("", { status: 200 });
-    },
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  } as any);
+
+  // Set up a Koa server to receive messages from the HttpDelivery service
+  const app = new Koa();
+  app.use(bodyParser());
+  app.use(async (ctx) => {
+    onRequest(ctx.request.body as NotificationResponse);
+    ctx.status = 200;
+  });
+  const server = app.listen(PORT);
 
   afterAll(() => {
-    server.stop();
+    server.close();
   });
 
   const waitForNextRequest = (
@@ -60,10 +60,10 @@ describe("notifications", () => {
     await alix.conversations.createDm(bo.inboxId);
     const notification = await notificationPromise;
 
-    expect(notification.idempotency_key).toBeString();
+    expect(notification.idempotency_key).toBeTypeOf("string");
     expect(notification.message.content_topic).toEqual(alixInviteTopic);
-    expect(notification.message.message).toBeString();
-    expect(notification.subscription.is_silent).toBeTrue();
+    expect(notification.message.message).toBeTypeOf("string");
+    expect(notification.subscription.is_silent).toBe(true);
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
     expect(notification.message_context.message_type).toEqual("v2-invite");
   });
@@ -118,10 +118,10 @@ describe("notifications", () => {
 
     const notification = await notificationPromise;
 
-    expect(notification.idempotency_key).toBeString();
+    expect(notification.idempotency_key).toBeTypeOf("string");
     expect(notification.message.content_topic).toEqual(topic);
-    expect(notification.message.message).toBeString();
-    expect(notification.subscription.is_silent).toBeFalse();
+    expect(notification.message.message).toBeTypeOf("string");
+    expect(notification.subscription.is_silent).toBe(false);
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
   });
 });
