@@ -7,7 +7,7 @@ import {
   Notifications,
   SubscriptionSchema,
   Subscription_HmacKeySchema,
-} from "./gen/notifications/v1/service_pb.ts";
+} from "./gen/notifications/v1/service_pb";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { config } from "./config";
 import { create } from "@bufbuild/protobuf";
