@@ -64,5 +64,6 @@ services:
       - XMTP_NODE_URL=http://node:5556
       - NOTIFICATION_SERVER_URL=http://notification_server:8080
     command:
-      - bun
-      - test
+      - npx
+      - vitest
+      - run
