@@ -45,27 +45,28 @@ describe("notifications", () => {
       },
     });
 
-    const alixInviteTopic = `/xmtp/mls/1/g-${alix.installationId}/proto`;
+    const alixWelcomeTopic = `/xmtp/mls/1/w-${alix.installationId}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
       installationId: alix.installationId,
       subscriptions: [
         {
-          topic: alixInviteTopic,
+          topic: alixWelcomeTopic,
           isSilent: true,
         },
       ],
     });
 
     const notificationPromise = waitForNextRequest(10000);
-    await alix.conversations.createDm(bo.inboxId);
+    // Bo creates a DM with alix, which sends a welcome to alix's installation
+    await bo.conversations.createDm(alix.inboxId);
     const notification = await notificationPromise;
 
     expect(notification.idempotency_key).toBeTypeOf("string");
-    expect(notification.message.content_topic).toEqual(alixInviteTopic);
+    expect(notification.message.content_topic).toEqual(alixWelcomeTopic);
     expect(notification.message.message).toBeTypeOf("string");
     expect(notification.subscription.is_silent).toBe(true);
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
-    expect(notification.message_context.message_type).toEqual("v2-invite");
+    expect(notification.message_context.message_type).toEqual("v3-welcome");
   });
 
   test("hmac keys", async () => {
