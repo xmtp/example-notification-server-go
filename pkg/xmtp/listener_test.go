@@ -22,7 +22,7 @@ const (
 	XMTP_ADDRESS      = "localhost:25556"
 	INSTALLATION_ID   = "test_installation"
 	INSTALLATION_ID_2 = "test_installation_2"
-	TEST_TOPIC        = "/xmtp/mls/1/g-test_topic/proto"
+	TEST_TOPIC        = "/xmtp/mls/1/w-test_installation/proto"
 	DELIVERY_TOKEN    = "test_token"
 )
 
@@ -47,17 +47,12 @@ func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*List
 	}
 }
 
-func sendMessage(t *testing.T, listener *Listener, topic string, message []byte) {
-	_, err := listener.xmtpClient.Publish(context.Background(), &v1.PublishRequest{
-		Envelopes: []*v1.Envelope{
-			{
-				ContentTopic: topic,
-				Message:      message,
-				TimestampNs:  uint64(time.Now().UnixNano()),
-			},
-		},
-	})
-	require.NoError(t, err)
+func injectMessage(listener *Listener, topic string, message []byte) {
+	listener.messageChannel <- &v1.Envelope{
+		ContentTopic: topic,
+		Message:      message,
+		TimestampNs:  uint64(time.Now().UnixNano()),
+	}
 }
 
 func subscribeToTopic(t *testing.T, l *Listener, installationId, topic string, isSilent bool) {
@@ -83,8 +78,8 @@ func Test_BasicDelivery(t *testing.T) {
 	mockDeliveryService.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	subscribeToTopic(t, l, INSTALLATION_ID, TEST_TOPIC, false)
-	sendMessage(t, l, TEST_TOPIC, []byte("test"))
-	time.Sleep(2 * time.Second)
+	injectMessage(l, TEST_TOPIC, []byte("test"))
+	time.Sleep(500 * time.Millisecond)
 
 	mockDeliveryService.AssertCalled(t, "CanDeliver", mock.Anything)
 	mockDeliveryService.AssertCalled(t, "Send", mock.Anything, mock.Anything)
@@ -103,8 +98,8 @@ func Test_MultipleDeliveries(t *testing.T) {
 	subscribeToTopic(t, l, INSTALLATION_ID, TEST_TOPIC, false)
 	subscribeToTopic(t, l, INSTALLATION_ID_2, TEST_TOPIC, false)
 
-	sendMessage(t, l, TEST_TOPIC, []byte("test"))
-	time.Sleep(2 * time.Second)
+	injectMessage(l, TEST_TOPIC, []byte("test"))
+	time.Sleep(500 * time.Millisecond)
 
 	mockDeliveryService.AssertCalled(t, "CanDeliver", mock.Anything)
 	mockDeliveryService.AssertCalled(t, "Send", mock.Anything, mock.Anything)

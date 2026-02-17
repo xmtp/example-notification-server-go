@@ -25,7 +25,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 
 /// Query for envelopes, shared by query and subscribe endpoints
 /// Either topics or originator_node_ids may be set, but not both
-public struct Xmtp_Xmtpv4_MessageApi_EnvelopesQuery: @unchecked Sendable {
+public struct Xmtp_Xmtpv4_MessageApi_EnvelopesQuery: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -36,12 +36,12 @@ public struct Xmtp_Xmtpv4_MessageApi_EnvelopesQuery: @unchecked Sendable {
   /// Node queries
   public var originatorNodeIds: [UInt32] = []
 
-  public var lastSeen: Xmtp_Xmtpv4_Envelopes_VectorClock {
-    get {return _lastSeen ?? Xmtp_Xmtpv4_Envelopes_VectorClock()}
+  public var lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor {
+    get {_lastSeen ?? Xmtp_Xmtpv4_Envelopes_Cursor()}
     set {_lastSeen = newValue}
   }
   /// Returns true if `lastSeen` has been explicitly set.
-  public var hasLastSeen: Bool {return self._lastSeen != nil}
+  public var hasLastSeen: Bool {self._lastSeen != nil}
   /// Clears the value of `lastSeen`. Subsequent reads from it will return its default value.
   public mutating func clearLastSeen() {self._lastSeen = nil}
 
@@ -49,7 +49,7 @@ public struct Xmtp_Xmtpv4_MessageApi_EnvelopesQuery: @unchecked Sendable {
 
   public init() {}
 
-  fileprivate var _lastSeen: Xmtp_Xmtpv4_Envelopes_VectorClock? = nil
+  fileprivate var _lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor? = nil
 }
 
 /// Batch subscribe to envelopes
@@ -59,11 +59,11 @@ public struct Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest: Sendable {
   // methods supported on all messages.
 
   public var query: Xmtp_Xmtpv4_MessageApi_EnvelopesQuery {
-    get {return _query ?? Xmtp_Xmtpv4_MessageApi_EnvelopesQuery()}
+    get {_query ?? Xmtp_Xmtpv4_MessageApi_EnvelopesQuery()}
     set {_query = newValue}
   }
   /// Returns true if `query` has been explicitly set.
-  public var hasQuery: Bool {return self._query != nil}
+  public var hasQuery: Bool {self._query != nil}
   /// Clears the value of `query`. Subsequent reads from it will return its default value.
   public mutating func clearQuery() {self._query = nil}
 
@@ -94,11 +94,11 @@ public struct Xmtp_Xmtpv4_MessageApi_QueryEnvelopesRequest: Sendable {
   // methods supported on all messages.
 
   public var query: Xmtp_Xmtpv4_MessageApi_EnvelopesQuery {
-    get {return _query ?? Xmtp_Xmtpv4_MessageApi_EnvelopesQuery()}
+    get {_query ?? Xmtp_Xmtpv4_MessageApi_EnvelopesQuery()}
     set {_query = newValue}
   }
   /// Returns true if `query` has been explicitly set.
-  public var hasQuery: Bool {return self._query != nil}
+  public var hasQuery: Bool {self._query != nil}
   /// Clears the value of `query`. Subsequent reads from it will return its default value.
   public mutating func clearQuery() {self._query = nil}
 
@@ -164,7 +164,9 @@ public struct Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest: Sendable {
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    public var address: String = String()
+    public var identifier: String = String()
+
+    public var identifierKind: Xmtp_Identity_Associations_IdentifierKind = .unspecified
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -190,16 +192,18 @@ public struct Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse: Sendable {
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    public var address: String = String()
+    public var identifier: String = String()
 
     public var inboxID: String {
-      get {return _inboxID ?? String()}
+      get {_inboxID ?? String()}
       set {_inboxID = newValue}
     }
     /// Returns true if `inboxID` has been explicitly set.
-    public var hasInboxID: Bool {return self._inboxID != nil}
+    public var hasInboxID: Bool {self._inboxID != nil}
     /// Clears the value of `inboxID`. Subsequent reads from it will return its default value.
     public mutating func clearInboxID() {self._inboxID = nil}
+
+    public var identifierKind: Xmtp_Identity_Associations_IdentifierKind = .unspecified
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -211,17 +215,61 @@ public struct Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse: Sendable {
   public init() {}
 }
 
+/// Request to get the newest envelope for a given topic
+public struct Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var topics: [Data] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Response to GetNewestEnvelopeRequest
+public struct Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The newest envelope for the given topic OR null if there are no envelopes on the topic
+  public var results: [Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse.Response] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public struct Response: Sendable {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    public var originatorEnvelope: Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope {
+      get {_originatorEnvelope ?? Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope()}
+      set {_originatorEnvelope = newValue}
+    }
+    /// Returns true if `originatorEnvelope` has been explicitly set.
+    public var hasOriginatorEnvelope: Bool {self._originatorEnvelope != nil}
+    /// Clears the value of `originatorEnvelope`. Subsequent reads from it will return its default value.
+    public mutating func clearOriginatorEnvelope() {self._originatorEnvelope = nil}
+
+    public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    public init() {}
+
+    fileprivate var _originatorEnvelope: Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope? = nil
+  }
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "xmtp.xmtpv4.message_api"
 
 extension Xmtp_Xmtpv4_MessageApi_EnvelopesQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EnvelopesQuery"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "topics"),
-    2: .standard(proto: "originator_node_ids"),
-    3: .standard(proto: "last_seen"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}topics\0\u{3}originator_node_ids\0\u{3}last_seen\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -265,9 +313,7 @@ extension Xmtp_Xmtpv4_MessageApi_EnvelopesQuery: SwiftProtobuf.Message, SwiftPro
 
 extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SubscribeEnvelopesRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "query"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}query\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -301,9 +347,7 @@ extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest: SwiftProtobuf.Messag
 
 extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SubscribeEnvelopesResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "envelopes"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}envelopes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -333,10 +377,7 @@ extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: SwiftProtobuf.Messa
 
 extension Xmtp_Xmtpv4_MessageApi_QueryEnvelopesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".QueryEnvelopesRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "query"),
-    2: .same(proto: "limit"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}query\0\u{1}limit\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -375,9 +416,7 @@ extension Xmtp_Xmtpv4_MessageApi_QueryEnvelopesRequest: SwiftProtobuf.Message, S
 
 extension Xmtp_Xmtpv4_MessageApi_QueryEnvelopesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".QueryEnvelopesResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "envelopes"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}envelopes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -407,9 +446,7 @@ extension Xmtp_Xmtpv4_MessageApi_QueryEnvelopesResponse: SwiftProtobuf.Message, 
 
 extension Xmtp_Xmtpv4_MessageApi_PublishPayerEnvelopesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PublishPayerEnvelopesRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "payer_envelopes"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}payer_envelopes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -439,9 +476,7 @@ extension Xmtp_Xmtpv4_MessageApi_PublishPayerEnvelopesRequest: SwiftProtobuf.Mes
 
 extension Xmtp_Xmtpv4_MessageApi_PublishPayerEnvelopesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PublishPayerEnvelopesResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "originator_envelopes"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}originator_envelopes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -471,9 +506,7 @@ extension Xmtp_Xmtpv4_MessageApi_PublishPayerEnvelopesResponse: SwiftProtobuf.Me
 
 extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInboxIdsRequest"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "requests"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}requests\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -503,9 +536,7 @@ extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest: SwiftProtobuf.Message, Swif
 
 extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest.Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest.protoMessageName + ".Request"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "address"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}identifier\0\u{3}identifier_kind\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -513,21 +544,26 @@ extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest.Request: SwiftProtobuf.Messa
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.address) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.identifier) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.identifierKind) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.address.isEmpty {
-      try visitor.visitSingularStringField(value: self.address, fieldNumber: 1)
+    if !self.identifier.isEmpty {
+      try visitor.visitSingularStringField(value: self.identifier, fieldNumber: 1)
+    }
+    if self.identifierKind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.identifierKind, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest.Request, rhs: Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest.Request) -> Bool {
-    if lhs.address != rhs.address {return false}
+    if lhs.identifier != rhs.identifier {return false}
+    if lhs.identifierKind != rhs.identifierKind {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -535,9 +571,7 @@ extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsRequest.Request: SwiftProtobuf.Messa
 
 extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInboxIdsResponse"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "responses"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}responses\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -567,10 +601,7 @@ extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse: SwiftProtobuf.Message, Swi
 
 extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse.Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse.protoMessageName + ".Response"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "address"),
-    2: .standard(proto: "inbox_id"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}identifier\0\u{3}inbox_id\0\u{3}identifier_kind\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -578,8 +609,9 @@ extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse.Response: SwiftProtobuf.Mes
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.address) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.identifier) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self._inboxID) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.identifierKind) }()
       default: break
       }
     }
@@ -590,18 +622,116 @@ extension Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse.Response: SwiftProtobuf.Mes
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.address.isEmpty {
-      try visitor.visitSingularStringField(value: self.address, fieldNumber: 1)
+    if !self.identifier.isEmpty {
+      try visitor.visitSingularStringField(value: self.identifier, fieldNumber: 1)
     }
     try { if let v = self._inboxID {
       try visitor.visitSingularStringField(value: v, fieldNumber: 2)
     } }()
+    if self.identifierKind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.identifierKind, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse.Response, rhs: Xmtp_Xmtpv4_MessageApi_GetInboxIdsResponse.Response) -> Bool {
-    if lhs.address != rhs.address {return false}
+    if lhs.identifier != rhs.identifier {return false}
     if lhs._inboxID != rhs._inboxID {return false}
+    if lhs.identifierKind != rhs.identifierKind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetNewestEnvelopeRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}topics\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedBytesField(value: &self.topics) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.topics.isEmpty {
+      try visitor.visitRepeatedBytesField(value: self.topics, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeRequest, rhs: Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeRequest) -> Bool {
+    if lhs.topics != rhs.topics {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetNewestEnvelopeResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}results\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.results) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.results.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.results, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse, rhs: Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse) -> Bool {
+    if lhs.results != rhs.results {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse.Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse.protoMessageName + ".Response"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}originator_envelope\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._originatorEnvelope) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._originatorEnvelope {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse.Response, rhs: Xmtp_Xmtpv4_MessageApi_GetNewestEnvelopeResponse.Response) -> Bool {
+    if lhs._originatorEnvelope != rhs._originatorEnvelope {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

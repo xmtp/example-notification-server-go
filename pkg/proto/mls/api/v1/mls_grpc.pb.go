@@ -33,6 +33,9 @@ const (
 	MlsApi_QueryWelcomeMessages_FullMethodName     = "/xmtp.mls.api.v1.MlsApi/QueryWelcomeMessages"
 	MlsApi_SubscribeGroupMessages_FullMethodName   = "/xmtp.mls.api.v1.MlsApi/SubscribeGroupMessages"
 	MlsApi_SubscribeWelcomeMessages_FullMethodName = "/xmtp.mls.api.v1.MlsApi/SubscribeWelcomeMessages"
+	MlsApi_BatchPublishCommitLog_FullMethodName    = "/xmtp.mls.api.v1.MlsApi/BatchPublishCommitLog"
+	MlsApi_BatchQueryCommitLog_FullMethodName      = "/xmtp.mls.api.v1.MlsApi/BatchQueryCommitLog"
+	MlsApi_GetNewestGroupMessage_FullMethodName    = "/xmtp.mls.api.v1.MlsApi/GetNewestGroupMessage"
 )
 
 // MlsApiClient is the client API for MlsApi service.
@@ -65,6 +68,9 @@ type MlsApiClient interface {
 	SubscribeGroupMessages(ctx context.Context, in *SubscribeGroupMessagesRequest, opts ...grpc.CallOption) (MlsApi_SubscribeGroupMessagesClient, error)
 	// Subscribe stream of new welcome messages
 	SubscribeWelcomeMessages(ctx context.Context, in *SubscribeWelcomeMessagesRequest, opts ...grpc.CallOption) (MlsApi_SubscribeWelcomeMessagesClient, error)
+	BatchPublishCommitLog(ctx context.Context, in *BatchPublishCommitLogRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	BatchQueryCommitLog(ctx context.Context, in *BatchQueryCommitLogRequest, opts ...grpc.CallOption) (*BatchQueryCommitLogResponse, error)
+	GetNewestGroupMessage(ctx context.Context, in *GetNewestGroupMessageRequest, opts ...grpc.CallOption) (*GetNewestGroupMessageResponse, error)
 }
 
 type mlsApiClient struct {
@@ -220,6 +226,33 @@ func (x *mlsApiSubscribeWelcomeMessagesClient) Recv() (*WelcomeMessage, error) {
 	return m, nil
 }
 
+func (c *mlsApiClient) BatchPublishCommitLog(ctx context.Context, in *BatchPublishCommitLogRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, MlsApi_BatchPublishCommitLog_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mlsApiClient) BatchQueryCommitLog(ctx context.Context, in *BatchQueryCommitLogRequest, opts ...grpc.CallOption) (*BatchQueryCommitLogResponse, error) {
+	out := new(BatchQueryCommitLogResponse)
+	err := c.cc.Invoke(ctx, MlsApi_BatchQueryCommitLog_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mlsApiClient) GetNewestGroupMessage(ctx context.Context, in *GetNewestGroupMessageRequest, opts ...grpc.CallOption) (*GetNewestGroupMessageResponse, error) {
+	out := new(GetNewestGroupMessageResponse)
+	err := c.cc.Invoke(ctx, MlsApi_GetNewestGroupMessage_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MlsApiServer is the server API for MlsApi service.
 // All implementations must embed UnimplementedMlsApiServer
 // for forward compatibility
@@ -250,6 +283,9 @@ type MlsApiServer interface {
 	SubscribeGroupMessages(*SubscribeGroupMessagesRequest, MlsApi_SubscribeGroupMessagesServer) error
 	// Subscribe stream of new welcome messages
 	SubscribeWelcomeMessages(*SubscribeWelcomeMessagesRequest, MlsApi_SubscribeWelcomeMessagesServer) error
+	BatchPublishCommitLog(context.Context, *BatchPublishCommitLogRequest) (*emptypb.Empty, error)
+	BatchQueryCommitLog(context.Context, *BatchQueryCommitLogRequest) (*BatchQueryCommitLogResponse, error)
+	GetNewestGroupMessage(context.Context, *GetNewestGroupMessageRequest) (*GetNewestGroupMessageResponse, error)
 	mustEmbedUnimplementedMlsApiServer()
 }
 
@@ -289,6 +325,15 @@ func (UnimplementedMlsApiServer) SubscribeGroupMessages(*SubscribeGroupMessagesR
 }
 func (UnimplementedMlsApiServer) SubscribeWelcomeMessages(*SubscribeWelcomeMessagesRequest, MlsApi_SubscribeWelcomeMessagesServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeWelcomeMessages not implemented")
+}
+func (UnimplementedMlsApiServer) BatchPublishCommitLog(context.Context, *BatchPublishCommitLogRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchPublishCommitLog not implemented")
+}
+func (UnimplementedMlsApiServer) BatchQueryCommitLog(context.Context, *BatchQueryCommitLogRequest) (*BatchQueryCommitLogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchQueryCommitLog not implemented")
+}
+func (UnimplementedMlsApiServer) GetNewestGroupMessage(context.Context, *GetNewestGroupMessageRequest) (*GetNewestGroupMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNewestGroupMessage not implemented")
 }
 func (UnimplementedMlsApiServer) mustEmbedUnimplementedMlsApiServer() {}
 
@@ -507,6 +552,60 @@ func (x *mlsApiSubscribeWelcomeMessagesServer) Send(m *WelcomeMessage) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _MlsApi_BatchPublishCommitLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchPublishCommitLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MlsApiServer).BatchPublishCommitLog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MlsApi_BatchPublishCommitLog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MlsApiServer).BatchPublishCommitLog(ctx, req.(*BatchPublishCommitLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MlsApi_BatchQueryCommitLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchQueryCommitLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MlsApiServer).BatchQueryCommitLog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MlsApi_BatchQueryCommitLog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MlsApiServer).BatchQueryCommitLog(ctx, req.(*BatchQueryCommitLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MlsApi_GetNewestGroupMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNewestGroupMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MlsApiServer).GetNewestGroupMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MlsApi_GetNewestGroupMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MlsApiServer).GetNewestGroupMessage(ctx, req.(*GetNewestGroupMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MlsApi_ServiceDesc is the grpc.ServiceDesc for MlsApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -549,6 +648,18 @@ var MlsApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryWelcomeMessages",
 			Handler:    _MlsApi_QueryWelcomeMessages_Handler,
+		},
+		{
+			MethodName: "BatchPublishCommitLog",
+			Handler:    _MlsApi_BatchPublishCommitLog_Handler,
+		},
+		{
+			MethodName: "BatchQueryCommitLog",
+			Handler:    _MlsApi_BatchQueryCommitLog_Handler,
+		},
+		{
+			MethodName: "GetNewestGroupMessage",
+			Handler:    _MlsApi_GetNewestGroupMessage_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

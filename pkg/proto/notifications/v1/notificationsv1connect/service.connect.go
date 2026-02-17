@@ -50,16 +50,6 @@ const (
 	NotificationsUnsubscribeProcedure = "/notifications.v1.Notifications/Unsubscribe"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	notificationsServiceDescriptor                     = v1.File_notifications_v1_service_proto.Services().ByName("Notifications")
-	notificationsRegisterInstallationMethodDescriptor  = notificationsServiceDescriptor.Methods().ByName("RegisterInstallation")
-	notificationsDeleteInstallationMethodDescriptor    = notificationsServiceDescriptor.Methods().ByName("DeleteInstallation")
-	notificationsSubscribeMethodDescriptor             = notificationsServiceDescriptor.Methods().ByName("Subscribe")
-	notificationsSubscribeWithMetadataMethodDescriptor = notificationsServiceDescriptor.Methods().ByName("SubscribeWithMetadata")
-	notificationsUnsubscribeMethodDescriptor           = notificationsServiceDescriptor.Methods().ByName("Unsubscribe")
-)
-
 // NotificationsClient is a client for the notifications.v1.Notifications service.
 type NotificationsClient interface {
 	RegisterInstallation(context.Context, *connect.Request[v1.RegisterInstallationRequest]) (*connect.Response[v1.RegisterInstallationResponse], error)
@@ -78,35 +68,36 @@ type NotificationsClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewNotificationsClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) NotificationsClient {
 	baseURL = strings.TrimRight(baseURL, "/")
+	notificationsMethods := v1.File_notifications_v1_service_proto.Services().ByName("Notifications").Methods()
 	return &notificationsClient{
 		registerInstallation: connect.NewClient[v1.RegisterInstallationRequest, v1.RegisterInstallationResponse](
 			httpClient,
 			baseURL+NotificationsRegisterInstallationProcedure,
-			connect.WithSchema(notificationsRegisterInstallationMethodDescriptor),
+			connect.WithSchema(notificationsMethods.ByName("RegisterInstallation")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteInstallation: connect.NewClient[v1.DeleteInstallationRequest, emptypb.Empty](
 			httpClient,
 			baseURL+NotificationsDeleteInstallationProcedure,
-			connect.WithSchema(notificationsDeleteInstallationMethodDescriptor),
+			connect.WithSchema(notificationsMethods.ByName("DeleteInstallation")),
 			connect.WithClientOptions(opts...),
 		),
 		subscribe: connect.NewClient[v1.SubscribeRequest, emptypb.Empty](
 			httpClient,
 			baseURL+NotificationsSubscribeProcedure,
-			connect.WithSchema(notificationsSubscribeMethodDescriptor),
+			connect.WithSchema(notificationsMethods.ByName("Subscribe")),
 			connect.WithClientOptions(opts...),
 		),
 		subscribeWithMetadata: connect.NewClient[v1.SubscribeWithMetadataRequest, emptypb.Empty](
 			httpClient,
 			baseURL+NotificationsSubscribeWithMetadataProcedure,
-			connect.WithSchema(notificationsSubscribeWithMetadataMethodDescriptor),
+			connect.WithSchema(notificationsMethods.ByName("SubscribeWithMetadata")),
 			connect.WithClientOptions(opts...),
 		),
 		unsubscribe: connect.NewClient[v1.UnsubscribeRequest, emptypb.Empty](
 			httpClient,
 			baseURL+NotificationsUnsubscribeProcedure,
-			connect.WithSchema(notificationsUnsubscribeMethodDescriptor),
+			connect.WithSchema(notificationsMethods.ByName("Unsubscribe")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -161,34 +152,35 @@ type NotificationsHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewNotificationsHandler(svc NotificationsHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	notificationsMethods := v1.File_notifications_v1_service_proto.Services().ByName("Notifications").Methods()
 	notificationsRegisterInstallationHandler := connect.NewUnaryHandler(
 		NotificationsRegisterInstallationProcedure,
 		svc.RegisterInstallation,
-		connect.WithSchema(notificationsRegisterInstallationMethodDescriptor),
+		connect.WithSchema(notificationsMethods.ByName("RegisterInstallation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	notificationsDeleteInstallationHandler := connect.NewUnaryHandler(
 		NotificationsDeleteInstallationProcedure,
 		svc.DeleteInstallation,
-		connect.WithSchema(notificationsDeleteInstallationMethodDescriptor),
+		connect.WithSchema(notificationsMethods.ByName("DeleteInstallation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	notificationsSubscribeHandler := connect.NewUnaryHandler(
 		NotificationsSubscribeProcedure,
 		svc.Subscribe,
-		connect.WithSchema(notificationsSubscribeMethodDescriptor),
+		connect.WithSchema(notificationsMethods.ByName("Subscribe")),
 		connect.WithHandlerOptions(opts...),
 	)
 	notificationsSubscribeWithMetadataHandler := connect.NewUnaryHandler(
 		NotificationsSubscribeWithMetadataProcedure,
 		svc.SubscribeWithMetadata,
-		connect.WithSchema(notificationsSubscribeWithMetadataMethodDescriptor),
+		connect.WithSchema(notificationsMethods.ByName("SubscribeWithMetadata")),
 		connect.WithHandlerOptions(opts...),
 	)
 	notificationsUnsubscribeHandler := connect.NewUnaryHandler(
 		NotificationsUnsubscribeProcedure,
 		svc.Unsubscribe,
-		connect.WithSchema(notificationsUnsubscribeMethodDescriptor),
+		connect.WithSchema(notificationsMethods.ByName("Unsubscribe")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/notifications.v1.Notifications/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
