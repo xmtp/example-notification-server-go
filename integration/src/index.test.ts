@@ -1,5 +1,6 @@
-import { serve } from "bun";
-import { expect, test, afterAll, describe } from "bun:test";
+import Koa from "koa";
+import { bodyParser } from "@koa/bodyparser";
+import { expect, test, afterAll, describe } from "vitest";
 import { createNotificationClient, randomClient } from ".";
 import type { NotificationResponse } from "./types";
 
@@ -8,19 +9,18 @@ const PORT = 7777;
 describe("notifications", () => {
   let onRequest = (req: NotificationResponse) =>
     console.log("No request handler set for", req);
-  // Set up a server to receive messages from the HttpDelivery service
-  const server = serve({
-    port: PORT,
-    async fetch(req: Request) {
-      const body = (await req.json()) as NotificationResponse;
-      onRequest(body);
-      return new Response("", { status: 200 });
-    },
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  } as any);
+
+  // Set up a Koa server to receive messages from the HttpDelivery service
+  const app = new Koa();
+  app.use(bodyParser());
+  app.use(async (ctx) => {
+    onRequest(ctx.request.body as NotificationResponse);
+    ctx.status = 200;
+  });
+  const server = app.listen(PORT);
 
   afterAll(() => {
-    server.stop();
+    server.close();
   });
 
   const waitForNextRequest = (
@@ -36,7 +36,7 @@ describe("notifications", () => {
     const bo = await randomClient();
     const alixNotificationClient = createNotificationClient();
     await alixNotificationClient.registerInstallation({
-      installationId: alix.accountAddress,
+      installationId: alix.installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           value: "token",
@@ -45,27 +45,28 @@ describe("notifications", () => {
       },
     });
 
-    const alixInviteTopic = `/xmtp/mls/1/g-${alix.accountAddress}/proto`;
+    const alixWelcomeTopic = `/xmtp/mls/1/w-${alix.installationId}/proto`;
     await alixNotificationClient.subscribeWithMetadata({
-      installationId: alix.accountAddress,
+      installationId: alix.installationId,
       subscriptions: [
         {
-          topic: alixInviteTopic,
+          topic: alixWelcomeTopic,
           isSilent: true,
         },
       ],
     });
 
-    const notificationPromise = waitForNextRequest(1000);
-    await alix.conversations.newDm(bo.accountAddress);
+    const notificationPromise = waitForNextRequest(10000);
+    // Bo creates a DM with alix, which sends a welcome to alix's installation
+    await bo.conversations.createDm(alix.inboxId);
     const notification = await notificationPromise;
 
-    expect(notification.idempotency_key).toBeString();
-    expect(notification.message.content_topic).toEqual(alixInviteTopic);
-    expect(notification.message.message).toBeString();
-    expect(notification.subscription.is_silent).toBeTrue();
+    expect(notification.idempotency_key).toBeTypeOf("string");
+    expect(notification.message.content_topic).toEqual(alixWelcomeTopic);
+    expect(notification.message.message).toBeTypeOf("string");
+    expect(notification.subscription.is_silent).toBe(true);
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
-    expect(notification.message_context.message_type).toEqual("v2-invite");
+    expect(notification.message_context.message_type).toEqual("v3-welcome");
   });
 
   test("hmac keys", async () => {
@@ -83,7 +84,7 @@ describe("notifications", () => {
       },
     });
 
-    const boGroup = await bo.conversations.newGroup([alix.accountAddress]);
+    const boGroup = await bo.conversations.createGroup([alix.inboxId]);
 
     expect((await alix.conversations.list()).length).toEqual(0);
     await alix.conversations.syncAll();
@@ -113,15 +114,15 @@ describe("notifications", () => {
     });
 
     const notificationPromise = waitForNextRequest(10000);
-    await alixGroup.send("This should never be delivered");
-    await boGroup.send("This should be delivered");
+    await alixGroup.sendText("This should never be delivered");
+    await boGroup.sendText("This should be delivered");
 
     const notification = await notificationPromise;
 
-    expect(notification.idempotency_key).toBeString();
+    expect(notification.idempotency_key).toBeTypeOf("string");
     expect(notification.message.content_topic).toEqual(topic);
-    expect(notification.message.message).toBeString();
-    expect(notification.subscription.is_silent).toBeFalse();
+    expect(notification.message.message).toBeTypeOf("string");
+    expect(notification.subscription.is_silent).toBe(false);
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
   });
 });

@@ -11,10 +11,10 @@ managed:
       - buf.build/grpc-ecosystem/grpc-gateway
 plugins:
   # Client code for the integration tests
-  - plugin: buf.build/connectrpc/es:v1.4.0
-    out: integration/gen
-  - plugin: buf.build/bufbuild/es
-    out: integration/gen
+  - plugin: buf.build/bufbuild/es:v2.2.3
+    out: integration/src/gen
+    opt:
+      - target=ts
   # Go server code
   - plugin: buf.build/protocolbuffers/go:v1.36.6
     out: pkg/proto
