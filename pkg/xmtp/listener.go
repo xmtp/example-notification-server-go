@@ -41,7 +41,7 @@ func NewListener(
 	clientVersion string,
 	appVersion string,
 ) (*Listener, error) {
-	client, err := NewClient(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
+	client, err := NewV3Client(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +71,9 @@ func (l *Listener) Start() {
 func (l *Listener) Stop() {
 	l.cancelFunc()
 }
+
+// TODO: The client supports some methods like publish etc - this should NOT be one of the functions.
+// We are read only.
 
 func (l *Listener) startMessageListener() {
 	l.logger.Info("starting message listener")
@@ -214,7 +217,7 @@ func (l *Listener) deliver(req interfaces.SendRequest) error {
 }
 
 func (l *Listener) refreshClient() error {
-	client, err := NewClient(l.ctx, l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
+	client, err := NewV3Client(l.ctx, l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
 	if err != nil {
 		return err
 	}

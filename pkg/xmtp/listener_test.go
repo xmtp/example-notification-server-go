@@ -31,8 +31,8 @@ func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*List
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := options.XmtpOptions{ListenerEnabled: true, GrpcAddress: XMTP_ADDRESS, UseTls: false, NumWorkers: 5}
 	db, cleanup := test.CreateTestDb()
-	installations := installations.NewInstallationsService(logger, db)
-	subscriptions := subscriptions.NewSubscriptionsService(logger, db)
+	installations := installations.NewService(logger, db)
+	subscriptions := subscriptions.NewService(logger, db)
 
 	l, err := NewListener(ctx, logger, opts, installations, subscriptions, []interfaces.Delivery{deliveryService}, "test", "test")
 	if err != nil {

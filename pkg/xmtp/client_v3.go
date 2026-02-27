@@ -41,7 +41,7 @@ func getCredentials(useTls bool) credentials.TransportCredentials {
 	return insecure.NewCredentials()
 }
 
-func NewClient(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (v1.MessageApiClient, error) {
+func NewV3Client(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (v1.MessageApiClient, error) {
 	conn, err := newConn(apiAddress, useTls, clientVersion, appVersion)
 	if err != nil {
 		return nil, err
