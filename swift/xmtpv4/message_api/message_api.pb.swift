@@ -52,7 +52,6 @@ public struct Xmtp_Xmtpv4_MessageApi_EnvelopesQuery: Sendable {
   fileprivate var _lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor? = nil
 }
 
-/// Batch subscribe to envelopes
 public struct Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -85,6 +84,28 @@ public struct Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+}
+
+/// Batch subscribe to all envelopes
+public struct Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor {
+    get {_lastSeen ?? Xmtp_Xmtpv4_Envelopes_Cursor()}
+    set {_lastSeen = newValue}
+  }
+  /// Returns true if `lastSeen` has been explicitly set.
+  public var hasLastSeen: Bool {self._lastSeen != nil}
+  /// Clears the value of `lastSeen`. Subsequent reads from it will return its default value.
+  public mutating func clearLastSeen() {self._lastSeen = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor? = nil
 }
 
 /// Query envelopes request
@@ -370,6 +391,40 @@ extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: SwiftProtobuf.Messa
 
   public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse) -> Bool {
     if lhs.envelopes != rhs.envelopes {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubscribeAllEnvelopesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}last_seen\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._lastSeen) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._lastSeen {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest) -> Bool {
+    if lhs._lastSeen != rhs._lastSeen {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

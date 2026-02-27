@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	ReplicationApi_SubscribeEnvelopes_FullMethodName    = "/xmtp.xmtpv4.message_api.ReplicationApi/SubscribeEnvelopes"
+	ReplicationApi_SubscribeAllEnvelopes_FullMethodName = "/xmtp.xmtpv4.message_api.ReplicationApi/SubscribeAllEnvelopes"
 	ReplicationApi_QueryEnvelopes_FullMethodName        = "/xmtp.xmtpv4.message_api.ReplicationApi/QueryEnvelopes"
 	ReplicationApi_PublishPayerEnvelopes_FullMethodName = "/xmtp.xmtpv4.message_api.ReplicationApi/PublishPayerEnvelopes"
 	ReplicationApi_GetInboxIds_FullMethodName           = "/xmtp.xmtpv4.message_api.ReplicationApi/GetInboxIds"
@@ -33,6 +34,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ReplicationApiClient interface {
 	SubscribeEnvelopes(ctx context.Context, in *SubscribeEnvelopesRequest, opts ...grpc.CallOption) (ReplicationApi_SubscribeEnvelopesClient, error)
+	SubscribeAllEnvelopes(ctx context.Context, in *SubscribeAllEnvelopesRequest, opts ...grpc.CallOption) (ReplicationApi_SubscribeAllEnvelopesClient, error)
 	QueryEnvelopes(ctx context.Context, in *QueryEnvelopesRequest, opts ...grpc.CallOption) (*QueryEnvelopesResponse, error)
 	PublishPayerEnvelopes(ctx context.Context, in *PublishPayerEnvelopesRequest, opts ...grpc.CallOption) (*PublishPayerEnvelopesResponse, error)
 	GetInboxIds(ctx context.Context, in *GetInboxIdsRequest, opts ...grpc.CallOption) (*GetInboxIdsResponse, error)
@@ -73,6 +75,38 @@ type replicationApiSubscribeEnvelopesClient struct {
 }
 
 func (x *replicationApiSubscribeEnvelopesClient) Recv() (*SubscribeEnvelopesResponse, error) {
+	m := new(SubscribeEnvelopesResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *replicationApiClient) SubscribeAllEnvelopes(ctx context.Context, in *SubscribeAllEnvelopesRequest, opts ...grpc.CallOption) (ReplicationApi_SubscribeAllEnvelopesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ReplicationApi_ServiceDesc.Streams[1], ReplicationApi_SubscribeAllEnvelopes_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &replicationApiSubscribeAllEnvelopesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ReplicationApi_SubscribeAllEnvelopesClient interface {
+	Recv() (*SubscribeEnvelopesResponse, error)
+	grpc.ClientStream
+}
+
+type replicationApiSubscribeAllEnvelopesClient struct {
+	grpc.ClientStream
+}
+
+func (x *replicationApiSubscribeAllEnvelopesClient) Recv() (*SubscribeEnvelopesResponse, error) {
 	m := new(SubscribeEnvelopesResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -121,6 +155,7 @@ func (c *replicationApiClient) GetNewestEnvelope(ctx context.Context, in *GetNew
 // for forward compatibility
 type ReplicationApiServer interface {
 	SubscribeEnvelopes(*SubscribeEnvelopesRequest, ReplicationApi_SubscribeEnvelopesServer) error
+	SubscribeAllEnvelopes(*SubscribeAllEnvelopesRequest, ReplicationApi_SubscribeAllEnvelopesServer) error
 	QueryEnvelopes(context.Context, *QueryEnvelopesRequest) (*QueryEnvelopesResponse, error)
 	PublishPayerEnvelopes(context.Context, *PublishPayerEnvelopesRequest) (*PublishPayerEnvelopesResponse, error)
 	GetInboxIds(context.Context, *GetInboxIdsRequest) (*GetInboxIdsResponse, error)
@@ -135,6 +170,9 @@ type UnimplementedReplicationApiServer struct {
 
 func (UnimplementedReplicationApiServer) SubscribeEnvelopes(*SubscribeEnvelopesRequest, ReplicationApi_SubscribeEnvelopesServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeEnvelopes not implemented")
+}
+func (UnimplementedReplicationApiServer) SubscribeAllEnvelopes(*SubscribeAllEnvelopesRequest, ReplicationApi_SubscribeAllEnvelopesServer) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeAllEnvelopes not implemented")
 }
 func (UnimplementedReplicationApiServer) QueryEnvelopes(context.Context, *QueryEnvelopesRequest) (*QueryEnvelopesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryEnvelopes not implemented")
@@ -179,6 +217,27 @@ type replicationApiSubscribeEnvelopesServer struct {
 }
 
 func (x *replicationApiSubscribeEnvelopesServer) Send(m *SubscribeEnvelopesResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _ReplicationApi_SubscribeAllEnvelopes_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeAllEnvelopesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ReplicationApiServer).SubscribeAllEnvelopes(m, &replicationApiSubscribeAllEnvelopesServer{stream})
+}
+
+type ReplicationApi_SubscribeAllEnvelopesServer interface {
+	Send(*SubscribeEnvelopesResponse) error
+	grpc.ServerStream
+}
+
+type replicationApiSubscribeAllEnvelopesServer struct {
+	grpc.ServerStream
+}
+
+func (x *replicationApiSubscribeAllEnvelopesServer) Send(m *SubscribeEnvelopesResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -282,6 +341,11 @@ var ReplicationApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SubscribeEnvelopes",
 			Handler:       _ReplicationApi_SubscribeEnvelopes_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "SubscribeAllEnvelopes",
+			Handler:       _ReplicationApi_SubscribeAllEnvelopes_Handler,
 			ServerStreams: true,
 		},
 	},
