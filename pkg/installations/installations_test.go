@@ -16,7 +16,7 @@ const INSTALLATION_ID = "foo"
 const TOKEN = "bar"
 
 func createService(db *bun.DB) interfaces.Installations {
-	return NewInstallationsService(
+	return NewService(
 		logging.CreateLogger("console", "info"),
 		db,
 	)
