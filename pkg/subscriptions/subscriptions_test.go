@@ -17,7 +17,7 @@ const TOPIC = "topic1"
 const TOPIC_2 = "topic2"
 
 func createService(db *bun.DB) interfaces.Subscriptions {
-	return NewSubscriptionsService(
+	return NewService(
 		logging.CreateLogger("console", "info"),
 		db,
 	)
