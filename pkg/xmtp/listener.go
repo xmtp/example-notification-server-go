@@ -4,31 +4,38 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
-	"go.uber.org/zap"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/envelopes"
 )
 
 const STARTING_SLEEP_TIME = 100 * time.Millisecond
 const DELIVERY_TIMEOUT = 15 * time.Second
 
 type Listener struct {
-	logger           *zap.Logger
-	ctx              context.Context
-	cancelFunc       func()
-	xmtpClient       v1.MessageApiClient
-	opts             options.XmtpOptions
-	messageChannel   chan *v1.Envelope
+	logger     *zap.Logger
+	ctx        context.Context
+	cancelFunc func()
+	opts       options.XmtpOptions
+
+	client SubscriberClient
+	// TODO: Make this channel generic
+	envelopes chan any
+
 	installations    interfaces.Installations
 	deliveryServices []interfaces.Delivery
 	subscriptions    interfaces.Subscriptions
-	clientVersion    string
-	appVersion       string
+
+	clientVersion string
+	appVersion    string
 }
 
 func NewListener(
@@ -41,30 +48,36 @@ func NewListener(
 	clientVersion string,
 	appVersion string,
 ) (*Listener, error) {
-	client, err := NewV3Client(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
-	if err != nil {
-		return nil, err
-	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &Listener{
+	conn, err := newConn(opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize GRPC client: %w", err)
+	}
+
+	client := newSubscriberClient(conn, UseV3Client(!opts.D14N))
+
+	listener := &Listener{
 		ctx:              ctx,
 		cancelFunc:       cancel,
 		logger:           logger.Named("xmtp-listener"),
-		xmtpClient:       client,
 		opts:             opts,
-		messageChannel:   make(chan *v1.Envelope, 100),
+		client:           client,
+		envelopes:        make(chan any),
 		installations:    installations,
 		deliveryServices: deliveryServices,
 		subscriptions:    subscriptions,
 		clientVersion:    clientVersion,
 		appVersion:       appVersion,
-	}, nil
+	}
+
+	return listener, nil
 }
 
 func (l *Listener) Start() {
-	go l.startMessageListener()
+	// TODO: Add cursor (from outside the binary - flags).
+	go l.startEnvelopeListener(nil)
 	l.startMessageWorkers()
 }
 
@@ -72,33 +85,41 @@ func (l *Listener) Stop() {
 	l.cancelFunc()
 }
 
-// TODO: The client supports some methods like publish etc - this should NOT be one of the functions.
-// We are read only.
+func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
 
-func (l *Listener) startMessageListener() {
 	l.logger.Info("starting message listener")
-	var stream v1.MessageApi_SubscribeAllClient
-	var err error
+
+	var (
+		stream SubscriberStream
+		err    error
+	)
+
 	sleepTime := STARTING_SLEEP_TIME
 	for {
-		stream, err = l.xmtpClient.SubscribeAll(l.ctx, &v1.SubscribeAllRequest{})
+		stream, err = l.client.Subscribe(l.ctx, cursor)
 		if err != nil {
+
 			l.logger.Error("error connecting to stream", zap.Error(err))
+
 			time.Sleep(sleepTime)
+
 			sleepTime = sleepTime * 2
 			if err = l.refreshClient(); err != nil {
 				l.logger.Error("error refreshing client", zap.Error(err))
 			}
+
 			continue
 		}
+
 	streamLoop:
 		for {
 			select {
 			case <-l.ctx.Done():
-				close(l.messageChannel)
+				close(l.envelopes)
 				return
 			default:
-				msg, err := stream.Recv()
+
+				msg, err := stream.Receive()
 				if err == io.EOF {
 					l.logger.Info("stream closed")
 					break streamLoop
@@ -106,19 +127,31 @@ func (l *Listener) startMessageListener() {
 
 				if err != nil {
 					l.logger.Error("error reading from stream", zap.Error(err))
+
 					// Wait 100ms to avoid hammering the API and getting rate limited
 					time.Sleep(sleepTime)
 					sleepTime = sleepTime * 2
 					if err = l.refreshClient(); err != nil {
 						l.logger.Error("error refreshing client", zap.Error(err))
 					}
+
 					break streamLoop
 				}
 
 				if msg != nil {
 					// Reset the sleep time on first successful message
 					sleepTime = STARTING_SLEEP_TIME
-					l.messageChannel <- msg
+				}
+
+				// Range over envelopes so they get distributed to the worker pool evenly.
+
+				// Only one, either v3 or v4 will be populated, but we can just range over both.
+				for _, env := range msg.V3 {
+					l.envelopes <- env
+				}
+
+				for _, env := range msg.V4 {
+					l.envelopes <- env
 				}
 			}
 		}
@@ -128,62 +161,29 @@ func (l *Listener) startMessageListener() {
 func (l *Listener) startMessageWorkers() {
 	for i := 0; i < l.opts.NumWorkers; i++ {
 		go func() {
-			var err error
-			for msg := range l.messageChannel {
-				err = l.processEnvelope(msg)
-				if err != nil {
-					l.logger.Error("error processing envelope", zap.String("topic", msg.ContentTopic), zap.Error(err))
-					continue
+			for msg := range l.envelopes {
+
+				switch env := msg.(type) {
+
+				case *v1.Envelope:
+					err := l.processV3Envelope(env)
+					if err != nil {
+						l.logger.Error("could not process envelope",
+							zap.String("topic", env.ContentTopic),
+							zap.Error(err),
+						)
+					}
+
+				case *envelopes.OriginatorEnvelope:
+
+					err := l.processV4Envelope(env)
+					if err != nil {
+						l.logger.Error("error processing envelope", zap.Error(err))
+					}
 				}
-				// l.logger.Info("processed a message", zap.String("topic", msg.ContentTopic))
 			}
 		}()
 	}
-}
-
-func (l *Listener) processEnvelope(env *v1.Envelope) error {
-	if !isV3Topic(env.ContentTopic) {
-		l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
-		return nil
-	}
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
-	if err != nil {
-		return err
-	}
-
-	if len(subs) == 0 {
-		return nil
-	}
-
-	installationIds := make([]string, len(subs))
-	for i, sub := range subs {
-		installationIds[i] = sub.InstallationId
-	}
-
-	installations, err := l.installations.GetInstallations(l.ctx, installationIds)
-	if err != nil {
-		return err
-	}
-
-	if len(installations) == 0 {
-		l.logger.Info("No matching installations found for topic", zap.String("topic", env.ContentTopic))
-		return nil
-	}
-
-	sendRequests := buildSendRequests(env, installations, subs)
-	for _, request := range sendRequests {
-		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
-			l.logger.Info("Skipping delivery of request",
-				zap.Any("message_context", request.MessageContext),
-				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
-			)
-			continue
-		}
-		if err = l.deliver(request); err != nil {
-			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
-		}
-	}
-	return err
 }
 
 func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
@@ -216,12 +216,20 @@ func (l *Listener) deliver(req interfaces.SendRequest) error {
 	return nil
 }
 
+// TODO: Implement.
 func (l *Listener) refreshClient() error {
-	client, err := NewV3Client(l.ctx, l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
+	conn, err := newConn(l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not refresh GRPC client: %w", err)
 	}
-	l.xmtpClient = client
+
+	_ = conn
+	// TODO: v3 or v4
+	// 	client, err := NewV3Client(l.ctx)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// l.v3Client = client
 
 	return nil
 }

@@ -13,6 +13,16 @@ if [ -n "$(go env GOPATH)" ]; then
     export PATH="${FOUND_GOPATH}/bin:${PATH}"
 fi
 
+# Use a local proto repo path if provided, otherwise pull from the Buf Schema Registry
+# Usage: ./dev/gen-proto [/path/to/local/xmtp/proto]
+if [ -n "${1:-}" ]; then
+    XMTP_PROTO_SOURCE="$1"
+    echo "Using local proto repo: $XMTP_PROTO_SOURCE"
+else
+    XMTP_PROTO_SOURCE="buf.build/xmtp/proto"
+    echo "Using BSR: $XMTP_PROTO_SOURCE"
+fi
+
 rm -rf ./pkg/proto
 buf generate --template proto/buf.gen.yaml
-buf generate buf.build/xmtp/proto
+buf generate "$XMTP_PROTO_SOURCE"

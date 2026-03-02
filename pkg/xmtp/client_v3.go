@@ -2,50 +2,43 @@ package xmtp
 
 import (
 	"context"
-	"crypto/tls"
-	"time"
+	"fmt"
+
+	"google.golang.org/grpc"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
-const (
-	clientVersionMetadataKey = "x-client-version"
-	appVersionMetadataKey    = "x-app-version"
-)
-
-func newConn(apiAddress string, useTls bool, clientVersion, appVersion string) (*grpc.ClientConn, error) {
-	return grpc.NewClient(
-		apiAddress,
-		grpc.WithTransportCredentials(getCredentials(useTls)),
-		grpc.WithConnectParams(grpc.ConnectParams{
-			MinConnectTimeout: 5 * time.Second,
-		}),
-		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-			ctx = metadata.AppendToOutgoingContext(ctx, clientVersionMetadataKey, clientVersion)
-			ctx = metadata.AppendToOutgoingContext(ctx, appVersionMetadataKey, appVersion)
-			return invoker(ctx, method, req, reply, cc, opts...)
-		}),
+type SubscriberV3 interface {
+	// Subscribe to a stream of all messages
+	SubscribeAll(context.Context, *v1.SubscribeAllRequest, ...grpc.CallOption) (
+		v1.MessageApi_SubscribeAllClient,
+		error,
 	)
 }
 
-func getCredentials(useTls bool) credentials.TransportCredentials {
-	if useTls {
-		return credentials.NewTLS(&tls.Config{
-			InsecureSkipVerify: false,
-		})
-	}
-	return insecure.NewCredentials()
+func NewV3Client(conn grpc.ClientConnInterface) SubscriberV3 {
+	return v1.NewMessageApiClient(conn)
 }
 
-func NewV3Client(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (v1.MessageApiClient, error) {
-	conn, err := newConn(apiAddress, useTls, clientVersion, appVersion)
+type v3Stream struct {
+	inner v1.MessageApi_SubscribeAllClient
+}
+
+func newV3Stream(s v1.MessageApi_SubscribeAllClient) SubscriberStream {
+	return &v3Stream{
+		inner: s,
+	}
+}
+
+func (s *v3Stream) Receive() (*EnvelopesWrapped, error) {
+
+	env, err := s.inner.Recv()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not receive envelopes: %w", err)
 	}
 
-	return v1.NewMessageApiClient(conn), nil
+	return &EnvelopesWrapped{
+		V3: []*v1.Envelope{env},
+	}, nil
 }
