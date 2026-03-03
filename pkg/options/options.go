@@ -25,7 +25,7 @@ type XmtpOptions struct {
 	ListenerEnabled bool   `long:"xmtp-listener" description:"Enable the XMTP listener to actually send notifications. Requires APNSOptions to be configured"`
 	UseTls          bool   `long:"xmtp-listener-tls" description:"Whether to connect to XMTP network using TLS"`
 	GrpcAddress     string `short:"x" long:"xmtp-address" env:"XMTP_GRPC_ADDRESS" description:"Address (including port) of XMTP GRPC server"`
-	D14N            bool   `short:"d" long:"d14n" env:"XTMP_D14N" description:"Use decentralization backend"`
+	D14N            bool   `long:"d14n" env:"XTMP_D14N" description:"Use decentralization backend"`
 	NumWorkers      int    `long:"num-workers" description:"Number of workers used to process messages" default:"50"`
 }
 

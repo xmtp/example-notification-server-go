@@ -135,12 +135,12 @@ func waitForShutdown() {
 func initDb() *bun.DB {
 	db, err := database.CreateBunDB(opts.DbConnectionString, 10*time.Second)
 	if err != nil {
-		log.Fatal("db creation error", zap.Error(err))
+		logger.Fatal("db creation error", zap.Error(err))
 	}
 
 	err = database.Migrate(context.Background(), db)
 	if err != nil {
-		log.Fatal("db migration error", zap.Error(err))
+		logger.Fatal("db migration error", zap.Error(err))
 	}
 
 	return db
