@@ -3,6 +3,7 @@ package installations
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -33,9 +34,8 @@ func (s Service) Register(ctx context.Context, installation interfaces.Installat
 			On("CONFLICT(id) DO UPDATE").
 			Set("deleted_at = NULL").
 			Exec(ctx)
-		// TODO: This is more than a debug log, no?
 		if err != nil {
-			s.logger.Debug("Installation already exists")
+			return fmt.Errorf("could not save installation: %w", err)
 		}
 
 		_, err = tx.NewInsert().
@@ -50,7 +50,7 @@ func (s Service) Register(ctx context.Context, installation interfaces.Installat
 			Set("updated_at = EXCLUDED.updated_at").Exec(ctx)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("could not save delivery mechanism: %w", err)
 		}
 
 		return nil

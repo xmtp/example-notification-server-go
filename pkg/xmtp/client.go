@@ -63,8 +63,6 @@ func newSubscriberClient(conn grpc.ClientConnInterface, opts ...clientOption) Su
 	}
 }
 
-// TODO: Implement a refresh
-
 // Subscribe opens an envelope stream. Cursor is ignored for v3 streams.
 func (c *clientWrapper) Subscribe(ctx context.Context, cursor map[uint32]uint64) (SubscriberStream, error) {
 
