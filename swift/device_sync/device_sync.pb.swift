@@ -169,7 +169,7 @@ public struct Xmtp_DeviceSync_BackupMetadataSave: Sendable {
 }
 
 /// Backup Options
-public struct Xmtp_DeviceSync_BackupOptions: Sendable {
+public struct Xmtp_DeviceSync_ArchiveOptions: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -379,8 +379,8 @@ extension Xmtp_DeviceSync_BackupMetadataSave: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
-extension Xmtp_DeviceSync_BackupOptions: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BackupOptions"
+extension Xmtp_DeviceSync_ArchiveOptions: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ArchiveOptions"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elements\0\u{3}start_ns\0\u{3}end_ns\0\u{3}exclude_disappearing_messages\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -418,7 +418,7 @@ extension Xmtp_DeviceSync_BackupOptions: SwiftProtobuf.Message, SwiftProtobuf._M
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Xmtp_DeviceSync_BackupOptions, rhs: Xmtp_DeviceSync_BackupOptions) -> Bool {
+  public static func ==(lhs: Xmtp_DeviceSync_ArchiveOptions, rhs: Xmtp_DeviceSync_ArchiveOptions) -> Bool {
     if lhs.elements != rhs.elements {return false}
     if lhs._startNs != rhs._startNs {return false}
     if lhs._endNs != rhs._endNs {return false}
