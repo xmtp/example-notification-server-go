@@ -56,6 +56,8 @@ func NewListener(
 		return nil, fmt.Errorf("could not initialize GRPC client: %w", err)
 	}
 
+	logger.Info("starting xmtp listener", zap.Bool("d14n", opts.D14N))
+
 	client := newSubscriberClient(conn, UseV3Client(!opts.D14N))
 
 	listener := &Listener{
@@ -186,7 +188,7 @@ func (l *Listener) startMessageWorkers() {
 	}
 }
 
-func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
+func shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
 	if subscription.HmacKey != nil && len(subscription.HmacKey.Key) > 0 {
 		isSender := messageContext.IsSender(subscription.HmacKey.Key)
 		if isSender {
@@ -234,6 +236,7 @@ func (l *Listener) refreshClient() error {
 	return nil
 }
 
+// isV3Topic returns true if topic is one we care about - group message or welcome message.
 func isV3Topic(topic string) bool {
 	if strings.HasPrefix(topic, "/xmtp/mls/1/g-") || strings.HasPrefix(topic, "/xmtp/mls/1/w-") {
 		return true
@@ -270,4 +273,37 @@ func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Install
 	}
 
 	return out
+}
+
+func buildSendRequestV4(env *envelopes.OriginatorEnvelope, info interfaces.MessageContext, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
+
+	var (
+		// TODO: Idempotency key
+		idempotencyKey string
+	)
+	var out []interfaces.SendRequest
+
+	installationMap := make(map[string]interfaces.Installation)
+	for _, installation := range installations {
+		installationMap[installation.Id] = installation
+	}
+
+	for _, sub := range subscriptions {
+
+		inst, ok := installationMap[sub.InstallationId]
+		if !ok {
+			continue
+		}
+
+		out = append(out, interfaces.SendRequest{
+			IdempotencyKey: idempotencyKey,
+			MessageV4:      env,
+			MessageContext: info,
+			Installation:   inst,
+			Subscription:   sub,
+		})
+	}
+
+	return out
+
 }

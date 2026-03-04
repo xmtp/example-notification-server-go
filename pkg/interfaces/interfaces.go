@@ -7,6 +7,7 @@ import (
 	"time"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/envelopes"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
@@ -49,8 +50,11 @@ type Subscription struct {
 }
 
 type SendRequest struct {
-	IdempotencyKey string         `json:"idempotency_key"`
-	Message        *v1.Envelope   `json:"message"`
+	IdempotencyKey string `json:"idempotency_key"`
+
+	Message   *v1.Envelope                  `json:"message,omitempty"`
+	MessageV4 *envelopes.OriginatorEnvelope `json:"message_v4,omitempty"`
+
 	MessageContext MessageContext `json:"message_context"`
 	Installation   Installation   `json:"installation"`
 	Subscription   Subscription   `json:"subscription"`
@@ -59,6 +63,7 @@ type SendRequest struct {
 type MessageContext struct {
 	MessageType topics.MessageType `json:"message_type"`
 	ShouldPush  *bool              `json:"should_push,omitempty"`
+	Topic       string             `json:"topic,omitempty"` // v4 parsed topic
 	HmacInputs  *[]byte            `json:"-"`
 	SenderHmac  *[]byte            `json:"-"`
 }
