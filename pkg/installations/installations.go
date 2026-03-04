@@ -84,7 +84,6 @@ func (s Service) GetInstallations(ctx context.Context, installationIds []string)
 		return []interfaces.Installation{}, nil
 	}
 
-	// TODO: Is this correct? Installation (capitalized) - relation.
 	results := make([]db.DeviceDeliveryMechanism, 0)
 	err := s.db.NewSelect().
 		Model((*db.DeviceDeliveryMechanism)(nil)).

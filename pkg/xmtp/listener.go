@@ -26,8 +26,7 @@ type Listener struct {
 	cancelFunc func()
 	opts       options.XmtpOptions
 
-	client SubscriberClient
-	// TODO: Make this channel generic
+	client    SubscriberClient
 	envelopes chan any
 
 	installations    interfaces.Installations

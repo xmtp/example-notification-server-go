@@ -112,6 +112,11 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 		l.logger.Info("delivering notification",
 			zap.Any("send_request", req),
 		)
+
+		// err = l.deliver(req)
+		// if err != nil {
+		// 	l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", req.MessageContext.Topic))
+		// }
 	}
 
 	return nil
