@@ -208,17 +208,35 @@ func shouldDeliver(messageContext interfaces.MessageContext, subscription interf
 }
 
 func (l *Listener) deliver(req interfaces.SendRequest) error {
+
+	if req.Message == nil && req.MessageV4 == nil {
+		return errors.New("empty message scheduled for delivery, skipping")
+	}
+
 	ctx, cancel := context.WithTimeout(l.ctx, DELIVERY_TIMEOUT)
 	defer cancel()
+
+	// TODO: Fix - we range accross multiple delivery services, but only the first one will be picked up.
 	for _, service := range l.deliveryServices {
-		if service.CanDeliver(req) && req.Message != nil {
-			l.logger.Info("active subscription found. sending message",
-				zap.String("topic", req.Message.ContentTopic),
-				zap.String("message_type", string(req.MessageContext.MessageType)),
-			)
-			return service.Send(ctx, req)
+
+		if !service.CanDeliver(req) {
+			continue
 		}
+
+		topic := req.MessageContext.Topic
+		if topic == "" && req.Message != nil {
+			// It's a legacy, V3 message.
+			topic = req.Message.ContentTopic
+		}
+
+		l.logger.Info("active subscription found. sending message",
+			zap.String("topic", req.Message.ContentTopic),
+			zap.String("message_type", string(req.MessageContext.MessageType)),
+		)
+
+		return service.Send(ctx, req)
 	}
+
 	l.logger.Info("No delivery service matches request", zap.String("delivery_mechanism", string(req.Installation.DeliveryMechanism.Kind)))
 	return nil
 }

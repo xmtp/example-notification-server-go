@@ -58,6 +58,8 @@ func (l *Listener) processV3Envelope(env *v1.Envelope) error {
 
 func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 
+	// TODO: Short circuit - if shouldPush == false no need to query anything only to quit later.
+
 	info, ok, err := parseV4Envelope(env)
 	if err != nil {
 		return fmt.Errorf("could not parse envelope: %w", err)
