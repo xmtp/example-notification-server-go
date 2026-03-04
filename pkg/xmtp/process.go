@@ -43,7 +43,7 @@ func (l *Listener) processV3Envelope(env *v1.Envelope) error {
 	sendRequests := buildSendRequests(env, installations, subs)
 	for _, request := range sendRequests {
 		if !shouldDeliver(request.MessageContext, request.Subscription) {
-			l.logger.Info("Skipping delivery of request",
+			l.logger.Info("skipping delivery of request",
 				zap.Any("message_context", request.MessageContext),
 				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
 			)
@@ -63,15 +63,12 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 		return fmt.Errorf("could not parse envelope: %w", err)
 	}
 
-	// TODO: Debug now - move this lower later.
-	l.logger.Info("processing envelope", zap.Any("message_context", info))
-
 	if !ok {
 		// What we have is not a group message or a welcome message.
 		return nil
 	}
 
-	l.logger.Info("processing envelope", zap.Any("message_context", info))
+	l.logger.Info("processing envelope", zap.String("topic", info.Topic))
 
 	// TODO: thirtyDayPeriodsFromEpoch
 	subs, err := l.subscriptions.GetSubscriptions(l.ctx, info.Topic, 0)

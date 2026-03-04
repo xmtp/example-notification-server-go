@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -77,8 +78,13 @@ func NewListener(
 }
 
 func (l *Listener) Start() {
-	// TODO: Add cursor (from outside the binary - flags).
+
+	// NOTE: Tentative support for cursor is added but it seems clunky
+	// to specify a key-value map via CLI flags.
+	// Since it's dubious if it's necessary, mechanism for specifying it is
+	// not added right now.
 	go l.startEnvelopeListener(nil)
+
 	l.startMessageWorkers()
 }
 
@@ -121,7 +127,7 @@ func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
 			default:
 
 				msg, err := stream.Receive()
-				if err == io.EOF {
+				if err != nil && errors.Is(err, io.EOF) {
 					l.logger.Info("stream closed")
 					break streamLoop
 				}
@@ -145,7 +151,6 @@ func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
 				}
 
 				// Range over envelopes so they get distributed to the worker pool evenly.
-
 				// Only one, either v3 or v4 will be populated, but we can just range over both.
 				for _, env := range msg.V3 {
 					l.envelopes <- env
@@ -179,7 +184,8 @@ func (l *Listener) startMessageWorkers() {
 
 					err := l.processV4Envelope(env)
 					if err != nil {
-						l.logger.Error("error processing envelope", zap.Error(err))
+						l.logger.Error("could not process v4 envelope",
+							zap.Error(err))
 					}
 				}
 			}
@@ -274,13 +280,22 @@ func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Install
 	return out
 }
 
+func buildIdempotencyKeyV4(info interfaces.MessageContext) string {
+	h := sha1.New()
+	h.Write([]byte(info.Topic))
+
+	// TODO: Double check - HmacInputs was set to group message GetV1().GetData()
+	// However it can lead to confusion where it comes from, so it could be separated.
+	h.Write(*info.HmacInputs)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func buildSendRequestV4(env *envelopes.OriginatorEnvelope, info interfaces.MessageContext, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
 
 	var (
-		// TODO: Idempotency key
-		idempotencyKey string
+		idempotencyKey = buildIdempotencyKeyV4(info)
+		out            []interfaces.SendRequest
 	)
-	var out []interfaces.SendRequest
 
 	installationMap := make(map[string]interfaces.Installation)
 	for _, installation := range installations {

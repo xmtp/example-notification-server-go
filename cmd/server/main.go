@@ -74,6 +74,10 @@ func main() {
 	)
 
 	if opts.Xmtp.ListenerEnabled {
+
+		// TODO: Handle APNs
+		// TODO: Handle FCM
+
 		// Delivery services: APNs, FCM or HTTP.
 		var (
 			deliveryServices = []interfaces.Delivery{}

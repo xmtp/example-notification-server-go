@@ -47,9 +47,8 @@ func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*interfaces.MessageCont
 	}
 
 	groupMessage := clientEnv.GetGroupMessage()
-
-	// Not a group message - nothing else to be done.
 	if groupMessage == nil {
+		// Not a group message - nothing else to be done.
 		return nil, false, nil
 	}
 
@@ -64,15 +63,18 @@ func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*interfaces.MessageCont
 		messageType topics.MessageType
 	)
 
-	if topicKind == topics.TopicKindGroupMessagesV1 {
+	// Essentially maintaining compatibility with the previous classification.
+	switch topicKind {
+
+	case topics.TopicKindGroupMessagesV1:
 		messageType = topics.V3Conversation
-	} else if topicKind == topics.TopicKindWelcomeMessagesV1 {
+
+	case topics.TopicKindWelcomeMessagesV1:
 		messageType = topics.V3Welcome
-	} else {
+
+	default:
 		return nil, false, nil
 	}
-
-	fmt.Printf(">>> topic - kind: %v, reserved: %v, str: %v\n", topicKind, topic.IsReserved(), topic.String())
 
 	var (
 		senderHmac  = groupMessage.GetV1().GetSenderHmac()
