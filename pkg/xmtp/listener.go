@@ -56,7 +56,7 @@ func NewListener(
 		return nil, fmt.Errorf("could not initialize GRPC client: %w", err)
 	}
 
-	logger.Info("starting xmtp listener", zap.Bool("d14n", opts.D14N))
+	logger.Info("creating xmtp listener", zap.Bool("d14n", opts.D14N))
 
 	client := newSubscriberClient(conn, UseV3Client(!opts.D14N))
 
@@ -223,20 +223,14 @@ func (l *Listener) deliver(req interfaces.SendRequest) error {
 	return nil
 }
 
-// TODO: Implement.
 func (l *Listener) refreshClient() error {
+
 	conn, err := newConn(l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
 	if err != nil {
 		return fmt.Errorf("could not refresh GRPC client: %w", err)
 	}
 
-	_ = conn
-	// TODO: v3 or v4
-	// 	client, err := NewV3Client(l.ctx)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// l.v3Client = client
+	l.client = newSubscriberClient(conn, UseV3Client(!l.opts.D14N))
 
 	return nil
 }
