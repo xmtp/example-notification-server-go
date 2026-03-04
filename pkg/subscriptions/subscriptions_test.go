@@ -17,7 +17,7 @@ const TOPIC = "topic1"
 const TOPIC_2 = "topic2"
 
 func createService(db *bun.DB) interfaces.Subscriptions {
-	return NewSubscriptionsService(
+	return NewService(
 		logging.CreateLogger("console", "info"),
 		db,
 	)
@@ -25,7 +25,7 @@ func createService(db *bun.DB) interfaces.Subscriptions {
 
 func Test_Subscribe(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -47,7 +47,7 @@ func Test_Subscribe(t *testing.T) {
 
 func Test_SubscribeMultiple(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -80,7 +80,7 @@ func Test_SubscribeMultiple(t *testing.T) {
 
 func Test_Unsubscribe(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -103,7 +103,7 @@ func Test_Unsubscribe(t *testing.T) {
 
 func Test_UnsubscribeResubscribe(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -135,7 +135,7 @@ func Test_UnsubscribeResubscribe(t *testing.T) {
 
 func Test_SubscribeWithMetadata(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -165,7 +165,7 @@ func Test_SubscribeWithMetadata(t *testing.T) {
 
 func Test_UpdateIsSilent(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -199,7 +199,7 @@ func Test_UpdateIsSilent(t *testing.T) {
 
 func Test_UpdateHmacKeys(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -236,7 +236,7 @@ func Test_UpdateHmacKeys(t *testing.T) {
 
 func Test_GetSubscriptions(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)

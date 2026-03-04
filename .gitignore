@@ -5,6 +5,7 @@
 *.so
 *.dylib
 mise.toml
+cmd/server/server
 
 # Test binary, built with `go test -c`
 *.test

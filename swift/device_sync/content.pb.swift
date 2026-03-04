@@ -170,17 +170,15 @@ public struct Xmtp_DeviceSync_Content_DeviceSyncRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// Unique identifier for each request
-  public var requestID: String = String()
+  public var pin: String = String()
+
+  public var serverURL: String = String()
 
   /// NOTE: This field was marked as deprecated in the .proto file.
-  public var pinCode: String = String()
+  public var deprecatedKind: Xmtp_DeviceSync_BackupElementSelection = .unspecified
 
-  /// NOTE: This field was marked as deprecated in the .proto file.
-  public var kind: Xmtp_DeviceSync_BackupElementSelection = .unspecified
-
-  public var options: Xmtp_DeviceSync_BackupOptions {
-    get {_options ?? Xmtp_DeviceSync_BackupOptions()}
+  public var options: Xmtp_DeviceSync_ArchiveOptions {
+    get {_options ?? Xmtp_DeviceSync_ArchiveOptions()}
     set {_options = newValue}
   }
   /// Returns true if `options` has been explicitly set.
@@ -192,7 +190,7 @@ public struct Xmtp_DeviceSync_Content_DeviceSyncRequest: Sendable {
 
   public init() {}
 
-  fileprivate var _options: Xmtp_DeviceSync_BackupOptions? = nil
+  fileprivate var _options: Xmtp_DeviceSync_ArchiveOptions? = nil
 }
 
 /// Pre-existing installation id capable of supplying a sync payload sends this reply
@@ -570,7 +568,7 @@ extension Xmtp_DeviceSync_Content_HmacKeyUpdate: SwiftProtobuf.Message, SwiftPro
 
 extension Xmtp_DeviceSync_Content_DeviceSyncRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeviceSyncRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}request_id\0\u{3}pin_code\0\u{1}kind\0\u{1}options\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pin\0\u{3}server_url\0\u{3}deprecated_kind\0\u{1}options\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -578,9 +576,9 @@ extension Xmtp_DeviceSync_Content_DeviceSyncRequest: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.pinCode) }()
-      case 3: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.pin) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.serverURL) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.deprecatedKind) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._options) }()
       default: break
       }
@@ -592,14 +590,14 @@ extension Xmtp_DeviceSync_Content_DeviceSyncRequest: SwiftProtobuf.Message, Swif
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.requestID.isEmpty {
-      try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 1)
+    if !self.pin.isEmpty {
+      try visitor.visitSingularStringField(value: self.pin, fieldNumber: 1)
     }
-    if !self.pinCode.isEmpty {
-      try visitor.visitSingularStringField(value: self.pinCode, fieldNumber: 2)
+    if !self.serverURL.isEmpty {
+      try visitor.visitSingularStringField(value: self.serverURL, fieldNumber: 2)
     }
-    if self.kind != .unspecified {
-      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 3)
+    if self.deprecatedKind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.deprecatedKind, fieldNumber: 3)
     }
     try { if let v = self._options {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
@@ -608,9 +606,9 @@ extension Xmtp_DeviceSync_Content_DeviceSyncRequest: SwiftProtobuf.Message, Swif
   }
 
   public static func ==(lhs: Xmtp_DeviceSync_Content_DeviceSyncRequest, rhs: Xmtp_DeviceSync_Content_DeviceSyncRequest) -> Bool {
-    if lhs.requestID != rhs.requestID {return false}
-    if lhs.pinCode != rhs.pinCode {return false}
-    if lhs.kind != rhs.kind {return false}
+    if lhs.pin != rhs.pin {return false}
+    if lhs.serverURL != rhs.serverURL {return false}
+    if lhs.deprecatedKind != rhs.deprecatedKind {return false}
     if lhs._options != rhs._options {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

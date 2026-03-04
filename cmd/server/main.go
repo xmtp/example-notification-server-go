@@ -62,15 +62,24 @@ func main() {
 	}
 
 	db := initDb()
+
 	ctx, cancel := context.WithCancel(context.Background())
-	installationsService := installations.NewInstallationsService(logger, db)
-	subscriptionsService := subscriptions.NewSubscriptionsService(logger, db)
-	var listener *xmtp.Listener
-	var apiServer *api.ApiServer
+
+	installationsService := installations.NewService(logger, db)
+	subscriptionsService := subscriptions.NewService(logger, db)
+
+	var (
+		listener  *xmtp.Listener
+		apiServer *api.ApiServer
+	)
 
 	if opts.Xmtp.ListenerEnabled {
-		deliveryServices := []interfaces.Delivery{}
-		var err error
+
+		// Delivery services: APNs, FCM or HTTP.
+		var (
+			deliveryServices = []interfaces.Delivery{}
+			err              error
+		)
 
 		if opts.Apns.Enabled {
 			apns, err := delivery.NewApnsDelivery(logger, opts.Apns)
@@ -127,12 +136,12 @@ func waitForShutdown() {
 func initDb() *bun.DB {
 	db, err := database.CreateBunDB(opts.DbConnectionString, 10*time.Second)
 	if err != nil {
-		log.Fatal("db creation error", zap.Error(err))
+		logger.Fatal("db creation error", zap.Error(err))
 	}
 
 	err = database.Migrate(context.Background(), db)
 	if err != nil {
-		log.Fatal("db migration error", zap.Error(err))
+		logger.Fatal("db migration error", zap.Error(err))
 	}
 
 	return db

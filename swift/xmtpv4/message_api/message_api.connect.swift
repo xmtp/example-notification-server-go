@@ -11,10 +11,22 @@ import SwiftProtobuf
 
 public protocol Xmtp_Xmtpv4_MessageApi_ReplicationApiClientInterface: Sendable {
 
+    /// This will be renamed to SubscribeOriginators
     func `subscribeEnvelopes`(headers: Connect.Headers, onResult: @escaping @Sendable (Connect.StreamResult<Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse>) -> Void) -> any Connect.ServerOnlyStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest>
 
+    /// This will be renamed to SubscribeOriginators
     @available(iOS 13, *)
     func `subscribeEnvelopes`(headers: Connect.Headers) -> any Connect.ServerOnlyAsyncStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest, Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse>
+
+    func `subscribeAllEnvelopes`(headers: Connect.Headers, onResult: @escaping @Sendable (Connect.StreamResult<Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse>) -> Void) -> any Connect.ServerOnlyStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest>
+
+    @available(iOS 13, *)
+    func `subscribeAllEnvelopes`(headers: Connect.Headers) -> any Connect.ServerOnlyAsyncStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest, Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse>
+
+    func `subscribeTopics`(headers: Connect.Headers, onResult: @escaping @Sendable (Connect.StreamResult<Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse>) -> Void) -> any Connect.ServerOnlyStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest>
+
+    @available(iOS 13, *)
+    func `subscribeTopics`(headers: Connect.Headers) -> any Connect.ServerOnlyAsyncStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest, Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse>
 
     @discardableResult
     func `queryEnvelopes`(request: Xmtp_Xmtpv4_MessageApi_QueryEnvelopesRequest, headers: Connect.Headers, completion: @escaping @Sendable (ResponseMessage<Xmtp_Xmtpv4_MessageApi_QueryEnvelopesResponse>) -> Void) -> Connect.Cancelable
@@ -60,6 +72,24 @@ public final class Xmtp_Xmtpv4_MessageApi_ReplicationApiClient: Xmtp_Xmtpv4_Mess
         return self.client.serverOnlyStream(path: "/xmtp.xmtpv4.message_api.ReplicationApi/SubscribeEnvelopes", headers: headers)
     }
 
+    public func `subscribeAllEnvelopes`(headers: Connect.Headers = [:], onResult: @escaping @Sendable (Connect.StreamResult<Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse>) -> Void) -> any Connect.ServerOnlyStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest> {
+        return self.client.serverOnlyStream(path: "/xmtp.xmtpv4.message_api.ReplicationApi/SubscribeAllEnvelopes", headers: headers, onResult: onResult)
+    }
+
+    @available(iOS 13, *)
+    public func `subscribeAllEnvelopes`(headers: Connect.Headers = [:]) -> any Connect.ServerOnlyAsyncStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest, Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse> {
+        return self.client.serverOnlyStream(path: "/xmtp.xmtpv4.message_api.ReplicationApi/SubscribeAllEnvelopes", headers: headers)
+    }
+
+    public func `subscribeTopics`(headers: Connect.Headers = [:], onResult: @escaping @Sendable (Connect.StreamResult<Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse>) -> Void) -> any Connect.ServerOnlyStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest> {
+        return self.client.serverOnlyStream(path: "/xmtp.xmtpv4.message_api.ReplicationApi/SubscribeTopics", headers: headers, onResult: onResult)
+    }
+
+    @available(iOS 13, *)
+    public func `subscribeTopics`(headers: Connect.Headers = [:]) -> any Connect.ServerOnlyAsyncStreamInterface<Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest, Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse> {
+        return self.client.serverOnlyStream(path: "/xmtp.xmtpv4.message_api.ReplicationApi/SubscribeTopics", headers: headers)
+    }
+
     @discardableResult
     public func `queryEnvelopes`(request: Xmtp_Xmtpv4_MessageApi_QueryEnvelopesRequest, headers: Connect.Headers = [:], completion: @escaping @Sendable (ResponseMessage<Xmtp_Xmtpv4_MessageApi_QueryEnvelopesResponse>) -> Void) -> Connect.Cancelable {
         return self.client.unary(path: "/xmtp.xmtpv4.message_api.ReplicationApi/QueryEnvelopes", idempotencyLevel: .unknown, request: request, headers: headers, completion: completion)
@@ -103,6 +133,8 @@ public final class Xmtp_Xmtpv4_MessageApi_ReplicationApiClient: Xmtp_Xmtpv4_Mess
     public enum Metadata {
         public enum Methods {
             public static let subscribeEnvelopes = Connect.MethodSpec(name: "SubscribeEnvelopes", service: "xmtp.xmtpv4.message_api.ReplicationApi", type: .serverStream)
+            public static let subscribeAllEnvelopes = Connect.MethodSpec(name: "SubscribeAllEnvelopes", service: "xmtp.xmtpv4.message_api.ReplicationApi", type: .serverStream)
+            public static let subscribeTopics = Connect.MethodSpec(name: "SubscribeTopics", service: "xmtp.xmtpv4.message_api.ReplicationApi", type: .serverStream)
             public static let queryEnvelopes = Connect.MethodSpec(name: "QueryEnvelopes", service: "xmtp.xmtpv4.message_api.ReplicationApi", type: .unary)
             public static let publishPayerEnvelopes = Connect.MethodSpec(name: "PublishPayerEnvelopes", service: "xmtp.xmtpv4.message_api.ReplicationApi", type: .unary)
             public static let getInboxIds = Connect.MethodSpec(name: "GetInboxIds", service: "xmtp.xmtpv4.message_api.ReplicationApi", type: .unary)

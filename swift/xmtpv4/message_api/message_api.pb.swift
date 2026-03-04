@@ -74,6 +74,143 @@ public struct Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest: Sendable {
   fileprivate var _query: Xmtp_Xmtpv4_MessageApi_EnvelopesQuery? = nil
 }
 
+/// Request to subscribe to a series of topics, with a separate cursor for each topic
+public struct Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var filters: [Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest.TopicFilter] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public struct TopicFilter: Sendable {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    public var topic: Data = Data()
+
+    public var lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor {
+      get {_lastSeen ?? Xmtp_Xmtpv4_Envelopes_Cursor()}
+      set {_lastSeen = newValue}
+    }
+    /// Returns true if `lastSeen` has been explicitly set.
+    public var hasLastSeen: Bool {self._lastSeen != nil}
+    /// Clears the value of `lastSeen`. Subsequent reads from it will return its default value.
+    public mutating func clearLastSeen() {self._lastSeen = nil}
+
+    public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    public init() {}
+
+    fileprivate var _lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor? = nil
+  }
+
+  public init() {}
+}
+
+/// Response to SubscribeTopics
+public struct Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var response: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.OneOf_Response? = nil
+
+  public var envelopes: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.Envelopes {
+    get {
+      if case .envelopes(let v)? = response {return v}
+      return Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.Envelopes()
+    }
+    set {response = .envelopes(newValue)}
+  }
+
+  public var statusUpdate: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.StatusUpdate {
+    get {
+      if case .statusUpdate(let v)? = response {return v}
+      return Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.StatusUpdate()
+    }
+    set {response = .statusUpdate(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Response: Equatable, Sendable {
+    case envelopes(Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.Envelopes)
+    case statusUpdate(Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.StatusUpdate)
+
+  }
+
+  public enum SubscriptionStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+    case started // = 1
+    case catchupComplete // = 2
+    case waiting // = 3
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .started
+      case 2: self = .catchupComplete
+      case 3: self = .waiting
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .started: return 1
+      case .catchupComplete: return 2
+      case .waiting: return 3
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.SubscriptionStatus] = [
+      .unspecified,
+      .started,
+      .catchupComplete,
+      .waiting,
+    ]
+
+  }
+
+  public struct StatusUpdate: Sendable {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    public var status: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.SubscriptionStatus = .unspecified
+
+    public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    public init() {}
+  }
+
+  public struct Envelopes: Sendable {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    public var envelopes: [Xmtp_Xmtpv4_Envelopes_OriginatorEnvelope] = []
+
+    public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    public init() {}
+  }
+
+  public init() {}
+}
+
 /// Streamed response for batch subscribe - can be multiple envelopes at once
 public struct Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -85,6 +222,28 @@ public struct Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+}
+
+/// Batch subscribe to all envelopes
+public struct Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor {
+    get {_lastSeen ?? Xmtp_Xmtpv4_Envelopes_Cursor()}
+    set {_lastSeen = newValue}
+  }
+  /// Returns true if `lastSeen` has been explicitly set.
+  public var hasLastSeen: Bool {self._lastSeen != nil}
+  /// Clears the value of `lastSeen`. Subsequent reads from it will return its default value.
+  public mutating func clearLastSeen() {self._lastSeen = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _lastSeen: Xmtp_Xmtpv4_Envelopes_Cursor? = nil
 }
 
 /// Query envelopes request
@@ -345,6 +504,206 @@ extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesRequest: SwiftProtobuf.Messag
   }
 }
 
+extension Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubscribeTopicsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}filters\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.filters) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.filters.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.filters, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest) -> Bool {
+    if lhs.filters != rhs.filters {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest.TopicFilter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest.protoMessageName + ".TopicFilter"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}topic\0\u{3}last_seen\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.topic) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._lastSeen) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.topic.isEmpty {
+      try visitor.visitSingularBytesField(value: self.topic, fieldNumber: 1)
+    }
+    try { if let v = self._lastSeen {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest.TopicFilter, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsRequest.TopicFilter) -> Bool {
+    if lhs.topic != rhs.topic {return false}
+    if lhs._lastSeen != rhs._lastSeen {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubscribeTopicsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}envelopes\0\u{3}status_update\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.Envelopes?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .envelopes(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .envelopes(v)
+        }
+      }()
+      case 2: try {
+        var v: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.StatusUpdate?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .statusUpdate(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .statusUpdate(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.response {
+    case .envelopes?: try {
+      guard case .envelopes(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    }()
+    case .statusUpdate?: try {
+      guard case .statusUpdate(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse) -> Bool {
+    if lhs.response != rhs.response {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.SubscriptionStatus: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SUBSCRIPTION_STATUS_UNSPECIFIED\0\u{1}SUBSCRIPTION_STATUS_STARTED\0\u{1}SUBSCRIPTION_STATUS_CATCHUP_COMPLETE\0\u{1}SUBSCRIPTION_STATUS_WAITING\0")
+}
+
+extension Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.StatusUpdate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.protoMessageName + ".StatusUpdate"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}status\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.status) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.status != .unspecified {
+      try visitor.visitSingularEnumField(value: self.status, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.StatusUpdate, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.StatusUpdate) -> Bool {
+    if lhs.status != rhs.status {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.Envelopes: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.protoMessageName + ".Envelopes"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}envelopes\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.envelopes) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.envelopes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.envelopes, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.Envelopes, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeTopicsResponse.Envelopes) -> Bool {
+    if lhs.envelopes != rhs.envelopes {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SubscribeEnvelopesResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}envelopes\0")
@@ -370,6 +729,40 @@ extension Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse: SwiftProtobuf.Messa
 
   public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeEnvelopesResponse) -> Bool {
     if lhs.envelopes != rhs.envelopes {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubscribeAllEnvelopesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}last_seen\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._lastSeen) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._lastSeen {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest, rhs: Xmtp_Xmtpv4_MessageApi_SubscribeAllEnvelopesRequest) -> Bool {
+    if lhs._lastSeen != rhs._lastSeen {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

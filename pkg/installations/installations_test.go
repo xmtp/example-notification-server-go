@@ -16,7 +16,7 @@ const INSTALLATION_ID = "foo"
 const TOKEN = "bar"
 
 func createService(db *bun.DB) interfaces.Installations {
-	return NewInstallationsService(
+	return NewService(
 		logging.CreateLogger("console", "info"),
 		db,
 	)
@@ -34,7 +34,7 @@ func buildInstallation(installationId string, kind interfaces.DeliveryMechanismK
 
 func Test_Register(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -56,7 +56,7 @@ func Test_Register(t *testing.T) {
 func Test_RegisterDuplicate(t *testing.T) {
 	var err error
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	svc := createService(db)
@@ -96,7 +96,7 @@ func Test_RegisterDuplicate(t *testing.T) {
 
 func Test_RegisterUpdate(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 
 	var err error
@@ -140,7 +140,7 @@ func Test_RegisterUpdate(t *testing.T) {
 
 func Test_Delete(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 	svc := createService(db)
 
@@ -164,7 +164,7 @@ func Test_Delete(t *testing.T) {
 
 func Test_DeleteAndRegisterAgain(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 	svc := createService(db)
 
@@ -191,7 +191,7 @@ func Test_DeleteAndRegisterAgain(t *testing.T) {
 
 func Test_Get(t *testing.T) {
 	ctx := context.Background()
-	db, _ := test.CreateTestDb()
+	db, _ := test.CreateTestDb(t)
 	// defer cleanup()
 	svc := createService(db)
 
@@ -214,7 +214,7 @@ func Test_Get(t *testing.T) {
 
 func Test_GetMultiple(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 	svc := createService(db)
 
@@ -232,7 +232,7 @@ func Test_GetMultiple(t *testing.T) {
 
 func Test_GetDeleted(t *testing.T) {
 	ctx := context.Background()
-	db, cleanup := test.CreateTestDb()
+	db, cleanup := test.CreateTestDb(t)
 	defer cleanup()
 	svc := createService(db)
 

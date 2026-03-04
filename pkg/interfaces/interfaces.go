@@ -7,6 +7,7 @@ import (
 	"time"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/envelopes"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
@@ -49,16 +50,47 @@ type Subscription struct {
 }
 
 type SendRequest struct {
-	IdempotencyKey string         `json:"idempotency_key"`
-	Message        *v1.Envelope   `json:"message"`
+	IdempotencyKey string `json:"idempotency_key"`
+
+	Message   *v1.Envelope                  `json:"message,omitempty"`
+	MessageV4 *envelopes.OriginatorEnvelope `json:"message_v4,omitempty"`
+
 	MessageContext MessageContext `json:"message_context"`
 	Installation   Installation   `json:"installation"`
 	Subscription   Subscription   `json:"subscription"`
 }
 
+func (r SendRequest) Empty() bool {
+	if r.Message == nil && r.MessageV4 == nil {
+		return true
+	}
+
+	return false
+}
+
+func (r SendRequest) GetTopic() string {
+	if r.Message != nil {
+		return r.Message.ContentTopic
+	}
+
+	return r.MessageContext.Topic
+}
+
+func (r SendRequest) GetMessage() []byte {
+	if r.Message != nil {
+		return r.Message.Message
+	}
+
+	// TODO: Potentially this should be the internal V1.GetData()
+	// Right now the HmacInputs and IdempotencyKey are the GetData() bytes,
+	// while 'Message' is the unsigned originator envelope.
+	return r.MessageV4.UnsignedOriginatorEnvelope
+}
+
 type MessageContext struct {
 	MessageType topics.MessageType `json:"message_type"`
 	ShouldPush  *bool              `json:"should_push,omitempty"`
+	Topic       string             `json:"topic,omitempty"` // v4 parsed topic
 	HmacInputs  *[]byte            `json:"-"`
 	SenderHmac  *[]byte            `json:"-"`
 }
