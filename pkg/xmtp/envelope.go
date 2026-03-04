@@ -11,7 +11,14 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
-func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*interfaces.MessageContext, bool, error) {
+type messageV4Info struct {
+	context interfaces.MessageContext
+
+	originatorNs    int64
+	idempotencyData *[]byte
+}
+
+func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*messageV4Info, bool, error) {
 
 	ue := env.GetUnsignedOriginatorEnvelope()
 	if ue == nil {
@@ -82,14 +89,17 @@ func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*interfaces.MessageCont
 		messageData = groupMessage.GetV1().GetData()
 	)
 
-	// TODO: Handle timestamp
+	out := messageV4Info{
+		context: interfaces.MessageContext{
+			MessageType: messageType,
+			SenderHmac:  &senderHmac,
+			ShouldPush:  &shouldPush,
+			Topic:       topic.String(),
+			HmacInputs:  &messageData,
+		},
 
-	out := interfaces.MessageContext{
-		MessageType: messageType,
-		SenderHmac:  &senderHmac,
-		ShouldPush:  &shouldPush,
-		Topic:       topic.String(),
-		HmacInputs:  &messageData,
+		originatorNs:    unsignedEnv.OriginatorNs,
+		idempotencyData: &messageData,
 	}
 
 	return &out, true, nil

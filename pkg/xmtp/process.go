@@ -68,16 +68,16 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 		return nil
 	}
 
-	l.logger.Info("processing envelope", zap.String("topic", info.Topic))
+	l.logger.Info("processing envelope", zap.String("topic", info.context.Topic))
 
-	// TODO: thirtyDayPeriodsFromEpoch
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, info.Topic, 0)
+	// TODO: Double check - OriginatorNs seems like the closest thing we have to a v1 timestamp?
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, info.context.Topic, int(info.originatorNs))
 	if err != nil {
 		return fmt.Errorf("could not get subscriptions: %w", err)
 	}
 
 	if len(subs) == 0 {
-		l.logger.Debug("no matching subscriptions found for topic", zap.String("topic", info.Topic))
+		l.logger.Debug("no matching subscriptions found for topic", zap.String("topic", info.context.Topic))
 		return nil
 	}
 
@@ -92,13 +92,13 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 	}
 
 	if len(installations) == 0 {
-		l.logger.Debug("no matching installations found for topic", zap.String("topic", info.Topic))
+		l.logger.Debug("no matching installations found for topic", zap.String("topic", info.context.Topic))
 		return nil
 	}
 
 	requests := buildSendRequestV4(env, *info, installations, subs)
 	for _, req := range requests {
-		if !shouldDeliver(*info, req.Subscription) && false {
+		if !shouldDeliver(info.context, req.Subscription) && false {
 			l.logger.Debug("skipping delivery",
 				zap.Any("message_context", *info),
 				zap.Bool("subscription_has_hmac_key", req.Subscription.HmacKey != nil),
@@ -110,10 +110,10 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 			zap.Any("send_request", req),
 		)
 
-		// err = l.deliver(req)
-		// if err != nil {
-		// 	l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", req.MessageContext.Topic))
-		// }
+		err = l.deliver(req)
+		if err != nil {
+			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", req.MessageContext.Topic))
+		}
 	}
 
 	return nil

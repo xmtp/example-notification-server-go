@@ -280,17 +280,17 @@ func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Install
 	return out
 }
 
-func buildIdempotencyKeyV4(info interfaces.MessageContext) string {
+func buildIdempotencyKeyV4(info messageV4Info) string {
 	h := sha1.New()
-	h.Write([]byte(info.Topic))
+	h.Write([]byte(info.context.Topic))
 
-	// TODO: Double check - HmacInputs was set to group message GetV1().GetData()
-	// However it can lead to confusion where it comes from, so it could be separated.
-	h.Write(*info.HmacInputs)
+	// NOTE: Idempotency data is initialized to group message .GetV1().GetData().
+	// HmacInputs are set to the same thing, so there's duplication there.
+	h.Write(*info.idempotencyData)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func buildSendRequestV4(env *envelopes.OriginatorEnvelope, info interfaces.MessageContext, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
+func buildSendRequestV4(env *envelopes.OriginatorEnvelope, info messageV4Info, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
 
 	var (
 		idempotencyKey = buildIdempotencyKeyV4(info)
@@ -312,7 +312,7 @@ func buildSendRequestV4(env *envelopes.OriginatorEnvelope, info interfaces.Messa
 		out = append(out, interfaces.SendRequest{
 			IdempotencyKey: idempotencyKey,
 			MessageV4:      env,
-			MessageContext: info,
+			MessageContext: info.context,
 			Installation:   inst,
 			Subscription:   sub,
 		})
