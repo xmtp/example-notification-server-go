@@ -209,7 +209,7 @@ func shouldDeliver(messageContext interfaces.MessageContext, subscription interf
 
 func (l *Listener) deliver(req interfaces.SendRequest) error {
 
-	if req.Message == nil && req.MessageV4 == nil {
+	if req.Empty() {
 		return errors.New("empty message scheduled for delivery, skipping")
 	}
 
@@ -223,14 +223,8 @@ func (l *Listener) deliver(req interfaces.SendRequest) error {
 			continue
 		}
 
-		topic := req.MessageContext.Topic
-		if topic == "" && req.Message != nil {
-			// It's a legacy, V3 message.
-			topic = req.Message.ContentTopic
-		}
-
 		l.logger.Info("active subscription found. sending message",
-			zap.String("topic", req.Message.ContentTopic),
+			zap.String("topic", req.GetTopic()),
 			zap.String("message_type", string(req.MessageContext.MessageType)),
 		)
 
