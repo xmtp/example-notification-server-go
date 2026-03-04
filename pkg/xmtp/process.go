@@ -16,7 +16,7 @@ func (l *Listener) processV3Envelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env.TimestampNs))
 	if err != nil {
 		return fmt.Errorf("could not get subscriptions: %w", err)
 	}
@@ -73,7 +73,7 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 	l.logger.Info("processing envelope", zap.String("topic", info.context.Topic))
 
 	// TODO: Double check - OriginatorNs seems like the closest thing we have to a v1 timestamp?
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, info.context.Topic, int(info.originatorNs))
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, info.context.Topic, getThirtyDayPeriodsFromEpoch(uint64(info.originatorNs)))
 	if err != nil {
 		return fmt.Errorf("could not get subscriptions: %w", err)
 	}
@@ -100,7 +100,7 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 
 	requests := buildSendRequestV4(env, *info, installations, subs)
 	for _, req := range requests {
-		if !shouldDeliver(info.context, req.Subscription) && false {
+		if !shouldDeliver(info.context, req.Subscription) {
 			l.logger.Debug("skipping delivery",
 				zap.Any("message_context", *info),
 				zap.Bool("subscription_has_hmac_key", req.Subscription.HmacKey != nil),

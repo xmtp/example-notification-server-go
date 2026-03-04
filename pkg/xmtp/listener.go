@@ -67,7 +67,7 @@ func NewListener(
 		logger:           logger.Named("xmtp-listener"),
 		opts:             opts,
 		client:           client,
-		envelopes:        make(chan any),
+		envelopes:        make(chan any, 100),
 		installations:    installations,
 		deliveryServices: deliveryServices,
 		subscriptions:    subscriptions,
