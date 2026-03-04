@@ -53,6 +53,7 @@ func NewListener(
 
 	conn, err := newConn(opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("could not initialize GRPC client: %w", err)
 	}
 
