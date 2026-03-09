@@ -146,10 +146,14 @@ func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
 					break streamLoop
 				}
 
-				if msg != nil {
-					// Reset the sleep time on first successful message
-					sleepTime = STARTING_SLEEP_TIME
+				// Should not happen.
+				if msg == nil {
+					l.logger.Error("stream returned nil message")
+					continue
 				}
+
+				// Reset the sleep time on first successful message
+				sleepTime = STARTING_SLEEP_TIME
 
 				// Range over envelopes so they get distributed to the worker pool evenly.
 				// Only one, either v3 or v4 will be populated, but we can just range over both.
