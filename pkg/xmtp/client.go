@@ -16,7 +16,7 @@ const (
 )
 
 type SubscriberClient interface {
-	Subscribe(ctx context.Context, cursor map[uint32]uint64) (SubscriberStream, error)
+	Subscribe(ctx context.Context) (SubscriberStream, error)
 }
 
 type SubscriberStream interface {
@@ -63,16 +63,12 @@ func newSubscriberClient(conn grpc.ClientConnInterface, opts ...clientOption) Su
 	}
 }
 
-// Subscribe opens an envelope stream. Cursor is ignored for v3 streams.
-func (c *clientWrapper) Subscribe(ctx context.Context, cursor map[uint32]uint64) (SubscriberStream, error) {
+// Subscribe opens an envelope stream.
+func (c *clientWrapper) Subscribe(ctx context.Context) (SubscriberStream, error) {
 
 	if c.useV4 {
 
-		req := &message_api.SubscribeAllEnvelopesRequest{
-			LastSeen: &envelopes.Cursor{
-				NodeIdToSequenceId: cursor,
-			},
-		}
+		req := &message_api.SubscribeAllEnvelopesRequest{}
 
 		stream, err := c.v4sub.SubscribeAllEnvelopes(ctx, req)
 		if err != nil {

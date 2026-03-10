@@ -87,11 +87,7 @@ func NewListener(
 
 func (l *Listener) Start() {
 
-	// NOTE: Tentative support for cursor is added but it seems clunky
-	// to specify a key-value map via CLI flags.
-	// Since it's dubious if it's necessary, mechanism for specifying it is
-	// not added right now.
-	go l.startEnvelopeListener(nil)
+	go l.startEnvelopeListener()
 
 	l.startMessageWorkers()
 }
@@ -108,7 +104,7 @@ func (l *Listener) Stop() {
 	}
 }
 
-func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
+func (l *Listener) startEnvelopeListener() {
 	defer close(l.envelopes)
 
 	l.logger.Info("starting message listener")
@@ -120,7 +116,7 @@ func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
 
 	sleepTime := STARTING_SLEEP_TIME
 	for {
-		stream, err = l.client.Subscribe(l.ctx, cursor)
+		stream, err = l.client.Subscribe(l.ctx)
 		if err != nil {
 
 			if l.ctx.Err() != nil {
