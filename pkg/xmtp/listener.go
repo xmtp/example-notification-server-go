@@ -229,7 +229,7 @@ func (l *Listener) deliver(req interfaces.SendRequest) error {
 		}
 
 		l.logger.Info("active subscription found. sending message",
-			zap.String("topic", req.GetTopic()),
+			zap.String("topic", req.MessageContext.Topic),
 			zap.String("message_type", string(req.MessageContext.MessageType)),
 		)
 

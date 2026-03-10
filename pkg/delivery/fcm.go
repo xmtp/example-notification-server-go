@@ -55,7 +55,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 	}
 
 	message := base64.StdEncoding.EncodeToString(req.GetMessage())
-	topic := req.GetTopic()
+	topic := req.MessageContext.Topic
 	data := map[string]string{
 		"topic":            topic,
 		"encryptedMessage": message,

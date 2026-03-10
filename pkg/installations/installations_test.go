@@ -191,8 +191,8 @@ func Test_DeleteAndRegisterAgain(t *testing.T) {
 
 func Test_Get(t *testing.T) {
 	ctx := context.Background()
-	db, _ := test.CreateTestDb(t)
-	// defer cleanup()
+	db, cleanup := test.CreateTestDb(t)
+	defer cleanup()
 	svc := createService(db)
 
 	installationIds := []string{"install1", "install2", "install3"}

@@ -68,14 +68,6 @@ func (r SendRequest) Empty() bool {
 	return false
 }
 
-func (r SendRequest) GetTopic() string {
-	if r.Message != nil {
-		return r.Message.ContentTopic
-	}
-
-	return r.MessageContext.Topic
-}
-
 func (r SendRequest) GetMessage() []byte {
 	if r.Message != nil {
 		return r.Message.Message
@@ -90,7 +82,7 @@ func (r SendRequest) GetMessage() []byte {
 type MessageContext struct {
 	MessageType topics.MessageType `json:"message_type"`
 	ShouldPush  *bool              `json:"should_push,omitempty"`
-	Topic       string             `json:"topic,omitempty"` // v4 parsed topic
+	Topic       string             `json:"topic,omitempty"`
 	HmacInputs  *[]byte            `json:"-"`
 	SenderHmac  *[]byte            `json:"-"`
 }

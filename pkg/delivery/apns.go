@@ -65,7 +65,7 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 
 	notification := a.buildNotification(req.Subscription.IsSilent,
 		req.Installation.DeliveryMechanism.Token,
-		req.GetTopic(),
+		req.MessageContext.Topic,
 		string(req.MessageContext.MessageType),
 		req.GetMessage(),
 	)

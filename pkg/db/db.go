@@ -42,7 +42,7 @@ func Migrate(ctx context.Context, db *bun.DB) error {
 	migrator := migrate.NewMigrator(db, migrations.Migrations)
 	err := migrator.Init(ctx)
 	if err != nil {
-		return fmt.Errorf("coult not initialize migrator: %w", err)
+		return fmt.Errorf("could not initialize migrator: %w", err)
 	}
 
 	group, err := migrator.Migrate(ctx)
