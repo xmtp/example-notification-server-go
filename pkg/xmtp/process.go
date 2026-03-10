@@ -53,7 +53,7 @@ func (l *Listener) processV3Envelope(env *v1.Envelope) error {
 			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
 		}
 	}
-	return err
+	return nil
 }
 
 func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
