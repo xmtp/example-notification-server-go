@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
@@ -22,11 +24,14 @@ const STARTING_SLEEP_TIME = 100 * time.Millisecond
 const DELIVERY_TIMEOUT = 15 * time.Second
 
 type Listener struct {
+	lock sync.Mutex
+
 	logger     *zap.Logger
 	ctx        context.Context
 	cancelFunc func()
 	opts       options.XmtpOptions
 
+	conn      *grpc.ClientConn
 	client    SubscriberClient
 	envelopes chan any
 
@@ -62,10 +67,12 @@ func NewListener(
 	client := newSubscriberClient(conn, UseV3Client(!opts.D14N))
 
 	listener := &Listener{
+		lock:             sync.Mutex{},
 		ctx:              ctx,
 		cancelFunc:       cancel,
 		logger:           logger.Named("xmtp-listener"),
 		opts:             opts,
+		conn:             conn,
 		client:           client,
 		envelopes:        make(chan any, 100),
 		installations:    installations,
@@ -91,9 +98,18 @@ func (l *Listener) Start() {
 
 func (l *Listener) Stop() {
 	l.cancelFunc()
+
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	err := l.conn.Close()
+	if err != nil {
+		l.logger.Error("could not close GRPC connection", zap.Error(err))
+	}
 }
 
 func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
+	defer close(l.envelopes)
 
 	l.logger.Info("starting message listener")
 
@@ -106,6 +122,11 @@ func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
 	for {
 		stream, err = l.client.Subscribe(l.ctx, cursor)
 		if err != nil {
+
+			if l.ctx.Err() != nil {
+				l.logger.Info("stream closed")
+				return
+			}
 
 			l.logger.Error("error connecting to stream", zap.Error(err))
 
@@ -123,7 +144,6 @@ func (l *Listener) startEnvelopeListener(cursor map[uint32]uint64) {
 		for {
 			select {
 			case <-l.ctx.Done():
-				close(l.envelopes)
 				return
 			default:
 
@@ -212,6 +232,7 @@ func shouldDeliver(messageContext interfaces.MessageContext, subscription interf
 	return true
 }
 
+// deliver() returns an error on partial success/failure.
 func (l *Listener) deliver(req interfaces.SendRequest) error {
 
 	if req.Empty() {
@@ -221,32 +242,58 @@ func (l *Listener) deliver(req interfaces.SendRequest) error {
 	ctx, cancel := context.WithTimeout(l.ctx, DELIVERY_TIMEOUT)
 	defer cancel()
 
-	// TODO: Fix - we range accross multiple delivery services, but only the first one will be picked up.
+	var (
+		errs  []error
+		found bool
+	)
 	for _, service := range l.deliveryServices {
 
 		if !service.CanDeliver(req) {
 			continue
 		}
 
+		found = true
+
 		l.logger.Info("active subscription found. sending message",
 			zap.String("topic", req.MessageContext.Topic),
 			zap.String("message_type", string(req.MessageContext.MessageType)),
 		)
 
-		return service.Send(ctx, req)
+		err := service.Send(ctx, req)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	l.logger.Info("No delivery service matches request", zap.String("delivery_mechanism", string(req.Installation.DeliveryMechanism.Kind)))
-	return nil
+	if !found {
+		l.logger.Info("No delivery service matches request", zap.String("delivery_mechanism", string(req.Installation.DeliveryMechanism.Kind)))
+		return nil
+	}
+
+	return errors.Join(errs...)
 }
 
 func (l *Listener) refreshClient() error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
 
+	if l.ctx.Err() != nil {
+		return errors.New("context cancelled")
+	}
+
+	// Try to close old connection, if possible.
+	err := l.conn.Close()
+	if err != nil {
+		l.logger.Error("could not close existing connection", zap.Error(err))
+	}
+
+	// Continue establishing a new connection nonetheless.
 	conn, err := newConn(l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
 	if err != nil {
 		return fmt.Errorf("could not refresh GRPC client: %w", err)
 	}
 
+	l.conn = conn
 	l.client = newSubscriberClient(conn, UseV3Client(!l.opts.D14N))
 
 	return nil
