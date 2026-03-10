@@ -49,7 +49,7 @@ func newSubscriberClient(conn grpc.ClientConnInterface, opts ...clientOption) Su
 		opt(&cfg)
 	}
 
-	// Use the legacy, v3 cliient
+	// Use the legacy, v3 client
 	if cfg.v3Client {
 
 		return &clientWrapper{
