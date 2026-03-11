@@ -89,7 +89,7 @@ func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*messageV4Info, bool, e
 		messageData = groupMessage.GetV1().GetData()
 	)
 
-	// TODO: Check - is it the V1().GetData() that is the new equivalent of the old data, or is it the unsigned envelope payload
+	// We use the V1 Data as inputs for both idempotency key and HMAC input, equivalent to the old behavior.
 	out := messageV4Info{
 		context: interfaces.MessageContext{
 			MessageType: messageType,
