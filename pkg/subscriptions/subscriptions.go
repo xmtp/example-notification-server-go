@@ -25,6 +25,9 @@ func NewService(logger *zap.Logger, db *bun.DB) *Service {
 func (s Service) Subscribe(ctx context.Context, installationId string, topics []string) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 
+		// TODO: This could have input validation - don't allow a subscription to anything that's not
+		// a topic or a welcome message as it's not supported.
+
 		out := make([]db.Subscription, 0)
 		// Update any existing results
 		_, err := tx.NewUpdate().

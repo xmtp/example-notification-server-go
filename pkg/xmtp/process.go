@@ -71,7 +71,6 @@ func (l *Listener) processV4Envelope(env *envelopes.OriginatorEnvelope) error {
 	if info.context.ShouldPush != nil && !*info.context.ShouldPush {
 		// No need to do any expensive queries.
 		return nil
-
 	}
 
 	l.logger.Info("processing envelope", zap.String("topic", info.context.Topic))

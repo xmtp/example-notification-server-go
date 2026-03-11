@@ -33,7 +33,7 @@ type Listener struct {
 
 	conn      *grpc.ClientConn
 	client    SubscriberClient
-	envelopes chan any
+	envelopes chan genericEnvelope
 
 	installations    interfaces.Installations
 	deliveryServices []interfaces.Delivery
@@ -74,7 +74,7 @@ func NewListener(
 		opts:             opts,
 		conn:             conn,
 		client:           client,
-		envelopes:        make(chan any, 100),
+		envelopes:        make(chan genericEnvelope, 100),
 		installations:    installations,
 		deliveryServices: deliveryServices,
 		subscriptions:    subscriptions,
@@ -174,11 +174,11 @@ func (l *Listener) startEnvelopeListener() {
 				// Range over envelopes so they get distributed to the worker pool evenly.
 				// Only one, either v3 or v4 will be populated, but we can just range over both.
 				for _, env := range msg.V3 {
-					l.envelopes <- env
+					l.envelopes <- genericEnvelope{env: env}
 				}
 
 				for _, env := range msg.V4 {
-					l.envelopes <- env
+					l.envelopes <- genericEnvelope{env: env}
 				}
 			}
 		}
@@ -190,25 +190,32 @@ func (l *Listener) startMessageWorkers() {
 		go func() {
 			for msg := range l.envelopes {
 
-				switch env := msg.(type) {
-
-				case *v1.Envelope:
-					err := l.processV3Envelope(env)
+				v1Env, ok := msg.V1()
+				if ok {
+					err := l.processV3Envelope(v1Env)
 					if err != nil {
 						l.logger.Error("could not process envelope",
-							zap.String("topic", env.ContentTopic),
+							zap.String("topic", v1Env.ContentTopic),
 							zap.Error(err),
 						)
 					}
 
-				case *envelopes.OriginatorEnvelope:
+					continue
+				}
 
-					err := l.processV4Envelope(env)
+				v4Env, ok := msg.V4()
+				if ok {
+					err := l.processV4Envelope(v4Env)
 					if err != nil {
 						l.logger.Error("could not process v4 envelope",
 							zap.Error(err))
 					}
+
+					continue
 				}
+
+				// Should never happen.
+				l.logger.Warn("unexpected envelope payload received", zap.String("type", fmt.Sprintf("%T", msg.env)))
 			}
 		}()
 	}
@@ -374,4 +381,20 @@ func buildSendRequestV4(env *envelopes.OriginatorEnvelope, info messageV4Info, i
 
 	return out
 
+}
+
+// genericEnvelope is super thin wrapper around envelope types,
+// aimed to get around ambiguity where we feed two envelope types into a `chan any`.
+type genericEnvelope struct {
+	env any
+}
+
+func (e genericEnvelope) V1() (*v1.Envelope, bool) {
+	v, ok := e.env.(*v1.Envelope)
+	return v, ok
+}
+
+func (e genericEnvelope) V4() (*envelopes.OriginatorEnvelope, bool) {
+	v, ok := e.env.(*envelopes.OriginatorEnvelope)
+	return v, ok
 }

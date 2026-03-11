@@ -48,10 +48,12 @@ func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*List
 }
 
 func injectMessage(listener *Listener, topic string, message []byte) {
-	listener.envelopes <- &v1.Envelope{
-		ContentTopic: topic,
-		Message:      message,
-		TimestampNs:  uint64(time.Now().UnixNano()),
+	listener.envelopes <- genericEnvelope{
+		env: &v1.Envelope{
+			ContentTopic: topic,
+			Message:      message,
+			TimestampNs:  uint64(time.Now().UnixNano()),
+		},
 	}
 }
 
