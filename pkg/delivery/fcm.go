@@ -54,7 +54,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		return errors.New("missing message")
 	}
 
-	message := base64.StdEncoding.EncodeToString(req.GetMessage())
+	message := base64.StdEncoding.EncodeToString(req.GetMessagePayload())
 	topic := req.MessageContext.Topic
 	data := map[string]string{
 		"topic":            topic,

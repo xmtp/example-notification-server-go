@@ -67,7 +67,7 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 		req.Installation.DeliveryMechanism.Token,
 		req.MessageContext.Topic,
 		string(req.MessageContext.MessageType),
-		req.GetMessage(),
+		req.GetMessagePayload(),
 	)
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)

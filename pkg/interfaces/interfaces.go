@@ -68,23 +68,27 @@ func (r SendRequest) Empty() bool {
 	return false
 }
 
-func (r SendRequest) GetMessage() []byte {
+func (r SendRequest) GetMessagePayload() []byte {
 	if r.Message != nil {
 		return r.Message.Message
 	}
 
-	// TODO: Potentially this should be the internal V1.GetData()
-	// Right now the HmacInputs and IdempotencyKey are the GetData() bytes,
-	// while 'Message' is the unsigned originator envelope.
-	return r.MessageV4.UnsignedOriginatorEnvelope
+	return r.MessageContext.MessagePayloadV4
 }
 
+// TODO: MessageContext now does a little too much, perhaps the models could be revamped a bit.
 type MessageContext struct {
 	MessageType topics.MessageType `json:"message_type"`
 	ShouldPush  *bool              `json:"should_push,omitempty"`
 	Topic       string             `json:"topic,omitempty"`
-	HmacInputs  *[]byte            `json:"-"`
-	SenderHmac  *[]byte            `json:"-"`
+
+	// Data not sent over the wire.
+	HmacInputs *[]byte `json:"-"`
+	SenderHmac *[]byte `json:"-"`
+
+	// To prevent duplicate work of unwrapping v4 envelope multiple times,
+	// keep the message data here. That way we can have it at hand when we need to send it.
+	MessagePayloadV4 []byte `json:"-"`
 }
 
 func (m MessageContext) IsSender(hmacKey []byte) bool {

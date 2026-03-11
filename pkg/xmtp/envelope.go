@@ -96,7 +96,11 @@ func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*messageV4Info, bool, e
 			SenderHmac:  &senderHmac,
 			ShouldPush:  &shouldPush,
 			Topic:       topic.String(),
-			HmacInputs:  &messageData,
+
+			// TODO: Check - Right now separated to make it clear what is HmacInput and what is message payload.
+			// But instead we could be transparent, just have message payload and use it for HMAC / idempotency key too.
+			HmacInputs:       &messageData,
+			MessagePayloadV4: messageData,
 		},
 
 		originatorNs:    unsignedEnv.OriginatorNs,
