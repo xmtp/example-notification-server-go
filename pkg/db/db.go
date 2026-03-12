@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"log"
@@ -41,12 +42,12 @@ func Migrate(ctx context.Context, db *bun.DB) error {
 	migrator := migrate.NewMigrator(db, migrations.Migrations)
 	err := migrator.Init(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not initialize migrator: %w", err)
 	}
 
 	group, err := migrator.Migrate(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not run migrator: %w", err)
 	}
 
 	if group.IsZero() {

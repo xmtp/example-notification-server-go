@@ -50,12 +50,12 @@ func (f FcmDelivery) CanDeliver(req interfaces.SendRequest) bool {
 }
 
 func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error {
-	if req.Message == nil {
+	if req.Empty() {
 		return errors.New("missing message")
 	}
 
-	message := base64.StdEncoding.EncodeToString(req.Message.Message)
-	topic := req.Message.ContentTopic
+	message := base64.StdEncoding.EncodeToString(req.GetMessagePayload())
+	topic := req.MessageContext.Topic
 	data := map[string]string{
 		"topic":            topic,
 		"encryptedMessage": message,

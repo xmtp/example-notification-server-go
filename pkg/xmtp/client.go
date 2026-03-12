@@ -2,14 +2,12 @@ package xmtp
 
 import (
 	"context"
-	"crypto/tls"
-	"time"
+	"fmt"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/envelopes"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/message_api"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -17,35 +15,79 @@ const (
 	appVersionMetadataKey    = "x-app-version"
 )
 
-func newConn(apiAddress string, useTls bool, clientVersion, appVersion string) (*grpc.ClientConn, error) {
-	return grpc.NewClient(
-		apiAddress,
-		grpc.WithTransportCredentials(getCredentials(useTls)),
-		grpc.WithConnectParams(grpc.ConnectParams{
-			MinConnectTimeout: 5 * time.Second,
-		}),
-		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-			ctx = metadata.AppendToOutgoingContext(ctx, clientVersionMetadataKey, clientVersion)
-			ctx = metadata.AppendToOutgoingContext(ctx, appVersionMetadataKey, appVersion)
-			return invoker(ctx, method, req, reply, cc, opts...)
-		}),
-	)
+type SubscriberClient interface {
+	Subscribe(ctx context.Context) (SubscriberStream, error)
 }
 
-func getCredentials(useTls bool) credentials.TransportCredentials {
-	if useTls {
-		return credentials.NewTLS(&tls.Config{
-			InsecureSkipVerify: false,
-		})
+type SubscriberStream interface {
+	Receive() (*EnvelopesWrapped, error)
+}
+
+type clientConfig struct {
+	v3Client bool
+}
+
+type clientOption func(*clientConfig)
+
+func UseV3Client(b bool) clientOption {
+	return func(cfg *clientConfig) {
+		cfg.v3Client = b
 	}
-	return insecure.NewCredentials()
 }
 
-func NewClient(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (v1.MessageApiClient, error) {
-	conn, err := newConn(apiAddress, useTls, clientVersion, appVersion)
+type clientWrapper struct {
+	useV4 bool
+
+	v3sub SubscriberV3
+	v4sub SubscriberV4
+}
+
+func newSubscriberClient(conn grpc.ClientConnInterface, opts ...clientOption) SubscriberClient {
+
+	var cfg clientConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	// Use the legacy, v3 client
+	if cfg.v3Client {
+
+		return &clientWrapper{
+			v3sub: NewV3Client(conn),
+		}
+	}
+
+	return &clientWrapper{
+		useV4: true,
+		v4sub: NewV4Client(conn),
+	}
+}
+
+// Subscribe opens an envelope stream.
+func (c *clientWrapper) Subscribe(ctx context.Context) (SubscriberStream, error) {
+
+	if c.useV4 {
+
+		req := &message_api.SubscribeAllEnvelopesRequest{}
+
+		stream, err := c.v4sub.SubscribeAllEnvelopes(ctx, req)
+		if err != nil {
+			return nil, fmt.Errorf("could not subscribe to envelopes: %w", err)
+		}
+
+		return newV4Stream(stream), nil
+	}
+
+	// Open the legacy, v3 stream.
+	stream, err := c.v3sub.SubscribeAll(ctx, &v1.SubscribeAllRequest{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not subscribe to envelopes: %w", err)
 	}
 
-	return v1.NewMessageApiClient(conn), nil
+	return newV3Stream(stream), nil
+}
+
+type EnvelopesWrapped struct {
+	V4 []*envelopes.OriginatorEnvelope
+	V3 []*v1.Envelope
 }

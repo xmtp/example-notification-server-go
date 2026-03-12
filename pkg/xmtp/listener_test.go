@@ -30,9 +30,9 @@ func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*List
 	logger := logging.CreateLogger("console", "info")
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := options.XmtpOptions{ListenerEnabled: true, GrpcAddress: XMTP_ADDRESS, UseTls: false, NumWorkers: 5}
-	db, cleanup := test.CreateTestDb()
-	installations := installations.NewInstallationsService(logger, db)
-	subscriptions := subscriptions.NewSubscriptionsService(logger, db)
+	db, cleanup := test.CreateTestDb(t)
+	installations := installations.NewService(logger, db)
+	subscriptions := subscriptions.NewService(logger, db)
 
 	l, err := NewListener(ctx, logger, opts, installations, subscriptions, []interfaces.Delivery{deliveryService}, "test", "test")
 	if err != nil {
@@ -48,10 +48,12 @@ func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*List
 }
 
 func injectMessage(listener *Listener, topic string, message []byte) {
-	listener.messageChannel <- &v1.Envelope{
-		ContentTopic: topic,
-		Message:      message,
-		TimestampNs:  uint64(time.Now().UnixNano()),
+	listener.envelopes <- genericEnvelope{
+		env: &v1.Envelope{
+			ContentTopic: topic,
+			Message:      message,
+			TimestampNs:  uint64(time.Now().UnixNano()),
+		},
 	}
 }
 

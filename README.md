@@ -10,6 +10,8 @@ This project is ready to serve as a reference for you to start building.
 
 Many applications will have different needs for push notifications (different delivery providers, different metadata attached to payloads, etc), and this repo is designed to be forked and customized for each application's needs.
 
+For more information about running the notificaiton server against V3 or V4 version of XMTP node, see [here](/Migration.md).
+
 ## Prerequisites
 
 1. Go 1.20
@@ -53,7 +55,7 @@ Here is the output as of 03/01/2024:
 
 ```sh
 Usage:
-  main [OPTIONS]
+  server [OPTIONS]
 
 Application Options:
   -d, --db-connection-string=              Address to database [$DB_CONNECTION_STRING]
@@ -69,6 +71,7 @@ Worker Options:
       --xmtp-listener                      Enable the XMTP listener to actually send notifications. Requires APNSOptions to be configured
       --xmtp-listener-tls                  Whether to connect to XMTP network using TLS
   -x, --xmtp-address=                      Address (including port) of XMTP GRPC server [$XMTP_GRPC_ADDRESS]
+      --d14n                               Use decentralization backend [$XTMP_D14N]
       --num-workers=                       Number of workers used to process messages (default: 50)
 
 APNS Options:
@@ -78,7 +81,8 @@ APNS Options:
       --apns-key-id=                       Key ID associated with APNS credentials [$APNS_KEY_ID]
       --apns-team-id=                      APNS Team ID [$APNS_TEAM_ID]
       --apns-topic=                        Topic to be used on all messages [$APNS_TOPIC]
-      --apns-mode=[development|production] Which APNS servers to deliver to, development or production (default: development) [$APNS_MODE]
+      --apns-mode=[development|production] Which APNS servers to deliver to, development or production (default: development)
+                                           [$APNS_MODE]
 
 FCM Options:
       --fcm-enabled                        Enable FCM sending [$FCM_ENABLED]

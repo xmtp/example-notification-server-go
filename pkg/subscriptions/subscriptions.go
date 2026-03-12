@@ -10,20 +10,24 @@ import (
 	"go.uber.org/zap"
 )
 
-type SubscriptionsService struct {
+type Service struct {
 	logger *zap.Logger
 	db     *bun.DB
 }
 
-func NewSubscriptionsService(logger *zap.Logger, db *bun.DB) *SubscriptionsService {
-	return &SubscriptionsService{
+func NewService(logger *zap.Logger, db *bun.DB) *Service {
+	return &Service{
 		logger: logger.Named("subscriptions-service"),
 		db:     db,
 	}
 }
 
-func (s SubscriptionsService) Subscribe(ctx context.Context, installationId string, topics []string) error {
+func (s Service) Subscribe(ctx context.Context, installationId string, topics []string) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+
+		// TODO: This could have input validation - don't allow a subscription to anything that's not
+		// a topic or a welcome message as it's not supported.
+
 		out := make([]db.Subscription, 0)
 		// Update any existing results
 		_, err := tx.NewUpdate().
@@ -67,7 +71,7 @@ func (s SubscriptionsService) Subscribe(ctx context.Context, installationId stri
 	})
 }
 
-func (s SubscriptionsService) SubscribeWithMetadata(ctx context.Context, installationId string, subscriptions []interfaces.SubscriptionInput) error {
+func (s Service) SubscribeWithMetadata(ctx context.Context, installationId string, subscriptions []interfaces.SubscriptionInput) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		toUpdate := make([]*db.Subscription, len(subscriptions))
 		for idx, sub := range subscriptions {
@@ -121,7 +125,7 @@ func (s SubscriptionsService) SubscribeWithMetadata(ctx context.Context, install
 	})
 }
 
-func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationId string, topics []string) error {
+func (s Service) Unsubscribe(ctx context.Context, installationId string, topics []string) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		_, err := tx.NewUpdate().
 			Model((*db.Subscription)(nil)).
@@ -134,9 +138,10 @@ func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationId st
 	})
 }
 
-func (s SubscriptionsService) GetSubscriptions(ctx context.Context, topic string, thirtyDayPeriod int) (out []interfaces.Subscription, err error) {
+func (s Service) GetSubscriptions(ctx context.Context, topic string, thirtyDayPeriod int) ([]interfaces.Subscription, error) {
+
 	results := make([]db.Subscription, 0)
-	err = s.db.NewSelect().
+	err := s.db.NewSelect().
 		Model(&results).
 		Where("topic = ?", topic).
 		Where("is_active = TRUE").
@@ -148,9 +153,11 @@ func (s SubscriptionsService) GetSubscriptions(ctx context.Context, topic string
 	if err != nil {
 		return nil, err
 	}
+
+	out := make([]interfaces.Subscription, len(results))
 	// s.logger.Info("Results", zap.Any("results", results))
-	for _, result := range results {
-		out = append(out, transformResult(result))
+	for i := range results {
+		out[i] = transformResult(results[i])
 	}
 
 	return out, err

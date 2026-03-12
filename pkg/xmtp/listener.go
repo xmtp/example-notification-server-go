@@ -4,31 +4,43 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
+
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
-	"go.uber.org/zap"
+	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/envelopes"
 )
 
 const STARTING_SLEEP_TIME = 100 * time.Millisecond
 const DELIVERY_TIMEOUT = 15 * time.Second
 
 type Listener struct {
-	logger           *zap.Logger
-	ctx              context.Context
-	cancelFunc       func()
-	xmtpClient       v1.MessageApiClient
-	opts             options.XmtpOptions
-	messageChannel   chan *v1.Envelope
+	lock sync.Mutex
+
+	logger     *zap.Logger
+	ctx        context.Context
+	cancelFunc func()
+	opts       options.XmtpOptions
+
+	conn      *grpc.ClientConn
+	client    SubscriberClient
+	envelopes chan genericEnvelope
+
 	installations    interfaces.Installations
 	deliveryServices []interfaces.Delivery
 	subscriptions    interfaces.Subscriptions
-	clientVersion    string
-	appVersion       string
+
+	clientVersion string
+	appVersion    string
 }
 
 func NewListener(
@@ -41,81 +53,132 @@ func NewListener(
 	clientVersion string,
 	appVersion string,
 ) (*Listener, error) {
-	client, err := NewClient(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
-	if err != nil {
-		return nil, err
-	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &Listener{
+	conn, err := newConn(opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("could not initialize GRPC client: %w", err)
+	}
+
+	logger.Info("creating xmtp listener", zap.Bool("d14n", opts.D14N))
+
+	client := newSubscriberClient(conn, UseV3Client(!opts.D14N))
+
+	listener := &Listener{
+		lock:             sync.Mutex{},
 		ctx:              ctx,
 		cancelFunc:       cancel,
 		logger:           logger.Named("xmtp-listener"),
-		xmtpClient:       client,
 		opts:             opts,
-		messageChannel:   make(chan *v1.Envelope, 100),
+		conn:             conn,
+		client:           client,
+		envelopes:        make(chan genericEnvelope, 100),
 		installations:    installations,
 		deliveryServices: deliveryServices,
 		subscriptions:    subscriptions,
 		clientVersion:    clientVersion,
 		appVersion:       appVersion,
-	}, nil
+	}
+
+	return listener, nil
 }
 
 func (l *Listener) Start() {
-	go l.startMessageListener()
+
+	go l.startEnvelopeListener()
+
 	l.startMessageWorkers()
 }
 
 func (l *Listener) Stop() {
 	l.cancelFunc()
+
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	err := l.conn.Close()
+	if err != nil {
+		l.logger.Error("could not close GRPC connection", zap.Error(err))
+	}
 }
 
-func (l *Listener) startMessageListener() {
+func (l *Listener) startEnvelopeListener() {
+	defer close(l.envelopes)
+
 	l.logger.Info("starting message listener")
-	var stream v1.MessageApi_SubscribeAllClient
-	var err error
+
+	var (
+		stream SubscriberStream
+		err    error
+	)
+
 	sleepTime := STARTING_SLEEP_TIME
 	for {
-		stream, err = l.xmtpClient.SubscribeAll(l.ctx, &v1.SubscribeAllRequest{})
+		stream, err = l.client.Subscribe(l.ctx)
 		if err != nil {
+
+			if l.ctx.Err() != nil {
+				l.logger.Info("stream closed")
+				return
+			}
+
 			l.logger.Error("error connecting to stream", zap.Error(err))
+
 			time.Sleep(sleepTime)
+
 			sleepTime = sleepTime * 2
 			if err = l.refreshClient(); err != nil {
 				l.logger.Error("error refreshing client", zap.Error(err))
 			}
+
 			continue
 		}
+
 	streamLoop:
 		for {
 			select {
 			case <-l.ctx.Done():
-				close(l.messageChannel)
 				return
 			default:
-				msg, err := stream.Recv()
-				if err == io.EOF {
+
+				msg, err := stream.Receive()
+				if err != nil && errors.Is(err, io.EOF) {
 					l.logger.Info("stream closed")
 					break streamLoop
 				}
 
 				if err != nil {
 					l.logger.Error("error reading from stream", zap.Error(err))
+
 					// Wait 100ms to avoid hammering the API and getting rate limited
 					time.Sleep(sleepTime)
 					sleepTime = sleepTime * 2
 					if err = l.refreshClient(); err != nil {
 						l.logger.Error("error refreshing client", zap.Error(err))
 					}
+
 					break streamLoop
 				}
 
-				if msg != nil {
-					// Reset the sleep time on first successful message
-					sleepTime = STARTING_SLEEP_TIME
-					l.messageChannel <- msg
+				// Should not happen.
+				if msg == nil {
+					l.logger.Error("stream returned nil message")
+					continue
+				}
+
+				// Reset the sleep time on first successful message
+				sleepTime = STARTING_SLEEP_TIME
+
+				// Range over envelopes so they get distributed to the worker pool evenly.
+				// Only one, either v3 or v4 will be populated, but we can just range over both.
+				for _, env := range msg.V3 {
+					l.envelopes <- genericEnvelope{env: env}
+				}
+
+				for _, env := range msg.V4 {
+					l.envelopes <- genericEnvelope{env: env}
 				}
 			}
 		}
@@ -125,65 +188,40 @@ func (l *Listener) startMessageListener() {
 func (l *Listener) startMessageWorkers() {
 	for i := 0; i < l.opts.NumWorkers; i++ {
 		go func() {
-			var err error
-			for msg := range l.messageChannel {
-				err = l.processEnvelope(msg)
-				if err != nil {
-					l.logger.Error("error processing envelope", zap.String("topic", msg.ContentTopic), zap.Error(err))
+			for msg := range l.envelopes {
+
+				v1Env, ok := msg.V1()
+				if ok {
+					err := l.processV3Envelope(v1Env)
+					if err != nil {
+						l.logger.Error("could not process envelope",
+							zap.String("topic", v1Env.ContentTopic),
+							zap.Error(err),
+						)
+					}
+
 					continue
 				}
-				// l.logger.Info("processed a message", zap.String("topic", msg.ContentTopic))
+
+				v4Env, ok := msg.V4()
+				if ok {
+					err := l.processV4Envelope(v4Env)
+					if err != nil {
+						l.logger.Error("could not process v4 envelope",
+							zap.Error(err))
+					}
+
+					continue
+				}
+
+				// Should never happen.
+				l.logger.Warn("unexpected envelope payload received", zap.String("type", fmt.Sprintf("%T", msg.env)))
 			}
 		}()
 	}
 }
 
-func (l *Listener) processEnvelope(env *v1.Envelope) error {
-	if !isV3Topic(env.ContentTopic) {
-		l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
-		return nil
-	}
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
-	if err != nil {
-		return err
-	}
-
-	if len(subs) == 0 {
-		return nil
-	}
-
-	installationIds := make([]string, len(subs))
-	for i, sub := range subs {
-		installationIds[i] = sub.InstallationId
-	}
-
-	installations, err := l.installations.GetInstallations(l.ctx, installationIds)
-	if err != nil {
-		return err
-	}
-
-	if len(installations) == 0 {
-		l.logger.Info("No matching installations found for topic", zap.String("topic", env.ContentTopic))
-		return nil
-	}
-
-	sendRequests := buildSendRequests(env, installations, subs)
-	for _, request := range sendRequests {
-		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
-			l.logger.Info("Skipping delivery of request",
-				zap.Any("message_context", request.MessageContext),
-				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
-			)
-			continue
-		}
-		if err = l.deliver(request); err != nil {
-			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
-		}
-	}
-	return err
-}
-
-func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
+func shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
 	if subscription.HmacKey != nil && len(subscription.HmacKey.Key) > 0 {
 		isSender := messageContext.IsSender(subscription.HmacKey.Key)
 		if isSender {
@@ -197,32 +235,74 @@ func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subsc
 	return true
 }
 
+// deliver() returns an error on partial success/failure.
 func (l *Listener) deliver(req interfaces.SendRequest) error {
+
+	if req.Empty() {
+		return errors.New("empty message scheduled for delivery, skipping")
+	}
+
 	ctx, cancel := context.WithTimeout(l.ctx, DELIVERY_TIMEOUT)
 	defer cancel()
+
+	var (
+		errs  []error
+		found bool
+	)
 	for _, service := range l.deliveryServices {
-		if service.CanDeliver(req) && req.Message != nil {
-			l.logger.Info("active subscription found. sending message",
-				zap.String("topic", req.Message.ContentTopic),
-				zap.String("message_type", string(req.MessageContext.MessageType)),
-			)
-			return service.Send(ctx, req)
+
+		if !service.CanDeliver(req) {
+			continue
+		}
+
+		found = true
+
+		l.logger.Info("active subscription found. sending message",
+			zap.String("topic", req.MessageContext.Topic),
+			zap.String("message_type", string(req.MessageContext.MessageType)),
+		)
+
+		err := service.Send(ctx, req)
+		if err != nil {
+			errs = append(errs, err)
 		}
 	}
-	l.logger.Info("No delivery service matches request", zap.String("delivery_mechanism", string(req.Installation.DeliveryMechanism.Kind)))
-	return nil
+
+	if !found {
+		l.logger.Info("No delivery service matches request", zap.String("delivery_mechanism", string(req.Installation.DeliveryMechanism.Kind)))
+		return nil
+	}
+
+	return errors.Join(errs...)
 }
 
 func (l *Listener) refreshClient() error {
-	client, err := NewClient(l.ctx, l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
-	if err != nil {
-		return err
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	if l.ctx.Err() != nil {
+		return errors.New("context cancelled")
 	}
-	l.xmtpClient = client
+
+	// Try to close old connection, if possible.
+	err := l.conn.Close()
+	if err != nil {
+		l.logger.Error("could not close existing connection", zap.Error(err))
+	}
+
+	// Continue establishing a new connection nonetheless.
+	conn, err := newConn(l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
+	if err != nil {
+		return fmt.Errorf("could not refresh GRPC client: %w", err)
+	}
+
+	l.conn = conn
+	l.client = newSubscriberClient(conn, UseV3Client(!l.opts.D14N))
 
 	return nil
 }
 
+// isV3Topic returns true if topic is one we care about - group message or welcome message.
 func isV3Topic(topic string) bool {
 	if strings.HasPrefix(topic, "/xmtp/mls/1/g-") || strings.HasPrefix(topic, "/xmtp/mls/1/w-") {
 		return true
@@ -259,4 +339,62 @@ func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Install
 	}
 
 	return out
+}
+
+func buildIdempotencyKeyV4(info messageV4Info) string {
+	h := sha1.New()
+	h.Write([]byte(info.context.Topic))
+
+	// NOTE: Idempotency data is initialized to group message .GetV1().GetData().
+	// HmacInputs are set to the same thing, so there's duplication there.
+	h.Write(*info.idempotencyData)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func buildSendRequestV4(env *envelopes.OriginatorEnvelope, info messageV4Info, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
+
+	var (
+		idempotencyKey = buildIdempotencyKeyV4(info)
+		out            []interfaces.SendRequest
+	)
+
+	installationMap := make(map[string]interfaces.Installation)
+	for _, installation := range installations {
+		installationMap[installation.Id] = installation
+	}
+
+	for _, sub := range subscriptions {
+
+		inst, ok := installationMap[sub.InstallationId]
+		if !ok {
+			continue
+		}
+
+		out = append(out, interfaces.SendRequest{
+			IdempotencyKey: idempotencyKey,
+			MessageV4:      env,
+			MessageContext: info.context,
+			Installation:   inst,
+			Subscription:   sub,
+		})
+	}
+
+	return out
+
+}
+
+// genericEnvelope is super thin wrapper around envelope types,
+// aimed to get around ambiguity where we feed two envelope types into a `chan any`.
+type genericEnvelope struct {
+	env any
+}
+
+func (e genericEnvelope) V1() (*v1.Envelope, bool) {
+	v, ok := e.env.(*v1.Envelope)
+	return v, ok
+}
+
+func (e genericEnvelope) V4() (*envelopes.OriginatorEnvelope, bool) {
+	v, ok := e.env.(*envelopes.OriginatorEnvelope)
+	return v, ok
 }

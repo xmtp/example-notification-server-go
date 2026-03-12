@@ -60,15 +60,15 @@ func (a ApnsDelivery) CanDeliver(req interfaces.SendRequest) bool {
 }
 
 func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) error {
-	if req.Message == nil {
+	if req.Empty() {
 		return errors.New("missing message")
 	}
 
 	notification := a.buildNotification(req.Subscription.IsSilent,
 		req.Installation.DeliveryMechanism.Token,
-		req.Message.ContentTopic,
+		req.MessageContext.Topic,
 		string(req.MessageContext.MessageType),
-		req.Message.Message,
+		req.GetMessagePayload(),
 	)
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)

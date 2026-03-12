@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
-	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	mlsV1 "github.com/xmtp/example-notification-server-go/pkg/proto/mls/api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"google.golang.org/protobuf/proto"
@@ -26,8 +26,8 @@ func parseGroupMessage(groupMessage []byte) (*mlsV1.GroupMessage_V1, error) {
 	return v1Message, nil
 }
 
-func getContext(env *messageApi.Envelope) interfaces.MessageContext {
-	messageType := topics.GetMessageType(env)
+func getContext(env *v1.Envelope) interfaces.MessageContext {
+	messageType := topics.GetMessageType(env.ContentTopic)
 	var shouldPush *bool
 	var hmacInputs, senderHmac *[]byte
 
@@ -45,6 +45,7 @@ func getContext(env *messageApi.Envelope) interfaces.MessageContext {
 	return interfaces.MessageContext{
 		MessageType: messageType,
 		ShouldPush:  shouldPush,
+		Topic:       env.GetContentTopic(),
 		HmacInputs:  hmacInputs,
 		SenderHmac:  senderHmac,
 	}

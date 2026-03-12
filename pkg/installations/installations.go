@@ -3,6 +3,7 @@ package installations
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -11,19 +12,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type DefaultInstallationService struct {
+type Service struct {
 	logger *zap.Logger
 	db     *bun.DB
 }
 
-func NewInstallationsService(logger *zap.Logger, db *bun.DB) *DefaultInstallationService {
-	return &DefaultInstallationService{
+func NewService(logger *zap.Logger, db *bun.DB) *Service {
+	return &Service{
 		logger: logger.Named("installations"),
 		db:     db,
 	}
 }
 
-func (s DefaultInstallationService) Register(ctx context.Context, installation interfaces.Installation) (res *interfaces.RegisterResponse, err error) {
+func (s Service) Register(ctx context.Context, installation interfaces.Installation) (res *interfaces.RegisterResponse, err error) {
 	err = s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		// Not sure how I want to handle register calls to deleted installation_ids
 		_, err := tx.NewInsert().
@@ -33,9 +34,8 @@ func (s DefaultInstallationService) Register(ctx context.Context, installation i
 			On("CONFLICT(id) DO UPDATE").
 			Set("deleted_at = NULL").
 			Exec(ctx)
-
 		if err != nil {
-			s.logger.Debug("Installation already exists")
+			return fmt.Errorf("could not save installation: %w", err)
 		}
 
 		_, err = tx.NewInsert().
@@ -50,7 +50,7 @@ func (s DefaultInstallationService) Register(ctx context.Context, installation i
 			Set("updated_at = EXCLUDED.updated_at").Exec(ctx)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("could not save delivery mechanism: %w", err)
 		}
 
 		return nil
@@ -66,7 +66,7 @@ func (s DefaultInstallationService) Register(ctx context.Context, installation i
 	}, nil
 }
 
-func (s DefaultInstallationService) Delete(ctx context.Context, installationId string) error {
+func (s Service) Delete(ctx context.Context, installationId string) error {
 	deletedAt := time.Now()
 	installation := &db.Installation{Id: installationId, DeletedAt: &deletedAt}
 	_, err := s.db.NewUpdate().
@@ -78,7 +78,7 @@ func (s DefaultInstallationService) Delete(ctx context.Context, installationId s
 	return err
 }
 
-func (s DefaultInstallationService) GetInstallations(ctx context.Context, installationIds []string) ([]interfaces.Installation, error) {
+func (s Service) GetInstallations(ctx context.Context, installationIds []string) ([]interfaces.Installation, error) {
 	// Abort if empty
 	if len(installationIds) == 0 {
 		return []interfaces.Installation{}, nil
@@ -98,24 +98,23 @@ func (s DefaultInstallationService) GetInstallations(ctx context.Context, instal
 	if err != nil {
 		return nil, err
 	}
-	out := []interfaces.Installation{}
 
+	out := make([]interfaces.Installation, len(results))
 	for i := range results {
-		transformed := transformResult(results[i])
-		if transformed != nil {
-			out = append(out, *transformed)
-		}
+		t := transformResult(results[i])
+		out[i] = *t
 	}
+
 	return out, nil
 }
 
-func transformResult(deliveryMechanism db.DeviceDeliveryMechanism) *interfaces.Installation {
+func transformResult(m db.DeviceDeliveryMechanism) *interfaces.Installation {
 	return &interfaces.Installation{
-		Id: deliveryMechanism.InstallationId,
+		Id: m.InstallationId,
 		DeliveryMechanism: interfaces.DeliveryMechanism{
-			Kind:      deliveryMechanism.Kind,
-			Token:     deliveryMechanism.Token,
-			UpdatedAt: deliveryMechanism.UpdatedAt,
+			Kind:      m.Kind,
+			Token:     m.Token,
+			UpdatedAt: m.UpdatedAt,
 		},
 	}
 }
