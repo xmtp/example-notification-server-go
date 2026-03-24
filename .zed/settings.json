@@ -1,0 +1,26 @@
+{
+  "languages": {
+    "Go": {
+      "hard_tabs": true,
+      "tab_size": 4,
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "language_servers": ["gopls", "golangci-lint"]
+    }
+  },
+  "lsp": {
+    "golangci-lint": {
+      "initialization_options": {
+        "command": [
+          "golangci-lint",
+          "run",
+          "--config=./dev/.golangci.yaml",
+          "--output.json.path",
+          "stdout",
+          "--show-stats=false",
+          "--output.text.path="
+        ]
+      }
+    }
+  }
+}
