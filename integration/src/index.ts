@@ -1,8 +1,17 @@
-import { Client, type Signer, IdentifierKind } from "@xmtp/node-sdk";
+import {
+  Client,
+  type Signer,
+  type ClientOptions,
+  IdentifierKind,
+  createBackend,
+} from "@xmtp/node-sdk";
 import { createWalletClient, http, toBytes } from "viem";
 import { mainnet } from "viem/chains";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
-import { createClient, type Client as ConnectClient } from "@connectrpc/connect";
+import {
+  createClient,
+  type Client as ConnectClient,
+} from "@connectrpc/connect";
 import {
   Notifications,
   SubscriptionSchema,
@@ -37,12 +46,13 @@ export async function randomClient() {
   };
 
   const encKey = getRandomValues(new Uint8Array(32));
-  return await Client.create(signer, {
-    env: "dev",
+  const opts: ClientOptions = {
     apiUrl: config.nodeUrl,
+    env: "local",
     dbEncryptionKey: encKey,
     dbPath: `/tmp/test-${wallet.account.address}.db3`,
-  });
+  };
+  return await Client.create(signer, opts);
 }
 
 export function createNotificationClient() {
@@ -60,13 +70,11 @@ export async function subscribeToTopics(
   xmtpClient: Client,
   // A notifications server client, like the one generated above.
   notificationClient: ConnectClient<typeof Notifications>,
-  // We want to handle iOS subscriptions slightly differently because we can't filter regular notifications on the client
-  isIos: boolean
 ) {
   // Only subscribe to notifications which have a consent state of allowed
   // to protect users from SPAM notifications
   const consentedConversations = (await xmtpClient.conversations.list()).filter(
-    (c) => c.consentState() === 1
+    (c) => c.consentState() === 1,
   );
 
   // Get the HMAC Keys for all conversations where the keys exist
@@ -75,7 +83,7 @@ export async function subscribeToTopics(
   // Convert the conversations to subscriptions
   const conversationSubscriptions = consentedConversations.map((c) =>
     create(SubscriptionSchema, {
-      topic: c.id,
+      topic: c.topic,
       // V1 conversations don't have isSender support.
       // Use data only notifications here for iOS
       isSilent: false,
@@ -83,12 +91,10 @@ export async function subscribeToTopics(
         create(Subscription_HmacKeySchema, {
           thirtyDayPeriodsSinceEpoch: Number(v.epoch),
           key: Uint8Array.from(v.key),
-        })
+        }),
       ),
-    })
+    }),
   );
-
-  const inviteAndIntroSubscriptions: typeof conversationSubscriptions = [];
 
   await notificationClient.subscribeWithMetadata({
     installationId,

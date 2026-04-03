@@ -24,7 +24,7 @@ describe("notifications", () => {
   });
 
   const waitForNextRequest = (
-    timeoutMs: number
+    timeoutMs: number,
   ): Promise<NotificationResponse> =>
     new Promise((resolve, reject) => {
       onRequest = (body) => resolve(body);
@@ -101,7 +101,7 @@ describe("notifications", () => {
       thirtyDayPeriodsSinceEpoch: Number(v.epoch),
       key: Uint8Array.from(v.key),
     }));
-    const topic = `/xmtp/mls/1/g-${alixGroup.id}/proto`;
+    const topic = alixGroup.topic;
     await alixNotificationClient.subscribeWithMetadata({
       installationId: alix.installationId,
       subscriptions: [
