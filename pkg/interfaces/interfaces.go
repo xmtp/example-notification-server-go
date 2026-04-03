@@ -44,6 +44,7 @@ type Subscription struct {
 	CreatedAt      time.Time `json:"created_at"`
 	InstallationId string    `json:"-"`
 	Topic          string    `json:"topic"`
+	TopicID        string    `json:"topic_id"`
 	IsActive       bool      `json:"-"`
 	IsSilent       bool      `json:"is_silent"`
 	HmacKey        *HmacKey  `json:"-"`
@@ -107,7 +108,7 @@ type HmacKey struct {
 }
 
 type SubscriptionInput struct {
-	Topic    string
+	TopicID  string
 	IsSilent bool
 	HmacKeys []HmacKey
 }
@@ -127,9 +128,9 @@ type Installations interface {
 //
 //go:generate mockery --dir ../interfaces --name Subscriptions --output ../../mocks --outpkg mocks
 type Subscriptions interface {
-	Subscribe(ctx context.Context, installationId string, topics []string) error
-	Unsubscribe(ctx context.Context, installationId string, topics []string) error
-	GetSubscriptions(ctx context.Context, topic string, thirtyDayPeriod int) ([]Subscription, error)
+	Subscribe(ctx context.Context, installationId string, topicIDs []string) error
+	Unsubscribe(ctx context.Context, installationId string, topicIDs []string) error
+	GetSubscriptions(ctx context.Context, topicID string, thirtyDayPeriod int) ([]Subscription, error)
 	SubscribeWithMetadata(ctx context.Context, installationId string, subscriptions []SubscriptionInput) error
 }
 

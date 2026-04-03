@@ -137,16 +137,113 @@ func Test_DeleteInstallation(t *testing.T) {
 }
 
 func Test_Subscribe(t *testing.T) {
+
 	ctx := setupTest(t)
 	defer ctx.cleanup()
-	topics := []string{"topic1"}
 
-	ctx.subscriptionsMock.On(
-		"Subscribe",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(nil)
+	tests := []struct {
+		name             string
+		topics           []string
+		expectedTopicIDs []string
+	}{
+		{
+			name:             "plain topic",
+			topics:           []string{"topicName"},
+			expectedTopicIDs: []string{"topicName"},
+		},
+		{
+			name:             "old group message topic",
+			topics:           []string{"/xmtp/mls/1/g-topic1"},
+			expectedTopicIDs: []string{"topic1"},
+		},
+		{
+			name:             "old welcome message topic",
+			topics:           []string{"/xmtp/mls/1/w-topic3"},
+			expectedTopicIDs: []string{"topic3"},
+		},
+		{
+			name: "group of old topics",
+			topics: []string{
+				"/xmtp/mls/1/g-topic1",
+				"/xmtp/mls/1/g-topic2",
+				"/xmtp/mls/1/w-topic3",
+				"/xmtp/mls/1/g-topic4/proto",
+			},
+			expectedTopicIDs: []string{
+				"topic1",
+				"topic2",
+				"topic3",
+				"topic4/proto",
+			},
+		},
+		{
+			name: "group of new topics",
+			topics: []string{
+				"topic1",
+				"topic2",
+				"topic3",
+			},
+			expectedTopicIDs: []string{
+				"topic1",
+				"topic2",
+				"topic3",
+			},
+		},
+		{
+			name: "group of mixed topics",
+			topics: []string{
+				"/xmtp/mls/1/g-topic1",
+				"/xmtp/mls/1/g-topic2",
+				"/xmtp/mls/1/w-topic3",
+				"topicA",
+				"topicB",
+			},
+			expectedTopicIDs: []string{
+				"topic1",
+				"topic2",
+				"topic3",
+				"topicA",
+				"topicB",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx.subscriptionsMock.On(
+				"Subscribe",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+			).Return(nil)
+
+			_, err := ctx.client.Subscribe(
+				ctx.ctx,
+				connect.NewRequest(&proto.SubscribeRequest{
+					InstallationId: INSTALLATION_ID,
+					Topics:         test.topics,
+				}),
+			)
+			require.NoError(t, err)
+			ctx.subscriptionsMock.AssertCalled(
+				t,
+				"Subscribe",
+				mock.Anything,
+				INSTALLATION_ID,
+				test.expectedTopicIDs,
+			)
+		})
+	}
+}
+
+func Test_SubscribeRejectsInvalidTopic(t *testing.T) {
+
+	ctx := setupTest(t)
+	defer ctx.cleanup()
+
+	topics := []string{
+		"/xmtp/mls/1/s-topic",
+	}
 
 	_, err := ctx.client.Subscribe(
 		ctx.ctx,
@@ -155,15 +252,7 @@ func Test_Subscribe(t *testing.T) {
 			Topics:         topics,
 		}),
 	)
-
-	require.NoError(t, err)
-	ctx.subscriptionsMock.AssertCalled(
-		t,
-		"Subscribe",
-		mock.Anything,
-		INSTALLATION_ID,
-		topics,
-	)
+	require.Error(t, err)
 }
 
 func Test_SubscribeError(t *testing.T) {

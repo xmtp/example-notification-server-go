@@ -83,6 +83,10 @@ func (t Topic) Identifier() []byte {
 	return t.identifier
 }
 
+func (t Topic) HexIdentifier() string {
+	return fmt.Sprintf("%x", t.identifier)
+}
+
 // IsReserved topics can only be published to by the node itself, and not through Payers.
 func (t Topic) IsReserved() bool {
 	return t.kind == TopicKindPayerReportsV1 ||

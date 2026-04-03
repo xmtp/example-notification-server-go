@@ -3,6 +3,7 @@ package subscriptions
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/uptrace/bun"
 	"github.com/xmtp/example-notification-server-go/pkg/db"
@@ -22,49 +23,55 @@ func NewService(logger *zap.Logger, db *bun.DB) *Service {
 	}
 }
 
-func (s Service) Subscribe(ctx context.Context, installationId string, topics []string) error {
+func (s Service) Subscribe(ctx context.Context, installationId string, topicIDs []string) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 
-		// TODO: This could have input validation - don't allow a subscription to anything that's not
-		// a topic or a welcome message as it's not supported.
+		// TODO: Do a single upsert.
 
 		out := make([]db.Subscription, 0)
 		// Update any existing results
 		_, err := tx.NewUpdate().
 			Model(&out).
 			Where("installation_id = ?", installationId).
-			Where("topic IN (?)", bun.In(topics)).
+			Where("topic_id IN (?)", bun.In(topicIDs)).
 			Set("is_active = ?", true).
-			Returning("topic").
+			Returning("topic_id").
 			Exec(ctx)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("could not update subscriptions: %w", err)
 		}
 
-		topicMap := make(map[string]bool)
-		for _, topic := range topics {
-			topicMap[topic] = true
+		topicIDMap := make(map[string]bool)
+		for _, topicID := range topicIDs {
+			topicIDMap[topicID] = true
 		}
 
 		// Remove already updated results from the map
 		for _, result := range out {
-			delete(topicMap, result.Topic)
+			delete(topicIDMap, result.TopicID)
 		}
 
-		for topic := range topicMap {
+		if len(topicIDMap) == 0 {
+			return nil
+		}
+
+		newSubs := make([]db.Subscription, 0, len(topicIDs))
+		for topicID := range topicIDMap {
 			newSub := db.Subscription{
 				InstallationId: installationId,
-				Topic:          topic,
+				Topic:          topicID, // Keep this to satisfy constraints, though in the future we might remove this.
+				TopicID:        topicID,
 				IsActive:       true,
 			}
-			_, err = tx.NewInsert().
-				Model(&newSub).
-				Exec(ctx)
 
-			if err != nil {
-				return err
-			}
+			newSubs = append(newSubs, newSub)
+		}
+
+		// Bulk insert new subs.
+		_, err = tx.NewInsert().Model(&newSubs).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("could not insert subscription: %w", err)
 		}
 
 		return nil
@@ -74,10 +81,11 @@ func (s Service) Subscribe(ctx context.Context, installationId string, topics []
 func (s Service) SubscribeWithMetadata(ctx context.Context, installationId string, subscriptions []interfaces.SubscriptionInput) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		toUpdate := make([]*db.Subscription, len(subscriptions))
-		for idx, sub := range subscriptions {
-			toUpdate[idx] = &db.Subscription{
+		for i, sub := range subscriptions {
+			toUpdate[i] = &db.Subscription{
 				InstallationId: installationId,
-				Topic:          sub.Topic,
+				Topic:          sub.TopicID,
+				TopicID:        sub.TopicID,
 				IsActive:       true,
 				IsSilent:       sub.IsSilent,
 			}
@@ -86,10 +94,10 @@ func (s Service) SubscribeWithMetadata(ctx context.Context, installationId strin
 		updated := make([]*db.Subscription, 0)
 		_, err := tx.NewInsert().
 			Model(&toUpdate).
-			On("CONFLICT (installation_id, topic) DO UPDATE").
+			On("CONFLICT (installation_id, topic_id) DO UPDATE").
 			Set("is_active = true").
 			Set("is_silent = EXCLUDED.is_silent").
-			Returning("id, topic").
+			Returning("id, topic_id").
 			Exec(ctx, &updated)
 
 		if err != nil {
@@ -98,12 +106,14 @@ func (s Service) SubscribeWithMetadata(ctx context.Context, installationId strin
 
 		topicIdMap := makeTopicIdMap(updated)
 		hmacKeyUpdates := []db.SubscriptionHmacKeys{}
+
 		for _, sub := range subscriptions {
-			subscriptionId, exists := topicIdMap[sub.Topic]
+			subscriptionId, exists := topicIdMap[sub.TopicID]
 			if !exists {
-				s.logger.Info("Skipping topic because subscription not found", zap.String("topic", sub.Topic))
+				s.logger.Info("Skipping topic because subscription not found", zap.String("topic", sub.TopicID))
 				continue
 			}
+
 			for _, keyUpdate := range sub.HmacKeys {
 				hmacKeyUpdates = append(hmacKeyUpdates, db.SubscriptionHmacKeys{
 					SubscriptionId:             subscriptionId,
@@ -113,24 +123,29 @@ func (s Service) SubscribeWithMetadata(ctx context.Context, installationId strin
 			}
 		}
 
-		if len(hmacKeyUpdates) > 0 {
-			_, err = tx.NewInsert().
-				Model(&hmacKeyUpdates).
-				On("CONFLICT (subscription_id, thirty_day_periods_since_epoch) DO UPDATE").
-				Set("key = EXCLUDED.key").
-				Exec(ctx)
+		if len(hmacKeyUpdates) == 0 {
+			return nil
+		}
+
+		_, err = tx.NewInsert().
+			Model(&hmacKeyUpdates).
+			On("CONFLICT (subscription_id, thirty_day_periods_since_epoch) DO UPDATE").
+			Set("key = EXCLUDED.key").
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("could not update hmac key data: %w", err)
 		}
 
 		return err
 	})
 }
 
-func (s Service) Unsubscribe(ctx context.Context, installationId string, topics []string) error {
+func (s Service) Unsubscribe(ctx context.Context, installationId string, topicIDs []string) error {
 	return s.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		_, err := tx.NewUpdate().
 			Model((*db.Subscription)(nil)).
 			Where("installation_id = ?", installationId).
-			Where("topic IN (?)", bun.In(topics)).
+			Where("topic_id IN (?)", bun.In(topicIDs)).
 			Set("is_active = ?", false).
 			Exec(ctx)
 
@@ -138,12 +153,12 @@ func (s Service) Unsubscribe(ctx context.Context, installationId string, topics 
 	})
 }
 
-func (s Service) GetSubscriptions(ctx context.Context, topic string, thirtyDayPeriod int) ([]interfaces.Subscription, error) {
+func (s Service) GetSubscriptions(ctx context.Context, topicID string, thirtyDayPeriod int) ([]interfaces.Subscription, error) {
 
 	results := make([]db.Subscription, 0)
 	err := s.db.NewSelect().
 		Model(&results).
-		Where("topic = ?", topic).
+		Where("topic_id = ?", topicID).
 		Where("is_active = TRUE").
 		Relation("HmacKeys", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Where("thirty_day_periods_since_epoch = ?", thirtyDayPeriod)
@@ -166,20 +181,21 @@ func (s Service) GetSubscriptions(ctx context.Context, topic string, thirtyDayPe
 func makeTopicIdMap(subscriptions []*db.Subscription) map[string]int64 {
 	out := make(map[string]int64)
 	for _, sub := range subscriptions {
-		out[sub.Topic] = sub.Id
+		out[sub.TopicID] = sub.Id
 	}
 	return out
 }
 
-func transformResult(dbSubscription db.Subscription) interfaces.Subscription {
+func transformResult(s db.Subscription) interfaces.Subscription {
 	return interfaces.Subscription{
-		Id:             dbSubscription.Id,
-		CreatedAt:      dbSubscription.CreatedAt,
-		InstallationId: dbSubscription.InstallationId,
-		Topic:          dbSubscription.Topic,
-		IsActive:       dbSubscription.IsActive,
-		IsSilent:       dbSubscription.IsSilent,
-		HmacKey:        extractHmacKey(dbSubscription.HmacKeys),
+		Id:             s.Id,
+		CreatedAt:      s.CreatedAt,
+		InstallationId: s.InstallationId,
+		Topic:          s.Topic,
+		TopicID:        s.TopicID,
+		IsActive:       s.IsActive,
+		IsSilent:       s.IsSilent,
+		HmacKey:        extractHmacKey(s.HmacKeys),
 	}
 }
 

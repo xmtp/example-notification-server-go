@@ -18,6 +18,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/envelopes"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
 const STARTING_SLEEP_TIME = 100 * time.Millisecond
@@ -304,7 +305,7 @@ func (l *Listener) refreshClient() error {
 
 // isV3Topic returns true if topic is one we care about - group message or welcome message.
 func isV3Topic(topic string) bool {
-	if strings.HasPrefix(topic, "/xmtp/mls/1/g-") || strings.HasPrefix(topic, "/xmtp/mls/1/w-") {
+	if strings.HasPrefix(topic, topics.V3GroupPrefix) || strings.HasPrefix(topic, topics.V3WelcomeMessagePrefix) {
 		return true
 	}
 	return false

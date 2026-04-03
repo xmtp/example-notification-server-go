@@ -1,7 +1,6 @@
 package installations
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,11 +32,13 @@ func buildInstallation(installationId string, kind interfaces.DeliveryMechanismK
 }
 
 func Test_Register(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
+
 	res, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 
 	require.NoError(t, err)
@@ -54,15 +55,15 @@ func Test_Register(t *testing.T) {
 }
 
 func Test_RegisterDuplicate(t *testing.T) {
-	var err error
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	req := buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN)
-	_, err = svc.Register(ctx, req)
+	_, err := svc.Register(ctx, req)
 
 	require.NoError(t, err)
 
@@ -95,19 +96,19 @@ func Test_RegisterDuplicate(t *testing.T) {
 }
 
 func Test_RegisterUpdate(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	var err error
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	token1 := "token1"
 	token2 := "token2"
 
 	req1 := buildInstallation(INSTALLATION_ID, interfaces.APNS, token1)
 
-	_, err = svc.Register(ctx, req1)
+	_, err := svc.Register(ctx, req1)
 	require.NoError(t, err)
 
 	firstInstallation := new(database.Installation)
@@ -139,10 +140,12 @@ func Test_RegisterUpdate(t *testing.T) {
 }
 
 func Test_Delete(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
-	svc := createService(db)
+
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	createReq := buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN)
 	_, err := svc.Register(ctx, createReq)
@@ -163,10 +166,12 @@ func Test_Delete(t *testing.T) {
 }
 
 func Test_DeleteAndRegisterAgain(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
-	svc := createService(db)
+
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	createReq := buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN)
 	_, err := svc.Register(ctx, createReq)
@@ -190,10 +195,12 @@ func Test_DeleteAndRegisterAgain(t *testing.T) {
 }
 
 func Test_Get(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
-	svc := createService(db)
+
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	installationIds := []string{"install1", "install2", "install3"}
 	for _, installationId := range installationIds {
@@ -213,10 +220,12 @@ func Test_Get(t *testing.T) {
 }
 
 func Test_GetMultiple(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
-	svc := createService(db)
+
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	tokens := []string{"token1", "token2", "token3"}
 	for _, token := range tokens {
@@ -231,10 +240,12 @@ func Test_GetMultiple(t *testing.T) {
 }
 
 func Test_GetDeleted(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
-	svc := createService(db)
+
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 	require.NoError(t, err)

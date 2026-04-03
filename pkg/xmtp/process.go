@@ -7,6 +7,7 @@ import (
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/xmtpv4/envelopes"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
 func (l *Listener) processV3Envelope(env *v1.Envelope) error {
@@ -16,7 +17,13 @@ func (l *Listener) processV3Envelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env.TimestampNs))
+	// Get the topic identifier, without the prefix.
+	topicID, err := topics.GetTopicID(env.ContentTopic)
+	if err != nil {
+		return fmt.Errorf("could not get topic ID: %w", err)
+	}
+
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, topicID, getThirtyDayPeriodsFromEpoch(env.TimestampNs))
 	if err != nil {
 		return fmt.Errorf("could not get subscriptions: %w", err)
 	}

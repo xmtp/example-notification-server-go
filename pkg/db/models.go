@@ -35,6 +35,7 @@ type Subscription struct {
 	CreatedAt      time.Time               `bun:"created_at,notnull,default:current_timestamp"`
 	InstallationId string                  `bun:"installation_id,notnull"`
 	Topic          string                  `bun:"topic,notnull"`
+	TopicID        string                  `bun:"topic_id"`
 	IsActive       bool                    `bun:"is_active,notnull"`
 	IsSilent       bool                    `bun:"is_silent,notnull"`
 	HmacKeys       []*SubscriptionHmacKeys `bun:"rel:has-many,join:id=subscription_id"`

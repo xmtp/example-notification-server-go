@@ -28,17 +28,21 @@ func createDb(t *testing.T) *bun.DB {
 	return db
 }
 
-func CreateTestDb(t *testing.T) (*bun.DB, func()) {
+func CreateTestDb(t *testing.T) *bun.DB {
 	t.Helper()
 
 	ctx := context.Background()
 	db := createDb(t)
-	_ = database.Migrate(ctx, db)
 
-	return db, func() {
+	err := database.Migrate(ctx, db)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
 		_, _ = db.NewTruncateTable().Model((*database.Installation)(nil)).Cascade().Exec(ctx)
 		_, _ = db.NewTruncateTable().Model((*database.DeviceDeliveryMechanism)(nil)).Cascade().Exec(ctx)
 		_, _ = db.NewTruncateTable().Model((*database.Subscription)(nil)).Cascade().Exec(ctx)
 		_, _ = db.NewTruncateTable().Model((*database.SubscriptionHmacKeys)(nil)).Cascade().Exec(ctx)
-	}
+	})
+
+	return db
 }

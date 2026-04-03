@@ -1,7 +1,6 @@
 package subscriptions
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,11 +23,12 @@ func createService(db *bun.DB) interfaces.Subscriptions {
 }
 
 func Test_Subscribe(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
 	require.NoError(t, err)
@@ -42,15 +42,16 @@ func Test_Subscribe(t *testing.T) {
 
 	require.Equal(t, stored.InstallationId, INSTALLATION_ID)
 	require.Equal(t, stored.IsActive, true)
-	require.Equal(t, stored.Topic, TOPIC)
+	require.Equal(t, stored.TopicID, TOPIC)
 }
 
 func Test_SubscribeMultiple(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	topics := []string{"topic_1", "topic_2", "topic_3"}
 
@@ -79,11 +80,12 @@ func Test_SubscribeMultiple(t *testing.T) {
 }
 
 func Test_Unsubscribe(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
 	require.NoError(t, err)
@@ -102,11 +104,12 @@ func Test_Unsubscribe(t *testing.T) {
 }
 
 func Test_UnsubscribeResubscribe(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	// Subscribe
 	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
@@ -134,16 +137,17 @@ func Test_UnsubscribeResubscribe(t *testing.T) {
 }
 
 func Test_SubscribeWithMetadata(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	key := []byte("key")
 
 	err := svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		TopicID:  TOPIC,
 		IsSilent: true,
 		HmacKeys: []interfaces.HmacKey{{
 			ThirtyDayPeriodsSinceEpoch: 1,
@@ -164,14 +168,15 @@ func Test_SubscribeWithMetadata(t *testing.T) {
 }
 
 func Test_UpdateIsSilent(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	err := svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		TopicID:  TOPIC,
 		IsSilent: false,
 	}})
 	require.NoError(t, err)
@@ -184,7 +189,7 @@ func Test_UpdateIsSilent(t *testing.T) {
 	require.False(t, sub.IsSilent)
 
 	err = svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		TopicID:  TOPIC,
 		IsSilent: true,
 	}})
 	require.NoError(t, err)
@@ -198,17 +203,18 @@ func Test_UpdateIsSilent(t *testing.T) {
 }
 
 func Test_UpdateHmacKeys(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	key1 := []byte("key")
 	key2 := []byte("key2")
 
 	err := svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		TopicID:  TOPIC,
 		IsSilent: true,
 		HmacKeys: []interfaces.HmacKey{{
 			ThirtyDayPeriodsSinceEpoch: 1,
@@ -217,7 +223,7 @@ func Test_UpdateHmacKeys(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	err = svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		TopicID:  TOPIC,
 		IsSilent: true,
 		HmacKeys: []interfaces.HmacKey{{
 			ThirtyDayPeriodsSinceEpoch: 1,
@@ -235,11 +241,12 @@ func Test_UpdateHmacKeys(t *testing.T) {
 }
 
 func Test_GetSubscriptions(t *testing.T) {
-	ctx := context.Background()
-	db, cleanup := test.CreateTestDb(t)
-	defer cleanup()
 
-	svc := createService(db)
+	var (
+		ctx = t.Context()
+		db  = test.CreateTestDb(t)
+		svc = createService(db)
+	)
 
 	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
 	require.NoError(t, err)

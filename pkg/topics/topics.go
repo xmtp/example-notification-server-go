@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -27,4 +28,26 @@ func GetMessageType(topic string) MessageType {
 	}
 
 	return Unknown
+}
+
+func GetTopicID(topic string) (string, error) {
+
+	// We have a plain topic ID - just keep it as is.
+	if !strings.HasPrefix(topic, V3CommonPrefix) {
+		return topic, nil
+	}
+
+	// Old group message.
+	groupTopic, ok := strings.CutPrefix(topic, V3GroupPrefix)
+	if ok {
+		return groupTopic, nil
+	}
+
+	// Old welcome message.
+	welcomeTopic, ok := strings.CutPrefix(topic, V3WelcomeMessagePrefix)
+	if ok {
+		return welcomeTopic, nil
+	}
+
+	return "", errors.New("unsupported topic")
 }

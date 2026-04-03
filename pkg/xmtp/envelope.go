@@ -63,10 +63,10 @@ func parseV4Envelope(env *envelopes.OriginatorEnvelope) (*messageV4Info, bool, e
 	switch topic.Kind() {
 
 	case topics.TopicKindWelcomeMessagesV1:
-		return parseV4WelcomeMessage(clientEnv.GetWelcomeMessage(), topic.String(), unsignedEnv.GetOriginatorNs())
+		return parseV4WelcomeMessage(clientEnv.GetWelcomeMessage(), topic.HexIdentifier(), unsignedEnv.GetOriginatorNs())
 
 	case topics.TopicKindGroupMessagesV1:
-		return parseV4GroupMessage(clientEnv.GetGroupMessage(), topic.String(), unsignedEnv.GetOriginatorNs())
+		return parseV4GroupMessage(clientEnv.GetGroupMessage(), topic.HexIdentifier(), unsignedEnv.GetOriginatorNs())
 
 	default:
 		return nil, false, nil

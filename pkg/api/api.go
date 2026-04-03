@@ -12,6 +12,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -116,7 +117,21 @@ func (s *ApiServer) Subscribe(
 ) (*connect.Response[emptypb.Empty], error) {
 	s.logger.Info("Subscribe", zap.Any("req", req))
 
-	err := s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
+	topicIDs := make([]string, len(req.Msg.GetTopics()))
+
+	for i, topic := range req.Msg.GetTopics() {
+		id, err := topics.GetTopicID(topic)
+		if err != nil {
+			return nil, connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf("invalid topic specified at pos %v (%v): %w", i, topic, err),
+			)
+		}
+
+		topicIDs[i] = id
+	}
+
+	err := s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, topicIDs)
 	if err != nil {
 		s.logger.Error("error subscribing", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -131,7 +146,19 @@ func (s *ApiServer) Unsubscribe(
 ) (*connect.Response[emptypb.Empty], error) {
 	s.logger.Info("Unsubscribe", zap.Any("req", req))
 
-	err := s.subscriptions.Unsubscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
+	topicIDs := make([]string, len(req.Msg.GetTopics()))
+	for i, topic := range req.Msg.GetTopics() {
+		id, err := topics.GetTopicID(topic)
+		if err != nil {
+			return nil, connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf("invalid topics found: %w", err))
+		}
+
+		topicIDs[i] = id
+	}
+
+	err := s.subscriptions.Unsubscribe(ctx, req.Msg.InstallationId, topicIDs)
 	if err != nil {
 		s.logger.Error("error unsubscribing", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -143,8 +170,15 @@ func (s *ApiServer) Unsubscribe(
 func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
 	log := s.logger.With(zap.String("method", "subscribeWithMetadata"))
 	log.Info("Subscribing")
-	inputs := buildSubscriptionInputs(req.Msg.Subscriptions)
-	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, inputs)
+
+	inputs, err := buildSubscriptionInputs(req.Msg.Subscriptions)
+	if err != nil {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("invalid topics found: %w", err))
+	}
+
+	err = s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, inputs)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -152,16 +186,23 @@ func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Requ
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
-func buildSubscriptionInputs(subs []*proto.Subscription) []interfaces.SubscriptionInput {
+func buildSubscriptionInputs(subs []*proto.Subscription) ([]interfaces.SubscriptionInput, error) {
 	out := make([]interfaces.SubscriptionInput, len(subs))
-	for idx, sub := range subs {
-		out[idx] = interfaces.SubscriptionInput{
-			Topic:    sub.Topic,
+	for i, sub := range subs {
+
+		topicID, err := topics.GetTopicID(sub.GetTopic())
+		if err != nil {
+			return nil, fmt.Errorf("invalid topic specified (topic: %v): %w", sub.GetTopic(), err)
+		}
+
+		out[i] = interfaces.SubscriptionInput{
+			TopicID:  topicID,
 			IsSilent: sub.IsSilent,
 			HmacKeys: buildHmacKeys(sub.HmacKeys),
 		}
 	}
-	return out
+
+	return out, nil
 }
 
 func buildHmacKeys(protoKeys []*proto.Subscription_HmacKey) []interfaces.HmacKey {
