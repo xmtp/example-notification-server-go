@@ -32,7 +32,6 @@ func buildInstallation(installationId string, kind interfaces.DeliveryMechanismK
 }
 
 func Test_Register(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -55,7 +54,6 @@ func Test_Register(t *testing.T) {
 }
 
 func Test_RegisterDuplicate(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -96,7 +94,6 @@ func Test_RegisterDuplicate(t *testing.T) {
 }
 
 func Test_RegisterUpdate(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -140,7 +137,6 @@ func Test_RegisterUpdate(t *testing.T) {
 }
 
 func Test_Delete(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -166,7 +162,6 @@ func Test_Delete(t *testing.T) {
 }
 
 func Test_DeleteAndRegisterAgain(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -195,7 +190,6 @@ func Test_DeleteAndRegisterAgain(t *testing.T) {
 }
 
 func Test_Get(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -220,7 +214,6 @@ func Test_Get(t *testing.T) {
 }
 
 func Test_GetMultiple(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -240,7 +233,6 @@ func Test_GetMultiple(t *testing.T) {
 }
 
 func Test_GetDeleted(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)

@@ -5,19 +5,31 @@ on:
       - main
   pull_request:
 jobs:
-  buf:
+  validate:
     runs-on: ubuntu-latest
     steps:
-      # Run `git checkout`
-      - uses: actions/checkout@v2
-      # Install the `buf` CLI
+      - uses: actions/checkout@v4
       - uses: bufbuild/buf-setup-action@v1
         with:
           github_token: ${{ github.token }}
-          buf_api_token: ${{ secrets.BUF_TOKEN }}
-      # Push only the Input in `proto` to the BSR
+      - uses: bufbuild/buf-lint-action@v1
+        with:
+          input: proto
+      - uses: bufbuild/buf-breaking-action@v1
+        with:
+          input: proto
+          against: "https://github.com/xmtp/example-notification-server-go.git#branch=main,subdir=proto"
+  push:
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
       - uses: bufbuild/buf-push-action@v1
+        if: ${{ secrets.BUF_TOKEN != '' }}
         with:
           input: proto
           buf_token: ${{ secrets.BUF_TOKEN }}
-          draft: ${{ github.ref_name != 'main'}}

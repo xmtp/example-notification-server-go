@@ -23,7 +23,6 @@ func createService(db *bun.DB) interfaces.Subscriptions {
 }
 
 func Test_Subscribe(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -46,7 +45,6 @@ func Test_Subscribe(t *testing.T) {
 }
 
 func Test_SubscribeMultiple(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -80,7 +78,6 @@ func Test_SubscribeMultiple(t *testing.T) {
 }
 
 func Test_Unsubscribe(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -104,7 +101,6 @@ func Test_Unsubscribe(t *testing.T) {
 }
 
 func Test_UnsubscribeResubscribe(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -137,7 +133,6 @@ func Test_UnsubscribeResubscribe(t *testing.T) {
 }
 
 func Test_SubscribeWithMetadata(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -168,7 +163,6 @@ func Test_SubscribeWithMetadata(t *testing.T) {
 }
 
 func Test_UpdateIsSilent(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -203,7 +197,6 @@ func Test_UpdateIsSilent(t *testing.T) {
 }
 
 func Test_UpdateHmacKeys(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)
@@ -241,7 +234,6 @@ func Test_UpdateHmacKeys(t *testing.T) {
 }
 
 func Test_GetSubscriptions(t *testing.T) {
-
 	var (
 		ctx = t.Context()
 		db  = test.CreateTestDb(t)

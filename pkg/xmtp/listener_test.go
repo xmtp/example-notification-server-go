@@ -28,7 +28,6 @@ const (
 )
 
 func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*Listener, func()) {
-
 	var (
 		logger      = logging.CreateLogger("console", "info")
 		ctx, cancel = context.WithCancel(t.Context())

@@ -1,0 +1,36 @@
+{
+  "name": "Go Dev Container",
+  "build": {
+    "context": "..",
+    "dockerfile": "../dev/docker/devcontainer.Dockerfile"
+  },
+  "remoteEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+    "HOST_DOCKER_DEV_FOLDER": "${localWorkspaceFolder}/dev/docker"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "go.gopath": "/go",
+        "go.useLanguageServer": true
+      },
+      "extensions": [
+        "golang.go",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "postCreateCommand": "go mod tidy",
+  "forwardPorts": [],
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "installZsh": true
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    }
+  }
+}
