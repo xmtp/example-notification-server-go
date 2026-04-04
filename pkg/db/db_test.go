@@ -23,6 +23,7 @@ func TestMigrateFreshDatabase(t *testing.T) {
 	assertRelationExists(t, db, "subscriptions")
 	assertRelationExists(t, db, "subscription_hmac_keys")
 	assertRelationExists(t, db, "subscriptions_installation_id_topic_idx")
+	assertRelationExists(t, db, "device_delivery_mechanisms_latest_idx")
 }
 
 func TestMigrateExistingLegacySchema(t *testing.T) {
@@ -74,7 +75,7 @@ func TestMigrateExistingLegacySchema(t *testing.T) {
 	var version int
 	err := db.QueryRowContext(context.Background(), `SELECT version FROM schema_migrations`).Scan(&version)
 	require.NoError(t, err)
-	require.Equal(t, 2, version)
+	require.Equal(t, 3, version)
 }
 
 func createRawDB(t *testing.T) *sql.DB {
