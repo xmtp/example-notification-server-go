@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	message_apiv1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	message_apiv1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 )
 
 func Test_get_thirty_day_periods(t *testing.T) {

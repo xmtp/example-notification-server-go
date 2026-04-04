@@ -1,7 +1,7 @@
 package xmtp
 
 import (
-	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 )
 
 func getThirtyDayPeriodsFromEpoch(env *v1.Envelope) int {

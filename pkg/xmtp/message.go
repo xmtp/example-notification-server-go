@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
-	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
-	mlsV1 "github.com/xmtp/example-notification-server-go/pkg/proto/mls/api/v1"
+	messageApi "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
+	mlsV1 "github.com/xmtp/xmtpd/pkg/proto/mls/api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 	"google.golang.org/protobuf/proto"

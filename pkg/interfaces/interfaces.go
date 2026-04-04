@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"time"
 
-	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"github.com/xmtp/xmtpd/pkg/topic"
 )

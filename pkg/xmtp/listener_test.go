@@ -12,7 +12,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/installations"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
 	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
