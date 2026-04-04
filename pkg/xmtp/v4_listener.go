@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	notificationApi "github.com/xmtp/xmtpd/pkg/proto/xmtpv4/message_api"
 	"github.com/xmtp/xmtpd/pkg/topic"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,6 +27,7 @@ type V4Listener struct {
 	ctx             context.Context
 	cancelFunc      func()
 	v4Client        notificationApi.NotificationApiClient
+	v4Conn          *grpc.ClientConn
 	opts            options.XmtpOptions
 	envelopeChannel chan *envelopesProto.OriginatorEnvelope
 	installations   interfaces.Installations
@@ -43,7 +46,7 @@ func NewV4Listener(
 	clientVersion string,
 	appVersion string,
 ) (*V4Listener, error) {
-	client, err := NewV4Client(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
+	client, conn, err := NewV4Client(ctx, opts.GrpcAddress, opts.UseTls, clientVersion, appVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +59,7 @@ func NewV4Listener(
 		cancelFunc:      cancel,
 		logger:          namedLogger,
 		v4Client:        client,
+		v4Conn:          conn,
 		opts:            opts,
 		envelopeChannel: make(chan *envelopesProto.OriginatorEnvelope, 100),
 		installations:   installations,
@@ -83,11 +87,18 @@ func (l *V4Listener) startEnvelopeListener() {
 	l.logger.Info("starting V4 envelope listener")
 	sleepTime := STARTING_SLEEP_TIME
 	for {
+		select {
+		case <-l.ctx.Done():
+			close(l.envelopeChannel)
+			return
+		default:
+		}
+
 		stream, err := l.v4Client.SubscribeAllEnvelopes(l.ctx, &notificationApi.SubscribeAllEnvelopesRequest{})
 		if err != nil {
 			l.logger.Error("error connecting to V4 stream", zap.Error(err))
 			time.Sleep(sleepTime)
-			sleepTime = sleepTime * 2
+			sleepTime = cappedBackoff(sleepTime)
 			if err = l.refreshV4Client(); err != nil {
 				l.logger.Error("error refreshing V4 client", zap.Error(err))
 			}
@@ -108,9 +119,8 @@ func (l *V4Listener) startEnvelopeListener() {
 
 				if err != nil {
 					l.logger.Error("error reading from V4 stream", zap.Error(err))
-					// Wait to avoid hammering the API and getting rate limited
 					time.Sleep(sleepTime)
-					sleepTime = sleepTime * 2
+					sleepTime = cappedBackoff(sleepTime)
 					if err = l.refreshV4Client(); err != nil {
 						l.logger.Error("error refreshing V4 client", zap.Error(err))
 					}
@@ -118,7 +128,6 @@ func (l *V4Listener) startEnvelopeListener() {
 				}
 
 				if resp != nil {
-					// Reset the sleep time on first successful message
 					sleepTime = STARTING_SLEEP_TIME
 					for _, env := range resp.GetEnvelopes() {
 						l.envelopeChannel <- env
@@ -366,19 +375,25 @@ func logV4ConversionIssue(logger *zap.Logger, clientEnvProto *envelopesProto.Cli
 }
 
 func buildV4IdempotencyKey(env *envelopesProto.OriginatorEnvelope) string {
-	h := sha1.New()
 	b, err := proto.Marshal(env)
-	if err == nil {
-		h.Write(b)
+	if err != nil {
+		// Fall back to a timestamp-based key if marshaling fails
+		return hex.EncodeToString([]byte(fmt.Sprintf("v4-%d", time.Now().UnixNano())))
 	}
+	h := sha1.New()
+	h.Write(b)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (l *V4Listener) refreshV4Client() error {
-	client, err := NewV4Client(l.ctx, l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
+	if l.v4Conn != nil {
+		_ = l.v4Conn.Close()
+	}
+	client, conn, err := NewV4Client(l.ctx, l.opts.GrpcAddress, l.opts.UseTls, l.clientVersion, l.appVersion)
 	if err != nil {
 		return err
 	}
 	l.v4Client = client
+	l.v4Conn = conn
 	return nil
 }

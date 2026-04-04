@@ -86,7 +86,7 @@ func (l *Listener) startMessageListener() {
 		if err != nil {
 			l.logger.Error("error connecting to stream", zap.Error(err))
 			time.Sleep(sleepTime)
-			sleepTime = sleepTime * 2
+			sleepTime = cappedBackoff(sleepTime)
 			if err = l.refreshClient(); err != nil {
 				l.logger.Error("error refreshing client", zap.Error(err))
 			}
@@ -109,7 +109,7 @@ func (l *Listener) startMessageListener() {
 					l.logger.Error("error reading from stream", zap.Error(err))
 					// Wait 100ms to avoid hammering the API and getting rate limited
 					time.Sleep(sleepTime)
-					sleepTime = sleepTime * 2
+					sleepTime = cappedBackoff(sleepTime)
 					if err = l.refreshClient(); err != nil {
 						l.logger.Error("error refreshing client", zap.Error(err))
 					}

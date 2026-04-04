@@ -51,11 +51,11 @@ func NewClient(ctx context.Context, apiAddress string, useTls bool, clientVersio
 	return v1.NewMessageApiClient(conn), nil
 }
 
-func NewV4Client(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (notificationApi.NotificationApiClient, error) {
+func NewV4Client(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (notificationApi.NotificationApiClient, *grpc.ClientConn, error) {
 	conn, err := newConn(apiAddress, useTls, clientVersion, appVersion)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return notificationApi.NewNotificationApiClient(conn), nil
+	return notificationApi.NewNotificationApiClient(conn), conn, nil
 }

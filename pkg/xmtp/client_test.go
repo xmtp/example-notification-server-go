@@ -16,9 +16,11 @@ func TestXmtpdNotificationApiImportable(t *testing.T) {
 }
 
 func TestNewV4Client_ReturnsClient(t *testing.T) {
-	client, err := NewV4Client(context.Background(), "localhost:0", false, "test", "test")
+	client, conn, err := NewV4Client(context.Background(), "localhost:0", false, "test", "test")
 	require.NoError(t, err)
 	require.NotNil(t, client)
+	require.NotNil(t, conn)
+	_ = conn.Close()
 }
 
 func TestXmtpdEnvelopeTypesImportable(t *testing.T) {

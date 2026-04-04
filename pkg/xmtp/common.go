@@ -9,7 +9,17 @@ import (
 )
 
 const STARTING_SLEEP_TIME = 100 * time.Millisecond
+const MAX_SLEEP_TIME = 30 * time.Second
 const DELIVERY_TIMEOUT = 15 * time.Second
+
+// cappedBackoff doubles sleepTime up to MAX_SLEEP_TIME.
+func cappedBackoff(sleepTime time.Duration) time.Duration {
+	sleepTime *= 2
+	if sleepTime > MAX_SLEEP_TIME {
+		sleepTime = MAX_SLEEP_TIME
+	}
+	return sleepTime
+}
 
 // NotificationListener is the interface implemented by both V3 and V4 listeners
 type NotificationListener interface {
