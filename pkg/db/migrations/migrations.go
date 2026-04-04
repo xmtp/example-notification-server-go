@@ -56,6 +56,19 @@ func LatestVersion() (int, error) {
 // deployments keep their existing application tables while still allowing future
 // golang-migrate-only migrations to run normally after upgrade.
 func Migrate(ctx context.Context, db *sql.DB) error {
+	return withMigrator(ctx, db, func(m *migrate.Migrate) error {
+		return m.Up()
+	})
+}
+
+// MigrateUpTo runs migrations up to (and including) the given version.
+func MigrateUpTo(ctx context.Context, db *sql.DB, version uint) error {
+	return withMigrator(ctx, db, func(m *migrate.Migrate) error {
+		return m.Migrate(version)
+	})
+}
+
+func withMigrator(ctx context.Context, db *sql.DB, fn func(*migrate.Migrate) error) error {
 	if err := reconcileExistingBunSchema(ctx, db); err != nil {
 		return err
 	}
@@ -92,7 +105,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 		_, _ = migrator.Close()
 	}()
 
-	if err := migrator.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+	if err := fn(migrator); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 

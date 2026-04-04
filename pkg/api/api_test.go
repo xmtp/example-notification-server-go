@@ -18,6 +18,8 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	protoconnect "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
+	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
+	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 )
 
 const INSTALLATION_ID = "install1"
@@ -161,7 +163,7 @@ func Test_DeleteInstallation(t *testing.T) {
 
 func Test_Subscribe(t *testing.T) {
 	ctx := setupTest(t)
-	topics := []string{"topic1"}
+	topics := []string{"/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto"}
 
 	ctx.subscriptionsMock.On(
 		"Subscribe",
@@ -184,7 +186,7 @@ func Test_Subscribe(t *testing.T) {
 		"Subscribe",
 		mock.Anything,
 		INSTALLATION_ID,
-		topics,
+		mock.Anything,
 	)
 }
 
@@ -202,7 +204,7 @@ func Test_SubscribeError(t *testing.T) {
 		ctx.ctx,
 		connect.NewRequest(&proto.SubscribeRequest{
 			InstallationId: INSTALLATION_ID,
-			Topics:         []string{"topic1"},
+			Topics:         []string{"/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto"},
 		}),
 	)
 
@@ -212,7 +214,7 @@ func Test_SubscribeError(t *testing.T) {
 
 func Test_Unsubscribe(t *testing.T) {
 	ctx := setupTest(t)
-	topics := []string{"topic1"}
+	topics := []string{"/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto"}
 
 	ctx.subscriptionsMock.On(
 		"Unsubscribe",
@@ -235,6 +237,147 @@ func Test_Unsubscribe(t *testing.T) {
 		"Unsubscribe",
 		mock.Anything,
 		INSTALLATION_ID,
-		topics,
+		mock.Anything,
 	)
+}
+
+func Test_Subscribe_StringTopics(t *testing.T) {
+	ctx := setupTest(t)
+
+	topicStr := "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto"
+	ctx.subscriptionsMock.On("Subscribe", mock.Anything, INSTALLATION_ID, mock.Anything).Return(nil)
+	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
+		InstallationId: INSTALLATION_ID,
+		Topics:         []string{topicStr},
+	}))
+	require.NoError(t, err)
+	ctx.subscriptionsMock.AssertCalled(t, "Subscribe", mock.Anything, INSTALLATION_ID, mock.Anything)
+}
+
+func Test_Subscribe_BytesTopics(t *testing.T) {
+	ctx := setupTest(t)
+
+	parsed, _ := topicutil.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
+	ctx.subscriptionsMock.On("Subscribe", mock.Anything, INSTALLATION_ID, mock.Anything).Return(nil)
+	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
+		InstallationId: INSTALLATION_ID,
+		TopicsBytes:    [][]byte{parsed.Bytes()},
+	}))
+	require.NoError(t, err)
+}
+
+func Test_Subscribe_InvalidStringTopic(t *testing.T) {
+	ctx := setupTest(t)
+
+	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
+		InstallationId: INSTALLATION_ID,
+		Topics:         []string{"invalid-topic"},
+	}))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid")
+}
+
+func Test_Subscribe_InvalidBytesTopics(t *testing.T) {
+	ctx := setupTest(t)
+
+	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
+		InstallationId: INSTALLATION_ID,
+		TopicsBytes:    [][]byte{{0xFF}}, // Too short, invalid kind
+	}))
+	require.Error(t, err)
+}
+
+func Test_Subscribe_MergedTopics(t *testing.T) {
+	ctx := setupTest(t)
+
+	parsed, _ := topicutil.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
+	ctx.subscriptionsMock.On("Subscribe", mock.Anything, INSTALLATION_ID, mock.MatchedBy(func(topics []*topicpkg.Topic) bool {
+		return len(topics) == 1 // deduplicated
+	})).Return(nil)
+	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
+		InstallationId: INSTALLATION_ID,
+		Topics:         []string{"/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto"},
+		TopicsBytes:    [][]byte{parsed.Bytes()},
+	}))
+	require.NoError(t, err)
+}
+
+func Test_Subscribe_EmptyTopics(t *testing.T) {
+	ctx := setupTest(t)
+
+	ctx.subscriptionsMock.On("Subscribe", mock.Anything, INSTALLATION_ID, mock.Anything).Return(nil)
+	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
+		InstallationId: INSTALLATION_ID,
+	}))
+	require.NoError(t, err)
+}
+
+func Test_Unsubscribe_BytesTopics(t *testing.T) {
+	ctx := setupTest(t)
+
+	parsed, _ := topicutil.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
+	ctx.subscriptionsMock.On("Unsubscribe", mock.Anything, INSTALLATION_ID, mock.MatchedBy(func(topics []*topicpkg.Topic) bool {
+		return len(topics) == 1
+	})).Return(nil)
+	_, err := ctx.client.Unsubscribe(ctx.ctx, connect.NewRequest(&proto.UnsubscribeRequest{
+		InstallationId: INSTALLATION_ID,
+		TopicsBytes:    [][]byte{parsed.Bytes()},
+	}))
+	require.NoError(t, err)
+}
+
+func Test_SubscribeWithMetadata_StringTopic(t *testing.T) {
+	ctx := setupTest(t)
+
+	ctx.subscriptionsMock.On("SubscribeWithMetadata", mock.Anything, INSTALLATION_ID, mock.Anything).Return(nil)
+	_, err := ctx.client.SubscribeWithMetadata(ctx.ctx, connect.NewRequest(&proto.SubscribeWithMetadataRequest{
+		InstallationId: INSTALLATION_ID,
+		Subscriptions: []*proto.Subscription{{
+			Topic:    "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto",
+			IsSilent: true,
+		}},
+	}))
+	require.NoError(t, err)
+	ctx.subscriptionsMock.AssertCalled(t, "SubscribeWithMetadata", mock.Anything, INSTALLATION_ID, mock.Anything)
+}
+
+func Test_SubscribeWithMetadata_BytesTakesPrecedence(t *testing.T) {
+	ctx := setupTest(t)
+
+	parsed, _ := topicutil.ParseV3Topic("/xmtp/mls/1/w-abcdef0123456789/proto")
+	ctx.subscriptionsMock.On("SubscribeWithMetadata", mock.Anything, INSTALLATION_ID, mock.MatchedBy(func(inputs []interfaces.SubscriptionInput) bool {
+		return len(inputs) == 1 && inputs[0].Topic.Kind() == topicpkg.TopicKindWelcomeMessagesV1
+	})).Return(nil)
+	_, err := ctx.client.SubscribeWithMetadata(ctx.ctx, connect.NewRequest(&proto.SubscribeWithMetadataRequest{
+		InstallationId: INSTALLATION_ID,
+		Subscriptions: []*proto.Subscription{{
+			Topic:      "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto",
+			TopicBytes: parsed.Bytes(),
+		}},
+	}))
+	require.NoError(t, err)
+}
+
+func Test_SubscribeWithMetadata_InvalidTopic(t *testing.T) {
+	ctx := setupTest(t)
+
+	_, err := ctx.client.SubscribeWithMetadata(ctx.ctx, connect.NewRequest(&proto.SubscribeWithMetadataRequest{
+		InstallationId: INSTALLATION_ID,
+		Subscriptions: []*proto.Subscription{{
+			Topic: "not-a-valid-topic",
+		}},
+	}))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid")
+}
+
+func Test_SubscribeWithMetadata_EmptyTopic(t *testing.T) {
+	ctx := setupTest(t)
+
+	_, err := ctx.client.SubscribeWithMetadata(ctx.ctx, connect.NewRequest(&proto.SubscribeWithMetadataRequest{
+		InstallationId: INSTALLATION_ID,
+		Subscriptions:  []*proto.Subscription{{}},
+	}))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no topic")
 }

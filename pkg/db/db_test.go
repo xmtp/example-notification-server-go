@@ -80,6 +80,53 @@ func TestMigrateExistingLegacySchema(t *testing.T) {
 	require.Equal(t, latest, version)
 }
 
+func TestMigration_BinaryTopics_DataConversion(t *testing.T) {
+	db := testdb.CreateEmptyTestDb(t)
+
+	// Run migrations up through 00003 (db_perf_improvements, pre-binary schema)
+	require.NoError(t, database.MigrateUpTo(t.Context(), db, 3))
+
+	// Seed rows: conforming group, conforming welcome, non-conforming, duplicate (case diff)
+	_, err := db.ExecContext(t.Context(), `
+		INSERT INTO installations (id) VALUES ('inst1');
+		INSERT INTO subscriptions (installation_id, topic, is_active) VALUES
+			('inst1', '/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto', TRUE),
+			('inst1', '/xmtp/mls/1/w-f3ac64eba2272334/proto', TRUE),
+			('inst1', '/xmtp/mls/1/w-test_installation/proto', TRUE),
+			('inst1', '/xmtp/mls/1/g-24CE39D660600B3A98ADFF3075B6D1F4/proto', TRUE);
+	`)
+	require.NoError(t, err)
+
+	// Run migration 00004 (binary conversion)
+	require.NoError(t, database.MigrateUpTo(t.Context(), db, 4))
+
+	// Verify: group topic converted correctly (first byte 0x00 = TopicKindGroupMessagesV1)
+	var topicBytes []byte
+	err = db.QueryRowContext(t.Context(),
+		"SELECT topic FROM subscriptions WHERE installation_id = 'inst1' AND get_byte(topic, 0) = 0 LIMIT 1",
+	).Scan(&topicBytes)
+	require.NoError(t, err)
+	require.Equal(t, byte(0x00), topicBytes[0]) // TopicKindGroupMessagesV1
+
+	// Verify: non-conforming row deleted, duplicate collapsed — 2 rows remain
+	var count int
+	err = db.QueryRowContext(t.Context(),
+		"SELECT COUNT(*) FROM subscriptions WHERE installation_id = 'inst1'",
+	).Scan(&count)
+	require.NoError(t, err)
+	require.Equal(t, 2, count)
+
+	// Run migration 00005 (drop legacy column)
+	require.NoError(t, database.MigrateUpTo(t.Context(), db, 5))
+
+	// Verify topic_legacy column does not exist
+	err = db.QueryRowContext(t.Context(),
+		"SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'subscriptions' AND column_name = 'topic_legacy'",
+	).Scan(&count)
+	require.NoError(t, err)
+	require.Equal(t, 0, count)
+}
+
 func createRawDB(t *testing.T) *sql.DB {
 	t.Helper()
 

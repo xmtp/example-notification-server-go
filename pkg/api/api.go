@@ -13,6 +13,8 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
+	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
+	"github.com/xmtp/xmtpd/pkg/topic"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -142,7 +144,12 @@ func (s *ApiServer) Subscribe(
 ) (*connect.Response[emptypb.Empty], error) {
 	s.logger.Info("Subscribe", zap.Any("req", req))
 
-	err := s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
+	topics, err := normalizeTopics(req.Msg.Topics, req.Msg.TopicsBytes)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	err = s.subscriptions.Subscribe(ctx, req.Msg.InstallationId, topics)
 	if err != nil {
 		s.logger.Error("error subscribing", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -157,7 +164,12 @@ func (s *ApiServer) Unsubscribe(
 ) (*connect.Response[emptypb.Empty], error) {
 	s.logger.Info("Unsubscribe", zap.Any("req", req))
 
-	err := s.subscriptions.Unsubscribe(ctx, req.Msg.InstallationId, req.Msg.Topics)
+	topics, err := normalizeTopics(req.Msg.Topics, req.Msg.TopicsBytes)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	err = s.subscriptions.Unsubscribe(ctx, req.Msg.InstallationId, topics)
 	if err != nil {
 		s.logger.Error("error unsubscribing", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -169,8 +181,11 @@ func (s *ApiServer) Unsubscribe(
 func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Request[proto.SubscribeWithMetadataRequest]) (*connect.Response[emptypb.Empty], error) {
 	log := s.logger.With(zap.String("method", "subscribeWithMetadata"))
 	log.Info("Subscribing")
-	inputs := buildSubscriptionInputs(req.Msg.Subscriptions)
-	err := s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, inputs)
+	inputs, err := normalizeSubscriptionInputs(req.Msg.Subscriptions)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	err = s.subscriptions.SubscribeWithMetadata(ctx, req.Msg.InstallationId, inputs)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -178,16 +193,62 @@ func (s *ApiServer) SubscribeWithMetadata(ctx context.Context, req *connect.Requ
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
-func buildSubscriptionInputs(subs []*proto.Subscription) []interfaces.SubscriptionInput {
+func normalizeTopics(stringTopics []string, bytesTopics [][]byte) ([]*topic.Topic, error) {
+	seen := make(map[string]struct{})
+	var result []*topic.Topic
+
+	for _, s := range stringTopics {
+		t, err := topicutil.ParseV3Topic(s)
+		if err != nil {
+			return nil, fmt.Errorf("invalid topic %q: %w", s, err)
+		}
+		key := string(t.Bytes())
+		if _, ok := seen[key]; !ok {
+			seen[key] = struct{}{}
+			result = append(result, t)
+		}
+	}
+
+	for _, b := range bytesTopics {
+		t, err := topic.ParseTopic(b)
+		if err != nil {
+			return nil, fmt.Errorf("invalid binary topic: %w", err)
+		}
+		key := string(t.Bytes())
+		if _, ok := seen[key]; !ok {
+			seen[key] = struct{}{}
+			result = append(result, t)
+		}
+	}
+
+	return result, nil
+}
+
+func normalizeSubscriptionInputs(subs []*proto.Subscription) ([]interfaces.SubscriptionInput, error) {
 	out := make([]interfaces.SubscriptionInput, len(subs))
 	for idx, sub := range subs {
+		var t *topic.Topic
+		var err error
+		if len(sub.TopicBytes) > 0 {
+			t, err = topic.ParseTopic(sub.TopicBytes)
+			if err != nil {
+				return nil, fmt.Errorf("invalid binary topic at index %d: %w", idx, err)
+			}
+		} else if sub.Topic != "" {
+			t, err = topicutil.ParseV3Topic(sub.Topic)
+			if err != nil {
+				return nil, fmt.Errorf("invalid topic %q at index %d: %w", sub.Topic, idx, err)
+			}
+		} else {
+			return nil, fmt.Errorf("subscription at index %d has no topic", idx)
+		}
 		out[idx] = interfaces.SubscriptionInput{
-			Topic:    sub.Topic,
+			Topic:    t,
 			IsSilent: sub.IsSilent,
 			HmacKeys: buildHmacKeys(sub.HmacKeys),
 		}
 	}
-	return out
+	return out, nil
 }
 
 func buildHmacKeys(protoKeys []*proto.Subscription_HmacKey) []interfaces.HmacKey {

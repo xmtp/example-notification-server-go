@@ -6,37 +6,36 @@ package queries
 
 import (
 	"database/sql"
-	"time"
 )
 
 type DeviceDeliveryMechanism struct {
-	ID             int64
+	ID             int32
 	InstallationID string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
 	Kind           string
 	Token          string
 }
 
 type Installation struct {
 	ID        string
-	CreatedAt time.Time
+	CreatedAt sql.NullTime
 	DeletedAt sql.NullTime
 }
 
 type Subscription struct {
-	ID             int64
+	ID             int32
 	InstallationID string
-	CreatedAt      time.Time
-	Topic          string
-	IsActive       bool
-	IsSilent       bool
+	CreatedAt      sql.NullTime
+	Topic          []byte
+	IsActive       sql.NullBool
+	IsSilent       sql.NullBool
 }
 
 type SubscriptionHmacKey struct {
-	SubscriptionID             int64
+	SubscriptionID             int32
 	ThirtyDayPeriodsSinceEpoch int32
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
+	CreatedAt                  sql.NullTime
+	UpdatedAt                  sql.NullTime
 	Key                        []byte
 }

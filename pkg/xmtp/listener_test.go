@@ -15,13 +15,14 @@ import (
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
 	"github.com/xmtp/example-notification-server-go/pkg/testutils"
+	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
 const (
 	XMTP_ADDRESS      = "localhost:25556"
 	INSTALLATION_ID   = "test_installation"
 	INSTALLATION_ID_2 = "test_installation_2"
-	TEST_TOPIC        = "/xmtp/mls/1/w-test_installation/proto"
+	TEST_TOPIC        = "/xmtp/mls/1/w-abcdef0123456789/proto"
 	DELIVERY_TOKEN    = "test_token"
 )
 
@@ -53,7 +54,7 @@ func injectMessage(listener *Listener, topic string, message []byte) {
 	}
 }
 
-func subscribeToTopic(t *testing.T, l *Listener, installationId, topic string, isSilent bool) {
+func subscribeToTopic(t *testing.T, l *Listener, installationId, topicStr string, isSilent bool) {
 	_, err := l.installations.Register(t.Context(), interfaces.Installation{
 		Id: installationId,
 		DeliveryMechanism: interfaces.DeliveryMechanism{
@@ -63,7 +64,10 @@ func subscribeToTopic(t *testing.T, l *Listener, installationId, topic string, i
 	})
 	require.NoError(t, err)
 
-	err = l.subscriptions.SubscribeWithMetadata(t.Context(), installationId, []interfaces.SubscriptionInput{{Topic: topic, IsSilent: isSilent}})
+	parsed, err := topicutil.ParseV3Topic(topicStr)
+	require.NoError(t, err)
+
+	err = l.subscriptions.SubscribeWithMetadata(t.Context(), installationId, []interfaces.SubscriptionInput{{Topic: parsed, IsSilent: isSilent}})
 	require.NoError(t, err)
 }
 

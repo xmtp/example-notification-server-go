@@ -3,10 +3,13 @@ package subscriptions
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	database "github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/queries"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
+	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
+	"github.com/xmtp/xmtpd/pkg/topic"
 	"go.uber.org/zap"
 )
 
@@ -24,27 +27,31 @@ func NewSubscriptionsService(logger *zap.Logger, db *sql.DB) *SubscriptionsServi
 	}
 }
 
-func (s SubscriptionsService) Subscribe(ctx context.Context, installationID string, topics []string) error {
+func (s SubscriptionsService) Subscribe(ctx context.Context, installationID string, topics []*topic.Topic) error {
 	return database.RunInTx(ctx, s.db, func(qtx *queries.Queries) error {
+		topicBytes := make([][]byte, len(topics))
+		for i, t := range topics {
+			topicBytes[i] = t.Bytes()
+		}
+
 		updated, err := qtx.ReactivateSubscriptions(ctx, queries.ReactivateSubscriptionsParams{
 			InstallationID: installationID,
-			Topics:         topics,
+			Topics:         topicBytes,
 		})
 		if err != nil {
 			return err
 		}
 
-		topicMap := make(map[string]bool, len(topics))
-		for _, topic := range topics {
-			topicMap[topic] = true
-		}
+		reactivated := make(map[string]bool, len(updated))
 		for _, result := range updated {
-			delete(topicMap, result.Topic)
+			reactivated[string(result.Topic)] = true
 		}
 
-		remaining := make([]string, 0, len(topicMap))
-		for topic := range topicMap {
-			remaining = append(remaining, topic)
+		var remaining [][]byte
+		for _, t := range topics {
+			if !reactivated[string(t.Bytes())] {
+				remaining = append(remaining, t.Bytes())
+			}
 		}
 
 		if len(remaining) > 0 {
@@ -68,16 +75,19 @@ func (s SubscriptionsService) SubscribeWithMetadata(
 			return nil
 		}
 
-		topics := make([]string, len(subscriptions))
+		topicBytes := make([][]byte, len(subscriptions))
 		isSilents := make([]bool, len(subscriptions))
 		for i, sub := range subscriptions {
-			topics[i] = sub.Topic
+			if sub.Topic == nil {
+				return errors.New("subscription topic must not be nil")
+			}
+			topicBytes[i] = sub.Topic.Bytes()
 			isSilents[i] = sub.IsSilent
 		}
 
 		rows, err := qtx.BatchUpsertSubscriptions(ctx, queries.BatchUpsertSubscriptionsParams{
 			InstallationID: installationID,
-			Topics:         topics,
+			Topics:         topicBytes,
 			IsSilents:      isSilents,
 		})
 		if err != nil {
@@ -86,7 +96,7 @@ func (s SubscriptionsService) SubscribeWithMetadata(
 
 		topicToID := make(map[string]int64, len(rows))
 		for _, row := range rows {
-			topicToID[row.Topic] = row.ID
+			topicToID[string(row.Topic)] = row.ID
 		}
 
 		var (
@@ -95,7 +105,7 @@ func (s SubscriptionsService) SubscribeWithMetadata(
 			keys            [][]byte
 		)
 		for _, sub := range subscriptions {
-			id := topicToID[sub.Topic]
+			id := topicToID[string(sub.Topic.Bytes())]
 			for _, keyUpdate := range sub.HmacKeys {
 				subscriptionIDs = append(subscriptionIDs, id)
 				periods = append(periods, int32(keyUpdate.ThirtyDayPeriodsSinceEpoch))
@@ -115,23 +125,27 @@ func (s SubscriptionsService) SubscribeWithMetadata(
 	})
 }
 
-func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationID string, topics []string) error {
+func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationID string, topics []*topic.Topic) error {
+	topicBytes := make([][]byte, len(topics))
+	for i, t := range topics {
+		topicBytes[i] = t.Bytes()
+	}
 	return s.queries.DeactivateSubscriptions(ctx, queries.DeactivateSubscriptionsParams{
 		InstallationID: installationID,
-		Topics:         topics,
+		Topics:         topicBytes,
 	})
 }
 
 func (s SubscriptionsService) GetSubscriptions(
 	ctx context.Context,
-	topic string,
+	t *topic.Topic,
 	thirtyDayPeriod int,
 ) ([]interfaces.Subscription, error) {
 	results, err := s.queries.ListActiveSubscriptionsByTopicAndPeriod(
 		ctx,
 		queries.ListActiveSubscriptionsByTopicAndPeriodParams{
 			ThirtyDayPeriod: int32(thirtyDayPeriod),
-			Topic:           topic,
+			Topic:           t.Bytes(),
 		},
 	)
 	if err != nil {
@@ -140,11 +154,17 @@ func (s SubscriptionsService) GetSubscriptions(
 
 	out := make([]interfaces.Subscription, 0, len(results))
 	for _, result := range results {
+		parsedTopic, err := topic.ParseTopic(result.Topic)
+		if err != nil {
+			s.logger.Warn("failed to parse topic from DB", zap.Error(err))
+			continue
+		}
 		subscription := interfaces.Subscription{
 			Id:             result.ID,
 			CreatedAt:      result.CreatedAt,
 			InstallationId: result.InstallationID,
-			Topic:          result.Topic,
+			Topic:          parsedTopic,
+			TopicString:    topicutil.TopicToString(parsedTopic),
 			IsActive:       result.IsActive,
 			IsSilent:       result.IsSilent,
 		}

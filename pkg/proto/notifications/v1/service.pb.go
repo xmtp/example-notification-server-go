@@ -274,10 +274,12 @@ func (x *DeleteInstallationRequest) GetInstallationId() string {
 
 // A subscription with associated metadata
 type Subscription struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Topic         string                  `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
-	HmacKeys      []*Subscription_HmacKey `protobuf:"bytes,2,rep,name=hmac_keys,json=hmacKeys,proto3" json:"hmac_keys,omitempty"`
-	IsSilent      bool                    `protobuf:"varint,3,opt,name=is_silent,json=isSilent,proto3" json:"is_silent,omitempty"`
+	state    protoimpl.MessageState  `protogen:"open.v1"`
+	Topic    string                  `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
+	HmacKeys []*Subscription_HmacKey `protobuf:"bytes,2,rep,name=hmac_keys,json=hmacKeys,proto3" json:"hmac_keys,omitempty"`
+	IsSilent bool                    `protobuf:"varint,3,opt,name=is_silent,json=isSilent,proto3" json:"is_silent,omitempty"`
+	// Binary topic (V4 format). If both topic and topic_bytes are set, topic_bytes takes precedence.
+	TopicBytes    []byte `protobuf:"bytes,4,opt,name=topic_bytes,json=topicBytes,proto3" json:"topic_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -331,6 +333,13 @@ func (x *Subscription) GetIsSilent() bool {
 		return x.IsSilent
 	}
 	return false
+}
+
+func (x *Subscription) GetTopicBytes() []byte {
+	if x != nil {
+		return x.TopicBytes
+	}
+	return nil
 }
 
 // A request to subscribe to a list of topics and update the associated metadata
@@ -391,8 +400,10 @@ type SubscribeRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	InstallationId string                 `protobuf:"bytes,1,opt,name=installation_id,json=installationId,proto3" json:"installation_id,omitempty"`
 	Topics         []string               `protobuf:"bytes,2,rep,name=topics,proto3" json:"topics,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Binary topics (V4 format). Merged with string topics if both are set.
+	TopicsBytes   [][]byte `protobuf:"bytes,3,rep,name=topics_bytes,json=topicsBytes,proto3" json:"topics_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubscribeRequest) Reset() {
@@ -439,13 +450,22 @@ func (x *SubscribeRequest) GetTopics() []string {
 	return nil
 }
 
+func (x *SubscribeRequest) GetTopicsBytes() [][]byte {
+	if x != nil {
+		return x.TopicsBytes
+	}
+	return nil
+}
+
 // Unsubscribe from a list of topics
 type UnsubscribeRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	InstallationId string                 `protobuf:"bytes,1,opt,name=installation_id,json=installationId,proto3" json:"installation_id,omitempty"`
 	Topics         []string               `protobuf:"bytes,2,rep,name=topics,proto3" json:"topics,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Binary topics (V4 format). Merged with string topics if both are set.
+	TopicsBytes   [][]byte `protobuf:"bytes,3,rep,name=topics_bytes,json=topicsBytes,proto3" json:"topics_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UnsubscribeRequest) Reset() {
@@ -488,6 +508,13 @@ func (x *UnsubscribeRequest) GetInstallationId() string {
 func (x *UnsubscribeRequest) GetTopics() []string {
 	if x != nil {
 		return x.Topics
+	}
+	return nil
+}
+
+func (x *UnsubscribeRequest) GetTopicsBytes() [][]byte {
+	if x != nil {
+		return x.TopicsBytes
 	}
 	return nil
 }
@@ -562,23 +589,27 @@ const file_notifications_v1_service_proto_rawDesc = "" +
 	"\vvalid_until\x18\x02 \x01(\x04R\n" +
 	"validUntil\"D\n" +
 	"\x19DeleteInstallationRequest\x12'\n" +
-	"\x0finstallation_id\x18\x01 \x01(\tR\x0einstallationId\"\xe7\x01\n" +
+	"\x0finstallation_id\x18\x01 \x01(\tR\x0einstallationId\"\x88\x02\n" +
 	"\fSubscription\x12\x14\n" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12C\n" +
 	"\thmac_keys\x18\x02 \x03(\v2&.notifications.v1.Subscription.HmacKeyR\bhmacKeys\x12\x1b\n" +
-	"\tis_silent\x18\x03 \x01(\bR\bisSilent\x1a_\n" +
+	"\tis_silent\x18\x03 \x01(\bR\bisSilent\x12\x1f\n" +
+	"\vtopic_bytes\x18\x04 \x01(\fR\n" +
+	"topicBytes\x1a_\n" +
 	"\aHmacKey\x12B\n" +
 	"\x1ethirty_day_periods_since_epoch\x18\x01 \x01(\rR\x1athirtyDayPeriodsSinceEpoch\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\fR\x03key\"\x8d\x01\n" +
 	"\x1cSubscribeWithMetadataRequest\x12'\n" +
 	"\x0finstallation_id\x18\x01 \x01(\tR\x0einstallationId\x12D\n" +
-	"\rsubscriptions\x18\x02 \x03(\v2\x1e.notifications.v1.SubscriptionR\rsubscriptions\"S\n" +
+	"\rsubscriptions\x18\x02 \x03(\v2\x1e.notifications.v1.SubscriptionR\rsubscriptions\"v\n" +
 	"\x10SubscribeRequest\x12'\n" +
 	"\x0finstallation_id\x18\x01 \x01(\tR\x0einstallationId\x12\x16\n" +
-	"\x06topics\x18\x02 \x03(\tR\x06topics\"U\n" +
+	"\x06topics\x18\x02 \x03(\tR\x06topics\x12!\n" +
+	"\ftopics_bytes\x18\x03 \x03(\fR\vtopicsBytes\"x\n" +
 	"\x12UnsubscribeRequest\x12'\n" +
 	"\x0finstallation_id\x18\x01 \x01(\tR\x0einstallationId\x12\x16\n" +
-	"\x06topics\x18\x02 \x03(\tR\x06topics2\xd8\x03\n" +
+	"\x06topics\x18\x02 \x03(\tR\x06topics\x12!\n" +
+	"\ftopics_bytes\x18\x03 \x03(\fR\vtopicsBytes2\xd8\x03\n" +
 	"\rNotifications\x12u\n" +
 	"\x14RegisterInstallation\x12-.notifications.v1.RegisterInstallationRequest\x1a..notifications.v1.RegisterInstallationResponse\x12Y\n" +
 	"\x12DeleteInstallation\x12+.notifications.v1.DeleteInstallationRequest\x1a\x16.google.protobuf.Empty\x12G\n" +

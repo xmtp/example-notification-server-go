@@ -11,6 +11,8 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
+	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 	"go.uber.org/zap"
 )
 
@@ -139,11 +141,18 @@ func (l *Listener) startMessageWorkers() {
 }
 
 func (l *Listener) processEnvelope(env *v1.Envelope) error {
-	if !isV3Topic(env.ContentTopic) {
+	// Fast-path: skip expensive parsing for topics that can't be V3
+	if !strings.HasPrefix(env.ContentTopic, topics.V3_PREFIX) {
 		l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
 		return nil
 	}
-	subs, err := l.subscriptions.GetSubscriptions(l.ctx, env.ContentTopic, getThirtyDayPeriodsFromEpoch(env))
+	t, err := topics.ParseV3Topic(env.ContentTopic)
+	if err != nil {
+		l.logger.Info("ignoring message with non-convertible topic",
+			zap.String("topic", env.ContentTopic), zap.Error(err))
+		return nil
+	}
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, t, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
 	}
@@ -167,7 +176,7 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 		return nil
 	}
 
-	sendRequests := buildSendRequests(env, installations, subs)
+	sendRequests := buildSendRequests(env, t, installations, subs)
 	for _, request := range sendRequests {
 		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
 			l.logger.Info("Skipping delivery of request",
@@ -223,13 +232,6 @@ func (l *Listener) refreshClient() error {
 	return nil
 }
 
-func isV3Topic(topic string) bool {
-	if strings.HasPrefix(topic, "/xmtp/mls/1/g-") || strings.HasPrefix(topic, "/xmtp/mls/1/w-") {
-		return true
-	}
-	return false
-}
-
 func buildIdempotencyKey(env *v1.Envelope) string {
 	h := sha1.New()
 	h.Write([]byte(env.ContentTopic))
@@ -237,9 +239,9 @@ func buildIdempotencyKey(env *v1.Envelope) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func buildSendRequests(envelope *v1.Envelope, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
+func buildSendRequests(envelope *v1.Envelope, t *topicpkg.Topic, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
 	idempotencyKey := buildIdempotencyKey(envelope)
-	messageContext := getContext(envelope)
+	messageContext := getContext(envelope, t)
 	out := []interfaces.SendRequest{}
 	installationMap := make(map[string]interfaces.Installation)
 	for _, installation := range installations {

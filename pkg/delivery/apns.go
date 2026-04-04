@@ -2,9 +2,10 @@ package delivery
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
-	"strings"
 	"os"
+	"strings"
 
 	"github.com/sideshow/apns2"
 	"github.com/sideshow/apns2/payload"
@@ -64,12 +65,7 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 		return errors.New("missing message")
 	}
 
-	notification := a.buildNotification(req.Subscription.IsSilent,
-		req.Installation.DeliveryMechanism.Token,
-		req.Message.ContentTopic,
-		string(req.MessageContext.MessageType),
-		req.Message.Message,
-	)
+	notification := a.buildNotification(req)
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)
 	if res != nil {
@@ -84,13 +80,19 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 	return err
 }
 
-func (a ApnsDelivery) buildNotification(isSilent bool, token string, contentTopic string, messageKind string, messageBytes []byte) *apns2.Notification {
-	notificationPayload := payload.NewPayload().
-		Custom("topic", contentTopic).
-		Custom("encryptedMessage", messageBytes).
-		Custom("messageKind", messageKind)
+func (a ApnsDelivery) buildNotification(req interfaces.SendRequest) *apns2.Notification {
+	var topicBytesB64 string
+	if req.Subscription.Topic != nil {
+		topicBytesB64 = base64.StdEncoding.EncodeToString(req.Subscription.Topic.Bytes())
+	}
 
-	if isSilent {
+	notificationPayload := payload.NewPayload().
+		Custom("topic", req.Subscription.TopicString).
+		Custom("topicBytesB64", topicBytesB64).
+		Custom("encryptedMessage", req.Message.Message).
+		Custom("messageKind", string(req.MessageContext.MessageType))
+
+	if req.Subscription.IsSilent {
 		notificationPayload = notificationPayload.ContentAvailable()
 	} else {
 		notificationPayload = notificationPayload.
@@ -99,7 +101,7 @@ func (a ApnsDelivery) buildNotification(isSilent bool, token string, contentTopi
 	}
 
 	return &apns2.Notification{
-		DeviceToken: token,
+		DeviceToken: req.Installation.DeliveryMechanism.Token,
 		Topic:       a.opts.Topic,
 		Payload:     notificationPayload,
 	}

@@ -57,13 +57,17 @@ func Test_IdentifyV3Conversation(t *testing.T) {
 	rawFixture := getRawFixture(t, "v3-conversation")
 	envelope := getEnvelope(t, rawFixture)
 	hmacKey := getHmacKey(t, rawFixture)
-	context := getContext(envelope)
+
+	tp, err := topics.ParseV3Topic(envelope.ContentTopic)
+	require.NoError(t, err)
+
+	context := getContext(envelope, tp)
 	require.False(t, context.IsSender(hmacKey))
 	require.True(t, *context.ShouldPush)
 	require.Equal(t, context.MessageType, topics.V3Conversation)
 
 	wrongKey := []byte("foo")
-	contextWithWrongKey := getContext(envelope)
+	contextWithWrongKey := getContext(envelope, tp)
 	require.False(t, contextWithWrongKey.IsSender(wrongKey))
 	require.True(t, *contextWithWrongKey.ShouldPush)
 	require.Equal(t, contextWithWrongKey.MessageType, topics.V3Conversation)

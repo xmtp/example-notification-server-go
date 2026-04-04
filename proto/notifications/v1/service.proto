@@ -41,6 +41,8 @@ message Subscription {
     string topic = 1;
     repeated HmacKey hmac_keys = 2;
     bool is_silent = 3;
+    // Binary topic (V4 format). If both topic and topic_bytes are set, topic_bytes takes precedence.
+    bytes topic_bytes = 4;
 }
 
 // A request to subscribe to a list of topics and update the associated metadata
@@ -53,12 +55,16 @@ message SubscribeWithMetadataRequest {
 message SubscribeRequest {
     string installation_id = 1;
     repeated string topics = 2;
+    // Binary topics (V4 format). Merged with string topics if both are set.
+    repeated bytes topics_bytes = 3;
 }
 
 // Unsubscribe from a list of topics
 message UnsubscribeRequest {
     string installation_id = 1;
     repeated string topics = 2;
+    // Binary topics (V4 format). Merged with string topics if both are set.
+    repeated bytes topics_bytes = 3;
 }
 
 service Notifications {

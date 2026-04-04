@@ -9,16 +9,20 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/testutils"
+	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
+	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 )
 
 const INSTALLATION_ID = "installation_1"
-const TOPIC = "topic1"
+
+// Valid V3 topic and its parsed form for testing
+var TEST_TOPIC, _ = topicutil.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
 
 type storedSubscription struct {
 	ID             int64
 	CreatedAt      time.Time
 	InstallationID string
-	Topic          string
+	Topic          []byte
 	IsActive       bool
 	IsSilent       bool
 }
@@ -71,14 +75,14 @@ func Test_Subscribe(t *testing.T) {
 
 	svc := createService(t, db)
 
-	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
+	err := svc.Subscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{TEST_TOPIC})
 	require.NoError(t, err)
 
 	stored := fetchSubscriptions(t, ctx, db, INSTALLATION_ID)
 	require.Len(t, stored, 1)
 	require.Equal(t, INSTALLATION_ID, stored[0].InstallationID)
 	require.True(t, stored[0].IsActive)
-	require.Equal(t, TOPIC, stored[0].Topic)
+	require.Equal(t, TEST_TOPIC.Bytes(), stored[0].Topic)
 }
 
 func Test_SubscribeMultiple(t *testing.T) {
@@ -86,16 +90,25 @@ func Test_SubscribeMultiple(t *testing.T) {
 	db := testutils.CreateTestDb(t)
 	svc := createService(t, db)
 
-	topics := []string{"topic_1", "topic_2", "topic_3"}
+	topic1 := topicpkg.NewTopic(topicpkg.TopicKindGroupMessagesV1, []byte{0x01})
+	topic2 := topicpkg.NewTopic(topicpkg.TopicKindGroupMessagesV1, []byte{0x02})
+	topic3 := topicpkg.NewTopic(topicpkg.TopicKindGroupMessagesV1, []byte{0x03})
+	topics := []*topicpkg.Topic{topic1, topic2, topic3}
+
 	err := svc.Subscribe(ctx, INSTALLATION_ID, topics)
 	require.NoError(t, err)
 
 	stored := fetchSubscriptions(t, ctx, db, INSTALLATION_ID)
 	require.Len(t, stored, 3)
-	for _, result := range stored {
+
+	storedTopicBytes := make([][]byte, len(stored))
+	for i, result := range stored {
 		require.Equal(t, INSTALLATION_ID, result.InstallationID)
 		require.NotZero(t, result.CreatedAt)
-		require.Contains(t, topics, result.Topic)
+		storedTopicBytes[i] = result.Topic
+	}
+	for _, tp := range topics {
+		require.Contains(t, storedTopicBytes, tp.Bytes())
 	}
 }
 
@@ -104,10 +117,10 @@ func Test_Unsubscribe(t *testing.T) {
 	db := testutils.CreateTestDb(t)
 	svc := createService(t, db)
 
-	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
+	err := svc.Subscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{TEST_TOPIC})
 	require.NoError(t, err)
 
-	err = svc.Unsubscribe(ctx, INSTALLATION_ID, []string{TOPIC})
+	err = svc.Unsubscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{TEST_TOPIC})
 	require.NoError(t, err)
 
 	stored := fetchSubscriptions(t, ctx, db, INSTALLATION_ID)
@@ -120,9 +133,9 @@ func Test_UnsubscribeResubscribe(t *testing.T) {
 	db := testutils.CreateTestDb(t)
 	svc := createService(t, db)
 
-	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC}))
-	require.NoError(t, svc.Unsubscribe(ctx, INSTALLATION_ID, []string{TOPIC}))
-	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC}))
+	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{TEST_TOPIC}))
+	require.NoError(t, svc.Unsubscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{TEST_TOPIC}))
+	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{TEST_TOPIC}))
 
 	stored := fetchSubscriptions(t, ctx, db, INSTALLATION_ID)
 	require.Len(t, stored, 1)
@@ -136,7 +149,7 @@ func Test_SubscribeWithMetadata(t *testing.T) {
 
 	key := []byte("key")
 	err := svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		Topic:    TEST_TOPIC,
 		IsSilent: true,
 		HmacKeys: []interfaces.HmacKey{{
 			ThirtyDayPeriodsSinceEpoch: 1,
@@ -145,10 +158,11 @@ func Test_SubscribeWithMetadata(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	results, err := svc.GetSubscriptions(ctx, TOPIC, 1)
+	results, err := svc.GetSubscriptions(ctx, TEST_TOPIC, 1)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
-	require.Equal(t, TOPIC, results[0].Topic)
+	require.Equal(t, TEST_TOPIC.Kind(), results[0].Topic.Kind())
+	require.Equal(t, TEST_TOPIC.Bytes(), results[0].Topic.Bytes())
 	require.NotNil(t, results[0].HmacKey)
 	require.True(t, results[0].IsSilent)
 	require.Equal(t, key, results[0].HmacKey.Key)
@@ -160,21 +174,21 @@ func Test_UpdateIsSilent(t *testing.T) {
 	svc := createService(t, db)
 
 	require.NoError(t, svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		Topic:    TEST_TOPIC,
 		IsSilent: false,
 	}}))
 
-	results, err := svc.GetSubscriptions(ctx, TOPIC, 1)
+	results, err := svc.GetSubscriptions(ctx, TEST_TOPIC, 1)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	require.False(t, results[0].IsSilent)
 
 	require.NoError(t, svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		Topic:    TEST_TOPIC,
 		IsSilent: true,
 	}}))
 
-	results, err = svc.GetSubscriptions(ctx, TOPIC, 1)
+	results, err = svc.GetSubscriptions(ctx, TEST_TOPIC, 1)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	require.True(t, results[0].IsSilent)
@@ -186,7 +200,7 @@ func Test_UpdateHmacKeys(t *testing.T) {
 	svc := createService(t, db)
 
 	require.NoError(t, svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		Topic:    TEST_TOPIC,
 		IsSilent: true,
 		HmacKeys: []interfaces.HmacKey{{
 			ThirtyDayPeriodsSinceEpoch: 1,
@@ -195,7 +209,7 @@ func Test_UpdateHmacKeys(t *testing.T) {
 	}}))
 
 	require.NoError(t, svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
-		Topic:    TOPIC,
+		Topic:    TEST_TOPIC,
 		IsSilent: true,
 		HmacKeys: []interfaces.HmacKey{{
 			ThirtyDayPeriodsSinceEpoch: 1,
@@ -203,7 +217,7 @@ func Test_UpdateHmacKeys(t *testing.T) {
 		}},
 	}}))
 
-	results, err := svc.GetSubscriptions(ctx, TOPIC, 1)
+	results, err := svc.GetSubscriptions(ctx, TEST_TOPIC, 1)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	require.Equal(t, []byte("key2"), results[0].HmacKey.Key)
@@ -214,9 +228,22 @@ func Test_GetSubscriptions(t *testing.T) {
 	db := testutils.CreateTestDb(t)
 	svc := createService(t, db)
 
-	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC}))
+	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{TEST_TOPIC}))
 
-	subs, err := svc.GetSubscriptions(ctx, TOPIC, 1)
+	subs, err := svc.GetSubscriptions(ctx, TEST_TOPIC, 1)
 	require.NoError(t, err)
 	require.Len(t, subs, 1)
+}
+
+func Test_SubscribeWithMetadata_NilTopic(t *testing.T) {
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
+
+	err := svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
+		Topic:    nil,
+		IsSilent: false,
+	}})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "nil")
 }

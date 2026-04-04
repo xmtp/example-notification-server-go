@@ -7,6 +7,7 @@ import (
 	messageApi "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	mlsV1 "github.com/xmtp/example-notification-server-go/pkg/proto/mls/api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
+	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -26,8 +27,8 @@ func parseGroupMessage(groupMessage []byte) (*mlsV1.GroupMessage_V1, error) {
 	return v1Message, nil
 }
 
-func getContext(env *messageApi.Envelope) interfaces.MessageContext {
-	messageType := topics.GetMessageType(env)
+func getContext(env *messageApi.Envelope, t *topicpkg.Topic) interfaces.MessageContext {
+	messageType := topics.GetMessageTypeFromTopic(t)
 	var shouldPush *bool
 	var hmacInputs, senderHmac *[]byte
 

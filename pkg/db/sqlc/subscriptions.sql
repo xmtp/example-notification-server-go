@@ -2,14 +2,14 @@
 UPDATE subscriptions
 SET is_active = TRUE
 WHERE installation_id = sqlc.arg(installation_id)
-  AND topic = ANY(sqlc.arg(topics)::text[])
+  AND topic = ANY(sqlc.arg(topics)::bytea[])
 RETURNING id, created_at, installation_id, topic, is_active, is_silent;
 
 -- name: DeactivateSubscriptions :exec
 UPDATE subscriptions
 SET is_active = FALSE
 WHERE installation_id = sqlc.arg(installation_id)
-  AND topic = ANY(sqlc.arg(topics)::text[]);
+  AND topic = ANY(sqlc.arg(topics)::bytea[]);
 
 -- name: ListActiveSubscriptionsByTopicAndPeriod :many
 SELECT
