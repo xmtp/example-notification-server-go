@@ -13,6 +13,104 @@ import (
 	"github.com/lib/pq"
 )
 
+const batchInsertSubscriptions = `-- name: BatchInsertSubscriptions :exec
+INSERT INTO subscriptions (installation_id, topic, is_active, is_silent)
+SELECT $1::text, t.topic, TRUE, FALSE
+FROM unnest($2::text[]) AS t(topic)
+ON CONFLICT (installation_id, topic) DO NOTHING
+`
+
+type BatchInsertSubscriptionsParams struct {
+	InstallationID string
+	Topics         []string
+}
+
+func (q *Queries) BatchInsertSubscriptions(ctx context.Context, arg BatchInsertSubscriptionsParams) error {
+	_, err := q.db.ExecContext(ctx, batchInsertSubscriptions, arg.InstallationID, pq.Array(arg.Topics))
+	return err
+}
+
+const batchUpsertSubscriptionHmacKeys = `-- name: BatchUpsertSubscriptionHmacKeys :exec
+INSERT INTO subscription_hmac_keys (subscription_id, thirty_day_periods_since_epoch, key)
+SELECT t.sub_id, t.period, t.hmac_key
+FROM ROWS FROM (
+    unnest($1::bigint[]),
+    unnest($2::integer[]),
+    unnest($3::bytea[])
+) AS t(sub_id, period, hmac_key)
+ON CONFLICT (subscription_id, thirty_day_periods_since_epoch) DO UPDATE
+SET key = EXCLUDED.key, updated_at = NOW()
+`
+
+type BatchUpsertSubscriptionHmacKeysParams struct {
+	SubscriptionIds []int64
+	Periods         []int32
+	Keys            [][]byte
+}
+
+func (q *Queries) BatchUpsertSubscriptionHmacKeys(ctx context.Context, arg BatchUpsertSubscriptionHmacKeysParams) error {
+	_, err := q.db.ExecContext(ctx, batchUpsertSubscriptionHmacKeys, pq.Array(arg.SubscriptionIds), pq.Array(arg.Periods), pq.Array(arg.Keys))
+	return err
+}
+
+const batchUpsertSubscriptions = `-- name: BatchUpsertSubscriptions :many
+INSERT INTO subscriptions (installation_id, topic, is_active, is_silent)
+SELECT $1::text, t.topic, TRUE, t.is_silent
+FROM ROWS FROM (
+    unnest($2::text[]),
+    unnest($3::boolean[])
+) AS t(topic, is_silent)
+ON CONFLICT (installation_id, topic) DO UPDATE
+SET is_active = TRUE, is_silent = EXCLUDED.is_silent
+RETURNING id, topic
+`
+
+type BatchUpsertSubscriptionsParams struct {
+	InstallationID string
+	Topics         []string
+	IsSilents      []bool
+}
+
+type BatchUpsertSubscriptionsRow struct {
+	ID    int64
+	Topic string
+}
+
+func (q *Queries) BatchUpsertSubscriptions(ctx context.Context, arg BatchUpsertSubscriptionsParams) ([]BatchUpsertSubscriptionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, batchUpsertSubscriptions, arg.InstallationID, pq.Array(arg.Topics), pq.Array(arg.IsSilents))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BatchUpsertSubscriptionsRow
+	for rows.Next() {
+		var i BatchUpsertSubscriptionsRow
+		if err := rows.Scan(&i.ID, &i.Topic); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deactivateInstallationSubscriptions = `-- name: DeactivateInstallationSubscriptions :exec
+UPDATE subscriptions
+SET is_active = FALSE
+WHERE installation_id = $1
+  AND is_active = TRUE
+`
+
+func (q *Queries) DeactivateInstallationSubscriptions(ctx context.Context, installationID string) error {
+	_, err := q.db.ExecContext(ctx, deactivateInstallationSubscriptions, installationID)
+	return err
+}
+
 const deactivateSubscriptions = `-- name: DeactivateSubscriptions :exec
 UPDATE subscriptions
 SET is_active = FALSE
