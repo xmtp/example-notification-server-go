@@ -80,6 +80,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 					"topic":            req.Topic,
 					"encryptedMessage": data["encryptedMessage"],
 					"messageType":      data["messageType"],
+					"payloadFormat":    data["payloadFormat"],
 				},
 				Aps: &messaging.Aps{
 					ContentAvailable: req.Subscription.IsSilent,
@@ -97,5 +98,6 @@ func buildFcmData(req interfaces.SendRequest) map[string]string {
 		"topic":            req.Topic,
 		"encryptedMessage": base64.StdEncoding.EncodeToString(req.EncryptedMessage),
 		"messageType":      string(req.MessageContext.MessageType),
+		"payloadFormat":    req.PayloadFormat.String(),
 	}
 }

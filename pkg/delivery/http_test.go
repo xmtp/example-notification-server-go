@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -159,6 +160,22 @@ func TestHttpDelivery_MaxAttemptsClampsToMinimumOne(t *testing.T) {
 
 	// Value of 0 should be clamped to 1
 	require.Equal(t, 1, d.maxAttempts)
+}
+
+func TestHttp_PayloadIncludesPayloadFormat(t *testing.T) {
+	req := interfaces.SendRequest{
+		IdempotencyKey:   "test-key",
+		Topic:            "test-topic",
+		EncryptedMessage: []byte("test"),
+		PayloadFormat:    interfaces.PayloadFormatV4,
+	}
+
+	jsonData, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var p map[string]interface{}
+	require.NoError(t, json.Unmarshal(jsonData, &p))
+	require.Equal(t, "v4", p["payload_format"])
 }
 
 func TestHttpDelivery_CanDeliver(t *testing.T) {

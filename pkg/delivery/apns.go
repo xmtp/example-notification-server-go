@@ -79,7 +79,8 @@ func (a ApnsDelivery) buildNotification(req interfaces.SendRequest) *apns2.Notif
 	notificationPayload := payload.NewPayload().
 		Custom("topic", req.Topic).
 		Custom("encryptedMessage", req.EncryptedMessage).
-		Custom("messageKind", string(req.MessageContext.MessageType))
+		Custom("messageKind", string(req.MessageContext.MessageType)).
+		Custom("payloadFormat", req.PayloadFormat.String())
 
 	if req.Subscription.IsSilent {
 		notificationPayload = notificationPayload.ContentAvailable()

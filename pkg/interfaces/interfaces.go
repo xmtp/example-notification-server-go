@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/json"
 	"time"
 
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
@@ -63,6 +64,10 @@ func (p PayloadFormat) String() string {
 	default:
 		return "unspecified"
 	}
+}
+
+func (p PayloadFormat) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.String())
 }
 
 type RegisterResponse struct {

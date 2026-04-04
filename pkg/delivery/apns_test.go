@@ -11,6 +11,35 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
+func TestApns_PayloadIncludesPayloadFormat(t *testing.T) {
+	parsed, err := topics.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
+	require.NoError(t, err)
+
+	topicStr := topics.TopicToString(parsed)
+	a := ApnsDelivery{opts: options.ApnsOptions{Topic: "com.example.app"}}
+	req := interfaces.SendRequest{
+		Topic:            topicStr,
+		EncryptedMessage: []byte("test"),
+		PayloadFormat:    interfaces.PayloadFormatV3,
+		Subscription: interfaces.Subscription{
+			TopicV4: parsed,
+			Topic:   topicStr,
+		},
+		Installation: interfaces.Installation{
+			DeliveryMechanism: interfaces.DeliveryMechanism{Token: "device-token"},
+		},
+		MessageContext: interfaces.MessageContext{MessageType: topics.V3Conversation},
+	}
+
+	notification := a.buildNotification(req)
+	payloadBytes, err := notification.Payload.(*payload.Payload).MarshalJSON()
+	require.NoError(t, err)
+
+	var p map[string]interface{}
+	require.NoError(t, json.Unmarshal(payloadBytes, &p))
+	require.Equal(t, "v3", p["payloadFormat"])
+}
+
 func Test_ApnsDelivery_BuildNotification_TopicField(t *testing.T) {
 	parsed, err := topics.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
 	require.NoError(t, err)
