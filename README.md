@@ -12,7 +12,7 @@ Many applications will have different needs for push notifications (different de
 
 ## Prerequisites
 
-1. Go 1.20
+1. Go 1.26
 2. Docker and Docker Compose
 
 ## Local Setup
