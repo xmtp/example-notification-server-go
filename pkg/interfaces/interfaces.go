@@ -101,7 +101,7 @@ type SendRequest struct {
 	IdempotencyKey   string        `json:"idempotency_key"`
 	Topic            string        `json:"topic"`
 	EncryptedMessage []byte        `json:"encrypted_message"`
-	PayloadFormat    PayloadFormat `json:"payload_format"`
+	PayloadFormat    PayloadFormat `json:"payloadFormat"`
 	MessageContext   MessageContext `json:"message_context"`
 	Installation     Installation  `json:"installation"`
 	Subscription     Subscription  `json:"subscription"`
