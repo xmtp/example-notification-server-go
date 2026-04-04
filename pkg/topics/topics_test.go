@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"testing"
 
@@ -139,4 +140,33 @@ func TestGetMessageTypeFromTopic(t *testing.T) {
 			require.Equal(t, tc.want, GetMessageTypeFromTopic(tc.topic))
 		})
 	}
+}
+
+func TestTopicToBase64(t *testing.T) {
+	identifier := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	tp := topic.NewTopic(topic.TopicKindGroupMessagesV1, identifier)
+	b64 := TopicToBase64(tp)
+	require.NotEmpty(t, b64)
+	// Verify it's valid base64 that decodes back to the topic bytes
+	decoded, err := base64.StdEncoding.DecodeString(b64)
+	require.NoError(t, err)
+	require.Equal(t, tp.Bytes(), decoded)
+}
+
+func TestTopicToBase64_Nil(t *testing.T) {
+	require.Equal(t, "", TopicToBase64(nil))
+}
+
+func TestTopicToLegacy(t *testing.T) {
+	identifier := []byte{0x24, 0xce, 0x39, 0xd6}
+	tp := topic.NewTopic(topic.TopicKindGroupMessagesV1, identifier)
+	legacy := TopicToLegacy(tp)
+	require.Equal(t, "/xmtp/mls/1/g-24ce39d6/proto", legacy)
+}
+
+func TestTopicToLegacy_Welcome(t *testing.T) {
+	identifier := []byte{0xab, 0xcd}
+	tp := topic.NewTopic(topic.TopicKindWelcomeMessagesV1, identifier)
+	legacy := TopicToLegacy(tp)
+	require.Equal(t, "/xmtp/mls/1/w-abcd/proto", legacy)
 }

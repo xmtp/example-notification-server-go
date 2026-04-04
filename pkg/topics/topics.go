@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -54,6 +55,21 @@ func TopicToString(t *topic.Topic) string {
 		return ""
 	}
 	return V3_PREFIX + prefix + "-" + hex.EncodeToString(t.Identifier()) + "/proto"
+}
+
+// TopicToBase64 returns the base64-encoded binary representation of a topic.
+// Used for V4 format delivery.
+func TopicToBase64(t *topic.Topic) string {
+	if t == nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(t.Bytes())
+}
+
+// TopicToLegacy returns the V3 string format of a topic.
+// Alias for TopicToString for clarity.
+func TopicToLegacy(t *topic.Topic) string {
+	return TopicToString(t)
 }
 
 func GetMessageTypeFromTopic(t *topic.Topic) MessageType {
