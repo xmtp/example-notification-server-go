@@ -8,6 +8,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -47,8 +48,8 @@ VALUES (
 type InsertSubscriptionParams struct {
 	InstallationID string
 	Topic          string
-	IsActive       sql.NullBool
-	IsSilent       sql.NullBool
+	IsActive       bool
+	IsSilent       bool
 }
 
 func (q *Queries) InsertSubscription(ctx context.Context, arg InsertSubscriptionParams) error {
@@ -87,12 +88,12 @@ type ListActiveSubscriptionsByTopicAndPeriodParams struct {
 }
 
 type ListActiveSubscriptionsByTopicAndPeriodRow struct {
-	ID                         int32
-	CreatedAt                  sql.NullTime
+	ID                         int64
+	CreatedAt                  time.Time
 	InstallationID             string
 	Topic                      string
-	IsActive                   sql.NullBool
-	IsSilent                   sql.NullBool
+	IsActive                   bool
+	IsSilent                   bool
 	HasHmacKey                 interface{}
 	ThirtyDayPeriodsSinceEpoch sql.NullInt32
 	Key                        []byte
@@ -145,12 +146,12 @@ type ReactivateSubscriptionsParams struct {
 }
 
 type ReactivateSubscriptionsRow struct {
-	ID             int32
-	CreatedAt      sql.NullTime
+	ID             int64
+	CreatedAt      time.Time
 	InstallationID string
 	Topic          string
-	IsActive       sql.NullBool
-	IsSilent       sql.NullBool
+	IsActive       bool
+	IsSilent       bool
 }
 
 func (q *Queries) ReactivateSubscriptions(ctx context.Context, arg ReactivateSubscriptionsParams) ([]ReactivateSubscriptionsRow, error) {
@@ -205,16 +206,16 @@ RETURNING id, created_at, installation_id, topic, is_active, is_silent
 type UpsertSubscriptionParams struct {
 	InstallationID string
 	Topic          string
-	IsSilent       sql.NullBool
+	IsSilent       bool
 }
 
 type UpsertSubscriptionRow struct {
-	ID             int32
-	CreatedAt      sql.NullTime
+	ID             int64
+	CreatedAt      time.Time
 	InstallationID string
 	Topic          string
-	IsActive       sql.NullBool
-	IsSilent       sql.NullBool
+	IsActive       bool
+	IsSilent       bool
 }
 
 func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error) {
@@ -248,7 +249,7 @@ SET key = EXCLUDED.key,
 `
 
 type UpsertSubscriptionHmacKeyParams struct {
-	SubscriptionID             int32
+	SubscriptionID             int64
 	ThirtyDayPeriodsSinceEpoch int32
 	Key                        []byte
 }

@@ -8,6 +8,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -28,12 +29,12 @@ ORDER BY ddm.installation_id DESC, ddm.updated_at DESC, ddm.id DESC
 `
 
 type GetLatestInstallationsRow struct {
-	ID             int32
+	ID             int64
 	InstallationID string
 	Kind           string
 	Token          string
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (q *Queries) GetLatestInstallations(ctx context.Context, installationIds []string) ([]GetLatestInstallationsRow, error) {

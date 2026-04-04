@@ -4,7 +4,7 @@ sql:
     queries:
       - "pkg/db/sqlc/installations.sql"
       - "pkg/db/sqlc/subscriptions.sql"
-    schema: "pkg/db/schema.sql"
+    schema: "pkg/db/migrations"
     gen:
       go:
         package: "queries"
