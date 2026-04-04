@@ -16,21 +16,18 @@ import (
 	"go.uber.org/zap"
 )
 
-const STARTING_SLEEP_TIME = 100 * time.Millisecond
-const DELIVERY_TIMEOUT = 15 * time.Second
-
 type Listener struct {
-	logger           *zap.Logger
-	ctx              context.Context
-	cancelFunc       func()
-	xmtpClient       v1.MessageApiClient
-	opts             options.XmtpOptions
-	messageChannel   chan *v1.Envelope
-	installations    interfaces.Installations
-	deliveryServices []interfaces.Delivery
-	subscriptions    interfaces.Subscriptions
-	clientVersion    string
-	appVersion       string
+	logger         *zap.Logger
+	ctx            context.Context
+	cancelFunc     func()
+	xmtpClient     v1.MessageApiClient
+	opts           options.XmtpOptions
+	messageChannel chan *v1.Envelope
+	installations  interfaces.Installations
+	subscriptions  interfaces.Subscriptions
+	clientVersion  string
+	appVersion     string
+	dispatcher     deliveryDispatcher
 }
 
 func NewListener(
@@ -49,19 +46,24 @@ func NewListener(
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
+	namedLogger := logger.Named("xmtp-listener")
 
 	return &Listener{
-		ctx:              ctx,
-		cancelFunc:       cancel,
-		logger:           logger.Named("xmtp-listener"),
-		xmtpClient:       client,
-		opts:             opts,
-		messageChannel:   make(chan *v1.Envelope, 100),
-		installations:    installations,
-		deliveryServices: deliveryServices,
-		subscriptions:    subscriptions,
-		clientVersion:    clientVersion,
-		appVersion:       appVersion,
+		ctx:            ctx,
+		cancelFunc:     cancel,
+		logger:         namedLogger,
+		xmtpClient:     client,
+		opts:           opts,
+		messageChannel: make(chan *v1.Envelope, 100),
+		installations:  installations,
+		subscriptions:  subscriptions,
+		clientVersion:  clientVersion,
+		appVersion:     appVersion,
+		dispatcher: deliveryDispatcher{
+			logger:           namedLogger,
+			ctx:              ctx,
+			deliveryServices: deliveryServices,
+		},
 	}, nil
 }
 
@@ -178,48 +180,18 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 
 	sendRequests := buildSendRequests(env, t, installations, subs)
 	for _, request := range sendRequests {
-		if !l.shouldDeliver(request.MessageContext, request.Subscription) {
+		if !l.dispatcher.shouldDeliver(request.MessageContext, request.Subscription) {
 			l.logger.Info("Skipping delivery of request",
 				zap.Any("message_context", request.MessageContext),
 				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
 			)
 			continue
 		}
-		if err = l.deliver(request); err != nil {
+		if err = l.dispatcher.deliver(request); err != nil {
 			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
 		}
 	}
 	return err
-}
-
-func (l *Listener) shouldDeliver(messageContext interfaces.MessageContext, subscription interfaces.Subscription) bool {
-	if subscription.HmacKey != nil && len(subscription.HmacKey.Key) > 0 {
-		isSender := messageContext.IsSender(subscription.HmacKey.Key)
-		if isSender {
-			return false
-		}
-	}
-	if messageContext.ShouldPush != nil {
-		shouldPush := messageContext.ShouldPush
-		return *shouldPush
-	}
-	return true
-}
-
-func (l *Listener) deliver(req interfaces.SendRequest) error {
-	ctx, cancel := context.WithTimeout(l.ctx, DELIVERY_TIMEOUT)
-	defer cancel()
-	for _, service := range l.deliveryServices {
-		if service.CanDeliver(req) {
-			l.logger.Info("active subscription found. sending message",
-				zap.String("topic", req.Topic),
-				zap.String("message_type", string(req.MessageContext.MessageType)),
-			)
-			return service.Send(ctx, req)
-		}
-	}
-	l.logger.Info("No delivery service matches request", zap.String("delivery_mechanism", string(req.Installation.DeliveryMechanism.Kind)))
-	return nil
 }
 
 func (l *Listener) refreshClient() error {
