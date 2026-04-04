@@ -3,7 +3,6 @@ package delivery
 import (
 	"context"
 	"encoding/base64"
-
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
 	"github.com/pkg/errors"
@@ -82,8 +81,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 			Headers: apnsHeaders,
 			Payload: &messaging.APNSPayload{
 				CustomData: map[string]interface{}{
-					"topic":            req.Subscription.TopicString,
-					"topicBytesB64":    data["topicBytesB64"],
+					"topic":            req.Subscription.Topic,
 					"encryptedMessage": data["encryptedMessage"],
 					"messageType":      data["messageType"],
 				},
@@ -99,14 +97,8 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 }
 
 func buildFcmData(req interfaces.SendRequest) map[string]string {
-	var topicBytesB64 string
-	if req.Subscription.Topic != nil {
-		topicBytesB64 = base64.StdEncoding.EncodeToString(req.Subscription.Topic.Bytes())
-	}
-
 	return map[string]string{
-		"topic":            req.Subscription.TopicString,
-		"topicBytesB64":    topicBytesB64,
+		"topic":            req.Subscription.Topic,
 		"encryptedMessage": base64.StdEncoding.EncodeToString(req.Message.Message),
 		"messageType":      string(req.MessageContext.MessageType),
 	}

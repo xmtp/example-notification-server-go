@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"testing"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
-func Test_ApnsDelivery_BuildNotification_DualTopicFields(t *testing.T) {
+func Test_ApnsDelivery_BuildNotification_TopicField(t *testing.T) {
 	parsed, err := topics.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
 	require.NoError(t, err)
 
@@ -21,8 +20,8 @@ func Test_ApnsDelivery_BuildNotification_DualTopicFields(t *testing.T) {
 	req := interfaces.SendRequest{
 		Message: &v1.Envelope{Message: []byte("test")},
 		Subscription: interfaces.Subscription{
-			Topic:       parsed,
-			TopicString: topics.TopicToString(parsed),
+			TopicV4: parsed,
+			Topic:   topics.TopicToString(parsed),
 		},
 		Installation: interfaces.Installation{
 			DeliveryMechanism: interfaces.DeliveryMechanism{Token: "device-token"},
@@ -34,10 +33,10 @@ func Test_ApnsDelivery_BuildNotification_DualTopicFields(t *testing.T) {
 	payloadBytes, err := notification.Payload.(*payload.Payload).MarshalJSON()
 	require.NoError(t, err)
 
-	var payload map[string]interface{}
-	require.NoError(t, json.Unmarshal(payloadBytes, &payload))
-	require.Equal(t, "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto", payload["topic"])
-	require.Equal(t, base64.StdEncoding.EncodeToString(parsed.Bytes()), payload["topicBytesB64"])
+	var p map[string]interface{}
+	require.NoError(t, json.Unmarshal(payloadBytes, &p))
+	require.Equal(t, "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto", p["topic"])
+	require.NotContains(t, p, "topicBytesB64")
 	require.Equal(t, "device-token", notification.DeviceToken)
 	require.Equal(t, "com.example.app", notification.Topic)
 }

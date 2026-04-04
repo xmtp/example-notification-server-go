@@ -141,6 +141,9 @@ func (s SubscriptionsService) GetSubscriptions(
 	t *topic.Topic,
 	thirtyDayPeriod int,
 ) ([]interfaces.Subscription, error) {
+	if t == nil {
+		return nil, errors.New("topic must not be nil")
+	}
 	results, err := s.queries.ListActiveSubscriptionsByTopicAndPeriod(
 		ctx,
 		queries.ListActiveSubscriptionsByTopicAndPeriodParams{
@@ -163,8 +166,8 @@ func (s SubscriptionsService) GetSubscriptions(
 			Id:             result.ID,
 			CreatedAt:      result.CreatedAt,
 			InstallationId: result.InstallationID,
-			Topic:          parsedTopic,
-			TopicString:    topicutil.TopicToString(parsedTopic),
+			Topic:          topicutil.TopicToString(parsedTopic),
+			TopicV4:        parsedTopic,
 			IsActive:       result.IsActive,
 			IsSilent:       result.IsSilent,
 		}

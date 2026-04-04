@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"time"
 
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
@@ -45,31 +43,11 @@ type Subscription struct {
 	Id             int64        `json:"-"`
 	CreatedAt      time.Time    `json:"created_at"`
 	InstallationId string       `json:"-"`
-	Topic          *topic.Topic `json:"-"`
-	TopicString    string       `json:"topic"`
+	Topic          string       `json:"topic"`
+	TopicV4        *topic.Topic `json:"-"`
 	IsActive       bool         `json:"-"`
 	IsSilent       bool         `json:"is_silent"`
 	HmacKey        *HmacKey     `json:"-"`
-}
-
-type subscriptionJSON struct {
-	CreatedAt     time.Time `json:"created_at"`
-	Topic         string    `json:"topic"`
-	TopicBytesB64 string    `json:"topicBytesB64"`
-	IsSilent      bool      `json:"is_silent"`
-}
-
-func (s Subscription) MarshalJSON() ([]byte, error) {
-	var topicB64 string
-	if s.Topic != nil {
-		topicB64 = base64.StdEncoding.EncodeToString(s.Topic.Bytes())
-	}
-	return json.Marshal(subscriptionJSON{
-		CreatedAt:     s.CreatedAt,
-		Topic:         s.TopicString,
-		TopicBytesB64: topicB64,
-		IsSilent:      s.IsSilent,
-	})
 }
 
 type SendRequest struct {

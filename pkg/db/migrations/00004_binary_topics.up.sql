@@ -11,10 +11,10 @@ ALTER TABLE subscriptions ADD COLUMN topic BYTEA;
 -- Step 4: Single-pass conversion using lower() inline (topic_legacy is not modified)
 UPDATE subscriptions
 SET topic = CASE
-    WHEN lower(topic_legacy) ~ '^/xmtp/mls/1/g-[0-9a-f]+/proto$'
+    WHEN lower(topic_legacy) ~ '^/xmtp/mls/1/g-([0-9a-f]{2})+/proto$'
     THEN decode('00', 'hex') || decode(
         substring(lower(topic_legacy) FROM '/xmtp/mls/1/g-(.+)/proto$'), 'hex')
-    WHEN lower(topic_legacy) ~ '^/xmtp/mls/1/w-[0-9a-f]+/proto$'
+    WHEN lower(topic_legacy) ~ '^/xmtp/mls/1/w-([0-9a-f]{2})+/proto$'
     THEN decode('01', 'hex') || decode(
         substring(lower(topic_legacy) FROM '/xmtp/mls/1/w-(.+)/proto$'), 'hex')
     ELSE NULL

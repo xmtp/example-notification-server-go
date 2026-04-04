@@ -317,13 +317,16 @@ func Test_Unsubscribe_BytesTopics(t *testing.T) {
 
 	parsed, _ := topicutil.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
 	ctx.subscriptionsMock.On("Unsubscribe", mock.Anything, INSTALLATION_ID, mock.MatchedBy(func(topics []*topicpkg.Topic) bool {
-		return len(topics) == 1
+		return len(topics) == 1 &&
+			topics[0].Kind() == topicpkg.TopicKindGroupMessagesV1 &&
+			string(topics[0].Bytes()) == string(parsed.Bytes())
 	})).Return(nil)
 	_, err := ctx.client.Unsubscribe(ctx.ctx, connect.NewRequest(&proto.UnsubscribeRequest{
 		InstallationId: INSTALLATION_ID,
 		TopicsBytes:    [][]byte{parsed.Bytes()},
 	}))
 	require.NoError(t, err)
+	ctx.subscriptionsMock.AssertCalled(t, "Unsubscribe", mock.Anything, INSTALLATION_ID, mock.Anything)
 }
 
 func Test_SubscribeWithMetadata_StringTopic(t *testing.T) {

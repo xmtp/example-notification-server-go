@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"os"
 	"strings"
@@ -81,14 +80,8 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 }
 
 func (a ApnsDelivery) buildNotification(req interfaces.SendRequest) *apns2.Notification {
-	var topicBytesB64 string
-	if req.Subscription.Topic != nil {
-		topicBytesB64 = base64.StdEncoding.EncodeToString(req.Subscription.Topic.Bytes())
-	}
-
 	notificationPayload := payload.NewPayload().
-		Custom("topic", req.Subscription.TopicString).
-		Custom("topicBytesB64", topicBytesB64).
+		Custom("topic", req.Subscription.Topic).
 		Custom("encryptedMessage", req.Message.Message).
 		Custom("messageKind", string(req.MessageContext.MessageType))
 
