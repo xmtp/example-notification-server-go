@@ -128,38 +128,6 @@ func (q *Queries) DeactivateSubscriptions(ctx context.Context, arg DeactivateSub
 	return err
 }
 
-const insertSubscription = `-- name: InsertSubscription :exec
-INSERT INTO subscriptions (
-    installation_id,
-    topic,
-    is_active,
-    is_silent
-)
-VALUES (
-    $1,
-    $2,
-    $3,
-    $4
-)
-`
-
-type InsertSubscriptionParams struct {
-	InstallationID string
-	Topic          string
-	IsActive       bool
-	IsSilent       bool
-}
-
-func (q *Queries) InsertSubscription(ctx context.Context, arg InsertSubscriptionParams) error {
-	_, err := q.db.ExecContext(ctx, insertSubscription,
-		arg.InstallationID,
-		arg.Topic,
-		arg.IsActive,
-		arg.IsSilent,
-	)
-	return err
-}
-
 const listActiveSubscriptionsByTopicAndPeriod = `-- name: ListActiveSubscriptionsByTopicAndPeriod :many
 SELECT
     s.id,
@@ -280,79 +248,4 @@ func (q *Queries) ReactivateSubscriptions(ctx context.Context, arg ReactivateSub
 		return nil, err
 	}
 	return items, nil
-}
-
-const upsertSubscription = `-- name: UpsertSubscription :one
-INSERT INTO subscriptions (
-    installation_id,
-    topic,
-    is_active,
-    is_silent
-)
-VALUES (
-    $1,
-    $2,
-    TRUE,
-    $3
-)
-ON CONFLICT (installation_id, topic) DO UPDATE
-SET is_active = TRUE,
-    is_silent = EXCLUDED.is_silent
-RETURNING id, created_at, installation_id, topic, is_active, is_silent
-`
-
-type UpsertSubscriptionParams struct {
-	InstallationID string
-	Topic          string
-	IsSilent       bool
-}
-
-type UpsertSubscriptionRow struct {
-	ID             int64
-	CreatedAt      time.Time
-	InstallationID string
-	Topic          string
-	IsActive       bool
-	IsSilent       bool
-}
-
-func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error) {
-	row := q.db.QueryRowContext(ctx, upsertSubscription, arg.InstallationID, arg.Topic, arg.IsSilent)
-	var i UpsertSubscriptionRow
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.InstallationID,
-		&i.Topic,
-		&i.IsActive,
-		&i.IsSilent,
-	)
-	return i, err
-}
-
-const upsertSubscriptionHmacKey = `-- name: UpsertSubscriptionHmacKey :exec
-INSERT INTO subscription_hmac_keys (
-    subscription_id,
-    thirty_day_periods_since_epoch,
-    key
-)
-VALUES (
-    $1,
-    $2,
-    $3
-)
-ON CONFLICT (subscription_id, thirty_day_periods_since_epoch) DO UPDATE
-SET key = EXCLUDED.key,
-    updated_at = NOW()
-`
-
-type UpsertSubscriptionHmacKeyParams struct {
-	SubscriptionID             int64
-	ThirtyDayPeriodsSinceEpoch int32
-	Key                        []byte
-}
-
-func (q *Queries) UpsertSubscriptionHmacKey(ctx context.Context, arg UpsertSubscriptionHmacKeyParams) error {
-	_, err := q.db.ExecContext(ctx, upsertSubscriptionHmacKey, arg.SubscriptionID, arg.ThirtyDayPeriodsSinceEpoch, arg.Key)
-	return err
 }

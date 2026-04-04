@@ -5,53 +5,6 @@ WHERE installation_id = sqlc.arg(installation_id)
   AND topic = ANY(sqlc.arg(topics)::text[])
 RETURNING id, created_at, installation_id, topic, is_active, is_silent;
 
--- name: InsertSubscription :exec
-INSERT INTO subscriptions (
-    installation_id,
-    topic,
-    is_active,
-    is_silent
-)
-VALUES (
-    sqlc.arg(installation_id),
-    sqlc.arg(topic),
-    sqlc.arg(is_active),
-    sqlc.arg(is_silent)
-);
-
--- name: UpsertSubscription :one
-INSERT INTO subscriptions (
-    installation_id,
-    topic,
-    is_active,
-    is_silent
-)
-VALUES (
-    sqlc.arg(installation_id),
-    sqlc.arg(topic),
-    TRUE,
-    sqlc.arg(is_silent)
-)
-ON CONFLICT (installation_id, topic) DO UPDATE
-SET is_active = TRUE,
-    is_silent = EXCLUDED.is_silent
-RETURNING id, created_at, installation_id, topic, is_active, is_silent;
-
--- name: UpsertSubscriptionHmacKey :exec
-INSERT INTO subscription_hmac_keys (
-    subscription_id,
-    thirty_day_periods_since_epoch,
-    key
-)
-VALUES (
-    sqlc.arg(subscription_id),
-    sqlc.arg(thirty_day_periods_since_epoch),
-    sqlc.arg(key)
-)
-ON CONFLICT (subscription_id, thirty_day_periods_since_epoch) DO UPDATE
-SET key = EXCLUDED.key,
-    updated_at = NOW();
-
 -- name: DeactivateSubscriptions :exec
 UPDATE subscriptions
 SET is_active = FALSE
