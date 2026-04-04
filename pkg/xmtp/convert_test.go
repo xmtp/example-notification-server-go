@@ -101,6 +101,39 @@ func TestConvertGroupMessageToV3_NotCommit(t *testing.T) {
 	require.False(t, v1.GetIsCommit(), "IsCommit should be false when nodeID != 0")
 }
 
+func TestConvertWelcomePointerToV3(t *testing.T) {
+	const (
+		nodeID     = uint32(2)
+		sequenceID = uint64(55)
+		tsNs       = int64(4_000_000_000)
+	)
+
+	input := &mlsV1.WelcomeMessageInput_WelcomePointer{
+		InstallationKey:  []byte("install-key"),
+		WelcomePointer:   []byte("welcome-ptr-data"),
+		HpkePublicKey:    []byte("hpke-key"),
+		WrapperAlgorithm: 0,
+	}
+
+	origEnv := buildTestOriginatorEnvelope(t, nodeID, sequenceID, tsNs)
+
+	result, err := convertWelcomePointerToV3(input, origEnv)
+	require.NoError(t, err)
+	require.NotEmpty(t, result)
+
+	var msg mlsV1.WelcomeMessage
+	err = proto.Unmarshal(result, &msg)
+	require.NoError(t, err)
+
+	wp := msg.GetWelcomePointer()
+	require.NotNil(t, wp)
+	require.Equal(t, sequenceID, wp.GetId())
+	require.Equal(t, uint64(tsNs), wp.GetCreatedNs())
+	require.Equal(t, input.InstallationKey, wp.GetInstallationKey())
+	require.Equal(t, input.WelcomePointer, wp.GetWelcomePointer())
+	require.Equal(t, input.HpkePublicKey, wp.GetHpkePublicKey())
+}
+
 func TestConvertWelcomeMessageToV3(t *testing.T) {
 	const (
 		nodeID     = uint32(1)

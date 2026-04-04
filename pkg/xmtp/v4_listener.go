@@ -271,18 +271,24 @@ func (l *V4Listener) buildV4SendRequest(
 	}
 
 	// V3 format (PayloadFormatV3 or PayloadFormatUnspecified)
+	logTopic := topics.TopicToLegacy(targetTopic)
 	switch payload := clientEnvProto.GetPayload().(type) {
 	case *envelopesProto.ClientEnvelope_GroupMessage:
+		clientEnvelope := origEnv.UnsignedOriginatorEnvelope.PayerEnvelope.ClientEnvelope
+		if !clientEnvelope.TopicMatchesPayload() {
+			l.logger.Error("group message target topic does not match payload")
+			return interfaces.SendRequest{}, true
+		}
 		v1Input := payload.GroupMessage.GetV1()
 		encryptedMsg, err := convertGroupMessageToV3(v1Input, origEnv, targetTopic)
 		if err != nil {
-			l.logger.Error("failed to convert group message to V3", zap.Error(err))
+			logV4ConversionIssue(l.logger, clientEnvProto, err, logTopic)
 			return interfaces.SendRequest{}, true
 		}
 		messageContext := buildGroupMessageContext(v1Input)
 		return interfaces.SendRequest{
 			IdempotencyKey:   idempotencyKey,
-			Topic:            topics.TopicToLegacy(targetTopic),
+			Topic:            logTopic,
 			EncryptedMessage: encryptedMsg,
 			PayloadFormat:    interfaces.PayloadFormatV3,
 			MessageContext:   messageContext,
@@ -291,15 +297,28 @@ func (l *V4Listener) buildV4SendRequest(
 		}, false
 
 	case *envelopesProto.ClientEnvelope_WelcomeMessage:
-		v1Input := payload.WelcomeMessage.GetV1()
-		encryptedMsg, err := convertWelcomeMessageToV3(v1Input, origEnv)
+		clientEnvelope := origEnv.UnsignedOriginatorEnvelope.PayerEnvelope.ClientEnvelope
+		if !clientEnvelope.TopicMatchesPayload() {
+			l.logger.Error("welcome message target topic does not match payload")
+			return interfaces.SendRequest{}, true
+		}
+		var encryptedMsg []byte
+		var err error
+		if v1Input := payload.WelcomeMessage.GetV1(); v1Input != nil {
+			encryptedMsg, err = convertWelcomeMessageToV3(v1Input, origEnv)
+		} else if wpInput := payload.WelcomeMessage.GetWelcomePointer(); wpInput != nil {
+			encryptedMsg, err = convertWelcomePointerToV3(wpInput, origEnv)
+		} else {
+			l.logger.Warn("welcome message has unknown version, skipping V3 conversion")
+			return interfaces.SendRequest{}, true
+		}
 		if err != nil {
-			l.logger.Error("failed to convert welcome message to V3", zap.Error(err))
+			logV4ConversionIssue(l.logger, clientEnvProto, err, logTopic)
 			return interfaces.SendRequest{}, true
 		}
 		return interfaces.SendRequest{
 			IdempotencyKey:   idempotencyKey,
-			Topic:            topics.TopicToLegacy(targetTopic),
+			Topic:            logTopic,
 			EncryptedMessage: encryptedMsg,
 			PayloadFormat:    interfaces.PayloadFormatV3,
 			MessageContext:   interfaces.MessageContext{MessageType: topics.V3Welcome},
@@ -309,7 +328,7 @@ func (l *V4Listener) buildV4SendRequest(
 
 	default:
 		// Non-convertible payload: skip V3 installations
-		l.logger.Info("skipping non-convertible payload for V3 installation")
+		logV4ConversionIssue(l.logger, clientEnvProto, nil, logTopic)
 		return interfaces.SendRequest{}, true
 	}
 }
@@ -319,15 +338,31 @@ func buildGroupMessageContext(v1Input *mlsV1.GroupMessageInput_V1) interfaces.Me
 		return interfaces.MessageContext{MessageType: topics.V3Conversation}
 	}
 	shouldPush := v1Input.ShouldPush
+	hmacInputs := cloneBytes(v1Input.Data)
+	senderHmac := cloneBytes(v1Input.SenderHmac)
 	mc := interfaces.MessageContext{
 		MessageType: topics.V3Conversation,
 		ShouldPush:  &shouldPush,
-		HmacInputs:  &v1Input.Data,
+		HmacInputs:  &hmacInputs,
 	}
-	if len(v1Input.SenderHmac) > 0 {
-		mc.SenderHmac = &v1Input.SenderHmac
+	if len(senderHmac) > 0 {
+		mc.SenderHmac = &senderHmac
 	}
 	return mc
+}
+
+func logV4ConversionIssue(logger *zap.Logger, clientEnvProto *envelopesProto.ClientEnvelope, err error, logTopic string) {
+	fields := []zap.Field{zap.String("topic", logTopic), zap.Error(err)}
+	if clientEnvProto == nil {
+		logger.Warn("v4 payload cannot be converted to v3", fields...)
+		return
+	}
+	switch clientEnvProto.GetPayload().(type) {
+	case *envelopesProto.ClientEnvelope_GroupMessage, *envelopesProto.ClientEnvelope_WelcomeMessage:
+		logger.Error("v4 group/welcome payload conversion to v3 failed", fields...)
+	default:
+		logger.Warn("v4 payload cannot be converted to v3", fields...)
+	}
 }
 
 func buildV4IdempotencyKey(env *envelopesProto.OriginatorEnvelope) string {

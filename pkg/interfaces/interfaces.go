@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
@@ -68,6 +69,28 @@ func (p PayloadFormat) String() string {
 
 func (p PayloadFormat) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.String())
+}
+
+type ListenerType string
+
+const (
+	ListenerTypeV3 ListenerType = "v3"
+	ListenerTypeV4 ListenerType = "v4"
+)
+
+func NormalizePayloadFormat(format PayloadFormat) PayloadFormat {
+	if format == PayloadFormatUnspecified {
+		return PayloadFormatV3
+	}
+	return format
+}
+
+func (p PayloadFormat) ValidateForListener(listenerType ListenerType) error {
+	normalized := NormalizePayloadFormat(p)
+	if listenerType == ListenerTypeV3 && normalized == PayloadFormatV4 {
+		return fmt.Errorf("payload format %q is not supported by listener type %q", normalized.String(), listenerType)
+	}
+	return nil
 }
 
 type RegisterResponse struct {

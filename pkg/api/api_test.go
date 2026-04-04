@@ -35,10 +35,10 @@ type testContext struct {
 
 func setupTest(t *testing.T) testContext {
 	t.Helper()
-	return setupTestWithListenerType(t, "v3")
+	return setupTestWithListenerType(t, interfaces.ListenerTypeV3)
 }
 
-func setupTestWithListenerType(t *testing.T, listenerType string) testContext {
+func setupTestWithListenerType(t *testing.T, listenerType interfaces.ListenerType) testContext {
 	t.Helper()
 	ctx := t.Context()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -77,7 +77,7 @@ func Test_SetListenerAfterStartReturnsError(t *testing.T) {
 		options.ApiOptions{Port: 18081},
 		mocks.NewInstallations(t),
 		mocks.NewSubscriptions(t),
-		"v3",
+		interfaces.ListenerTypeV3,
 	)
 	apiServer.Start()
 	defer apiServer.Stop()
@@ -392,8 +392,7 @@ func Test_SubscribeWithMetadata_EmptyTopic(t *testing.T) {
 }
 
 func TestRegisterInstallation_WithPayloadFormatV4_OnV3Listener_ReturnsError(t *testing.T) {
-	ctx := setupTestWithListenerType(t, "v3")
-
+	ctx := setupTestWithListenerType(t, interfaces.ListenerTypeV3)
 
 	_, err := ctx.client.RegisterInstallation(
 		ctx.ctx,
@@ -411,8 +410,7 @@ func TestRegisterInstallation_WithPayloadFormatV4_OnV3Listener_ReturnsError(t *t
 }
 
 func TestRegisterInstallation_WithPayloadFormatV4_OnV4Listener_Succeeds(t *testing.T) {
-	ctx := setupTestWithListenerType(t, "v4")
-
+	ctx := setupTestWithListenerType(t, interfaces.ListenerTypeV4)
 
 	validUntil := time.Now()
 	ctx.installationsMock.On(

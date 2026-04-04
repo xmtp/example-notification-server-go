@@ -28,10 +28,10 @@ type ApiServer struct {
 	httpServer    *http.Server
 	port          int
 	listener      net.Listener
-	listenerType  string
+	listenerType  interfaces.ListenerType
 }
 
-func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions, listenerType string) *ApiServer {
+func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions, listenerType interfaces.ListenerType) *ApiServer {
 	return &ApiServer{
 		logger:        logger.Named("api"),
 		installations: installations,
@@ -109,11 +109,9 @@ func (s *ApiServer) RegisterInstallation(
 	s.logger.Info("got mechanism", zap.Any("mechanism", mechanism))
 
 	payloadFormat := interfaces.PayloadFormatFromProto(req.Msg.PayloadFormat)
-	if payloadFormat == interfaces.PayloadFormatUnspecified {
-		payloadFormat = interfaces.PayloadFormatV3
-	}
-	if payloadFormat == interfaces.PayloadFormatV4 && s.listenerType == "v3" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("payload format V4 is not supported on V3 listener"))
+	payloadFormat = interfaces.NormalizePayloadFormat(payloadFormat)
+	if err := payloadFormat.ValidateForListener(s.listenerType); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	result, err := s.installations.Register(

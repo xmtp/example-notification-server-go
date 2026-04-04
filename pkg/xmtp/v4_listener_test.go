@@ -20,6 +20,8 @@ import (
 	envelopesProto "github.com/xmtp/xmtpd/pkg/proto/xmtpv4/envelopes"
 	testEnvelopes "github.com/xmtp/xmtpd/pkg/testutils/envelopes"
 	"github.com/xmtp/xmtpd/pkg/topic"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -437,4 +439,102 @@ func TestV4Listener_HmacSenderFiltering(t *testing.T) {
 
 	// The sender matches — should be filtered
 	mockDelivery.AssertNotCalled(t, "Send")
+}
+
+// TestV4Listener_ProcessWelcomePointer_V3Format tests that a WelcomePointer envelope is
+// converted to V3 WelcomeMessage with WelcomePointer variant and delivered to a V3 installation.
+func TestV4Listener_ProcessWelcomePointer_V3Format(t *testing.T) {
+	mockDelivery := mocks.NewDelivery(t)
+	mockDelivery.On("CanDeliver", mock.Anything).Return(true)
+	mockDelivery.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	l := buildV4TestListener(t, mockDelivery)
+
+	installationKeyID := []byte{0xEE, 0xFF, 0x00, 0x11}
+	welcomeTopic := topic.NewTopic(topic.TopicKindWelcomeMessagesV1, installationKeyID)
+
+	registerV4Installation(t, l, "inst-wp-v3", interfaces.PayloadFormatV3)
+	subscribeV4ToTopic(t, l, "inst-wp-v3", welcomeTopic)
+
+	// Build a WelcomePointer envelope
+	wpInput := &mlsV1.WelcomeMessageInput{
+		Version: &mlsV1.WelcomeMessageInput_WelcomePointer_{
+			WelcomePointer: &mlsV1.WelcomeMessageInput_WelcomePointer{
+				InstallationKey: installationKeyID,
+				WelcomePointer:  []byte("pointer-data"),
+				HpkePublicKey:   []byte("hpke-key"),
+			},
+		},
+	}
+
+	clientEnv := &envelopesProto.ClientEnvelope{
+		Payload: &envelopesProto.ClientEnvelope_WelcomeMessage{
+			WelcomeMessage: wpInput,
+		},
+		Aad: &envelopesProto.AuthenticatedData{
+			TargetTopic: welcomeTopic.Bytes(),
+		},
+	}
+	payerEnv := testEnvelopes.CreatePayerEnvelope(t, 1, clientEnv)
+	env := testEnvelopes.CreateOriginatorEnvelopeWithTimestamp(t, 1, 10, time.Unix(0, int64(time.Second)), payerEnv)
+
+	err := l.processOriginatorEnvelope(env)
+	require.NoError(t, err)
+
+	mockDelivery.AssertNumberOfCalls(t, "Send", 1)
+	sendReqs := getSendRequests(mockDelivery)
+	require.Len(t, sendReqs, 1)
+	require.Equal(t, interfaces.PayloadFormatV3, sendReqs[0].PayloadFormat)
+
+	// Verify it's a WelcomeMessage with WelcomePointer variant
+	var welcomeMsg mlsV1.WelcomeMessage
+	require.NoError(t, proto.Unmarshal(sendReqs[0].EncryptedMessage, &welcomeMsg))
+	wp := welcomeMsg.GetWelcomePointer()
+	require.NotNil(t, wp, "expected WelcomePointer variant")
+	require.Equal(t, installationKeyID, wp.GetInstallationKey())
+	require.Equal(t, []byte("pointer-data"), wp.GetWelcomePointer())
+}
+
+// TestV4Listener_NonConvertiblePayload_LogsWarning tests that non-convertible payloads
+// produce a warning log (not error) for V3 installations.
+func TestV4Listener_NonConvertiblePayload_LogsWarning(t *testing.T) {
+	// Use observer logger to capture log output
+	observedCore, logs := observer.New(zap.WarnLevel)
+	testLogger := zap.New(observedCore)
+
+	// Build a V4Listener with the observed logger
+	db := test.CreateTestDb(t)
+	instSvc := installations.NewInstallationsService(logging.CreateLogger("console", "info"), db)
+	subsSvc := subscriptions.NewSubscriptionsService(logging.CreateLogger("console", "info"), db)
+	mockDelivery := mocks.NewDelivery(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	l := &V4Listener{
+		ctx: ctx, cancelFunc: cancel, logger: testLogger,
+		opts:            options.XmtpOptions{NumWorkers: 5},
+		envelopeChannel: make(chan *envelopesProto.OriginatorEnvelope, 100),
+		installations:   instSvc,
+		subscriptions:   subsSvc,
+		dispatcher:      deliveryDispatcher{logger: testLogger, ctx: ctx, deliveryServices: []interfaces.Delivery{mockDelivery}},
+	}
+
+	payerReportTopic := topic.NewTopic(topic.TopicKindPayerReportsV1, []byte{0x00, 0x00, 0x00, 0x03})
+	registerV4Installation(t, l, "inst-log-test", interfaces.PayloadFormatV3)
+	subscribeV4ToTopic(t, l, "inst-log-test", payerReportTopic)
+
+	clientEnv := &envelopesProto.ClientEnvelope{
+		Payload: &envelopesProto.ClientEnvelope_PayerReport{PayerReport: &envelopesProto.PayerReport{}},
+		Aad:     &envelopesProto.AuthenticatedData{TargetTopic: payerReportTopic.Bytes()},
+	}
+	payerEnv := testEnvelopes.CreatePayerEnvelope(t, 1, clientEnv)
+	env := testEnvelopes.CreateOriginatorEnvelopeWithTimestamp(t, 1, 20, time.Unix(0, int64(time.Second)), payerEnv)
+
+	err := l.processOriginatorEnvelope(env)
+	require.NoError(t, err)
+
+	// Should log a warning (not error) for non-convertible payload
+	warnLogs := logs.FilterMessage("v4 payload cannot be converted to v3")
+	require.Equal(t, 1, warnLogs.Len(), "expected 1 warning log for non-convertible payload")
 }

@@ -26,6 +26,20 @@ func TestPayloadFormat_ToProto(t *testing.T) {
 	require.Equal(t, proto.PayloadFormat_PAYLOAD_FORMAT_V4, PayloadFormatV4.ToProto())
 }
 
+func TestNormalizePayloadFormat(t *testing.T) {
+	require.Equal(t, PayloadFormatV3, NormalizePayloadFormat(PayloadFormatUnspecified))
+	require.Equal(t, PayloadFormatV3, NormalizePayloadFormat(PayloadFormatV3))
+	require.Equal(t, PayloadFormatV4, NormalizePayloadFormat(PayloadFormatV4))
+}
+
+func TestPayloadFormat_ValidateForListener(t *testing.T) {
+	require.NoError(t, PayloadFormatV3.ValidateForListener(ListenerTypeV3))
+	require.NoError(t, PayloadFormatV3.ValidateForListener(ListenerTypeV4))
+	require.NoError(t, PayloadFormatV4.ValidateForListener(ListenerTypeV4))
+	require.Error(t, PayloadFormatV4.ValidateForListener(ListenerTypeV3))
+	require.NoError(t, PayloadFormatUnspecified.ValidateForListener(ListenerTypeV3)) // defaults to V3
+}
+
 func Test_Subscription_MarshalJSON_TopicOnly(t *testing.T) {
 	tp := topic.NewTopic(topic.TopicKindGroupMessagesV1, []byte{0x24, 0xce})
 	sub := Subscription{
