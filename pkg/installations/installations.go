@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	database "github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/queries"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"go.uber.org/zap"
@@ -27,73 +28,46 @@ func NewInstallationsService(logger *zap.Logger, db *sql.DB) *DefaultInstallatio
 func (s DefaultInstallationService) Register(
 	ctx context.Context,
 	installation interfaces.Installation,
-) (res *interfaces.RegisterResponse, err error) {
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
-	qtx := queries.New(tx)
-	if err = qtx.UpsertInstallation(ctx, installation.Id); err != nil {
-		return nil, err
-	}
-
+) (*interfaces.RegisterResponse, error) {
 	updatedAt := installation.DeliveryMechanism.UpdatedAt
 	if updatedAt.IsZero() {
 		updatedAt = time.Now().UTC()
 	}
 
-	err = qtx.UpsertDeviceDeliveryMechanism(ctx, queries.UpsertDeviceDeliveryMechanismParams{
-		InstallationID: installation.Id,
-		Kind:           string(installation.DeliveryMechanism.Kind),
-		Token:          installation.DeliveryMechanism.Token,
-		UpdatedAt:      updatedAt,
+	return database.RunInTxResult(ctx, s.db, func(qtx *queries.Queries) (*interfaces.RegisterResponse, error) {
+		if err := qtx.UpsertInstallation(ctx, installation.Id); err != nil {
+			return nil, err
+		}
+
+		err := qtx.UpsertDeviceDeliveryMechanism(ctx, queries.UpsertDeviceDeliveryMechanismParams{
+			InstallationID: installation.Id,
+			Kind:           string(installation.DeliveryMechanism.Kind),
+			Token:          installation.DeliveryMechanism.Token,
+			UpdatedAt:      updatedAt,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return &interfaces.RegisterResponse{
+			InstallationId: installation.Id,
+			ValidUntil:     getExpiry(updatedAt),
+		}, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return &interfaces.RegisterResponse{
-		InstallationId: installation.Id,
-		ValidUntil:     getExpiry(updatedAt),
-	}, nil
 }
 
-func (s DefaultInstallationService) Delete(ctx context.Context, installationID string) (err error) {
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer func() {
+func (s DefaultInstallationService) Delete(ctx context.Context, installationID string) error {
+	return database.RunInTx(ctx, s.db, func(qtx *queries.Queries) error {
+		err := qtx.SoftDeleteInstallation(ctx, queries.SoftDeleteInstallationParams{
+			ID:        installationID,
+			DeletedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		})
 		if err != nil {
-			_ = tx.Rollback()
+			return err
 		}
-	}()
 
-	qtx := queries.New(tx)
-	err = qtx.SoftDeleteInstallation(ctx, queries.SoftDeleteInstallationParams{
-		ID:        installationID,
-		DeletedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		return qtx.DeactivateInstallationSubscriptions(ctx, installationID)
 	})
-	if err != nil {
-		return err
-	}
-
-	err = qtx.DeactivateInstallationSubscriptions(ctx, installationID)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
 }
 
 func (s DefaultInstallationService) GetInstallations(

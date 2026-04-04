@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	database "github.com/xmtp/example-notification-server-go/pkg/db"
 	"github.com/xmtp/example-notification-server-go/pkg/db/queries"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"go.uber.org/zap"
@@ -23,119 +24,95 @@ func NewSubscriptionsService(logger *zap.Logger, db *sql.DB) *SubscriptionsServi
 	}
 }
 
-func (s SubscriptionsService) Subscribe(ctx context.Context, installationID string, topics []string) (err error) {
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
-	qtx := queries.New(tx)
-	updated, err := qtx.ReactivateSubscriptions(ctx, queries.ReactivateSubscriptionsParams{
-		InstallationID: installationID,
-		Topics:         topics,
-	})
-	if err != nil {
-		return err
-	}
-
-	topicMap := make(map[string]bool, len(topics))
-	for _, topic := range topics {
-		topicMap[topic] = true
-	}
-	for _, result := range updated {
-		delete(topicMap, result.Topic)
-	}
-
-	remaining := make([]string, 0, len(topicMap))
-	for topic := range topicMap {
-		remaining = append(remaining, topic)
-	}
-
-	if len(remaining) > 0 {
-		err = qtx.BatchInsertSubscriptions(ctx, queries.BatchInsertSubscriptionsParams{
+func (s SubscriptionsService) Subscribe(ctx context.Context, installationID string, topics []string) error {
+	return database.RunInTx(ctx, s.db, func(qtx *queries.Queries) error {
+		updated, err := qtx.ReactivateSubscriptions(ctx, queries.ReactivateSubscriptionsParams{
 			InstallationID: installationID,
-			Topics:         remaining,
+			Topics:         topics,
 		})
 		if err != nil {
 			return err
 		}
-	}
 
-	return tx.Commit()
+		topicMap := make(map[string]bool, len(topics))
+		for _, topic := range topics {
+			topicMap[topic] = true
+		}
+		for _, result := range updated {
+			delete(topicMap, result.Topic)
+		}
+
+		remaining := make([]string, 0, len(topicMap))
+		for topic := range topicMap {
+			remaining = append(remaining, topic)
+		}
+
+		if len(remaining) > 0 {
+			return qtx.BatchInsertSubscriptions(ctx, queries.BatchInsertSubscriptionsParams{
+				InstallationID: installationID,
+				Topics:         remaining,
+			})
+		}
+
+		return nil
+	})
 }
 
 func (s SubscriptionsService) SubscribeWithMetadata(
 	ctx context.Context,
 	installationID string,
 	subscriptions []interfaces.SubscriptionInput,
-) (err error) {
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
+) error {
+	return database.RunInTx(ctx, s.db, func(qtx *queries.Queries) error {
+		if len(subscriptions) == 0 {
+			return nil
 		}
-	}()
 
-	if len(subscriptions) == 0 {
-		return tx.Commit()
-	}
-
-	topics := make([]string, len(subscriptions))
-	isSilents := make([]bool, len(subscriptions))
-	for i, sub := range subscriptions {
-		topics[i] = sub.Topic
-		isSilents[i] = sub.IsSilent
-	}
-
-	qtx := queries.New(tx)
-	rows, err := qtx.BatchUpsertSubscriptions(ctx, queries.BatchUpsertSubscriptionsParams{
-		InstallationID: installationID,
-		Topics:         topics,
-		IsSilents:      isSilents,
-	})
-	if err != nil {
-		return err
-	}
-
-	topicToID := make(map[string]int64, len(rows))
-	for _, row := range rows {
-		topicToID[row.Topic] = row.ID
-	}
-
-	var (
-		subscriptionIDs []int64
-		periods         []int32
-		keys            [][]byte
-	)
-	for _, sub := range subscriptions {
-		id := topicToID[sub.Topic]
-		for _, keyUpdate := range sub.HmacKeys {
-			subscriptionIDs = append(subscriptionIDs, id)
-			periods = append(periods, int32(keyUpdate.ThirtyDayPeriodsSinceEpoch))
-			keys = append(keys, keyUpdate.Key)
+		topics := make([]string, len(subscriptions))
+		isSilents := make([]bool, len(subscriptions))
+		for i, sub := range subscriptions {
+			topics[i] = sub.Topic
+			isSilents[i] = sub.IsSilent
 		}
-	}
 
-	if len(subscriptionIDs) > 0 {
-		err = qtx.BatchUpsertSubscriptionHmacKeys(ctx, queries.BatchUpsertSubscriptionHmacKeysParams{
-			SubscriptionIds: subscriptionIDs,
-			Periods:         periods,
-			Keys:            keys,
+		rows, err := qtx.BatchUpsertSubscriptions(ctx, queries.BatchUpsertSubscriptionsParams{
+			InstallationID: installationID,
+			Topics:         topics,
+			IsSilents:      isSilents,
 		})
 		if err != nil {
 			return err
 		}
-	}
 
-	return tx.Commit()
+		topicToID := make(map[string]int64, len(rows))
+		for _, row := range rows {
+			topicToID[row.Topic] = row.ID
+		}
+
+		var (
+			subscriptionIDs []int64
+			periods         []int32
+			keys            [][]byte
+		)
+		for _, sub := range subscriptions {
+			id := topicToID[sub.Topic]
+			for _, keyUpdate := range sub.HmacKeys {
+				subscriptionIDs = append(subscriptionIDs, id)
+				periods = append(periods, int32(keyUpdate.ThirtyDayPeriodsSinceEpoch))
+				keys = append(keys, keyUpdate.Key)
+			}
+		}
+
+		if len(subscriptionIDs) > 0 {
+			return qtx.BatchUpsertSubscriptionHmacKeys(ctx, queries.BatchUpsertSubscriptionHmacKeysParams{
+				SubscriptionIds: subscriptionIDs,
+				Periods:         periods,
+				Keys:            keys,
+			})
+		}
+
+		return nil
+	})
 }
 
 func (s SubscriptionsService) Unsubscribe(ctx context.Context, installationID string, topics []string) error {
