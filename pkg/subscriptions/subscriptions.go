@@ -55,8 +55,8 @@ func (s SubscriptionsService) Subscribe(ctx context.Context, installationID stri
 		err = qtx.InsertSubscription(ctx, queries.InsertSubscriptionParams{
 			InstallationID: installationID,
 			Topic:          topic,
-			IsActive:       sql.NullBool{Bool: true, Valid: true},
-			IsSilent:       sql.NullBool{Bool: false, Valid: true},
+			IsActive:       true,
+			IsSilent:       false,
 		})
 		if err != nil {
 			return err
@@ -86,7 +86,7 @@ func (s SubscriptionsService) SubscribeWithMetadata(
 		row, err := qtx.UpsertSubscription(ctx, queries.UpsertSubscriptionParams{
 			InstallationID: installationID,
 			Topic:          sub.Topic,
-			IsSilent:       sql.NullBool{Bool: sub.IsSilent, Valid: true},
+			IsSilent:       sub.IsSilent,
 		})
 		if err != nil {
 			return err
@@ -133,12 +133,12 @@ func (s SubscriptionsService) GetSubscriptions(
 	out := make([]interfaces.Subscription, 0, len(results))
 	for _, result := range results {
 		subscription := interfaces.Subscription{
-			Id:             int64(result.ID),
-			CreatedAt:      result.CreatedAt.Time,
+			Id:             result.ID,
+			CreatedAt:      result.CreatedAt,
 			InstallationId: result.InstallationID,
 			Topic:          result.Topic,
-			IsActive:       result.IsActive.Bool,
-			IsSilent:       result.IsSilent.Bool,
+			IsActive:       result.IsActive,
+			IsSilent:       result.IsSilent,
 		}
 		if result.ThirtyDayPeriodsSinceEpoch.Valid {
 			subscription.HmacKey = &interfaces.HmacKey{

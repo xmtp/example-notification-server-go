@@ -52,10 +52,7 @@ func (s DefaultInstallationService) Register(
 		InstallationID: installation.Id,
 		Kind:           string(installation.DeliveryMechanism.Kind),
 		Token:          installation.DeliveryMechanism.Token,
-		UpdatedAt: sql.NullTime{
-			Time:  updatedAt,
-			Valid: true,
-		},
+		UpdatedAt:      updatedAt,
 	})
 	if err != nil {
 		return nil, err
@@ -98,7 +95,7 @@ func (s DefaultInstallationService) GetInstallations(
 			DeliveryMechanism: interfaces.DeliveryMechanism{
 				Kind:      interfaces.DeliveryMechanismKind(result.Kind),
 				Token:     result.Token,
-				UpdatedAt: result.UpdatedAt.Time,
+				UpdatedAt: result.UpdatedAt,
 			},
 		})
 	}
