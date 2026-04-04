@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sideshow/apns2 v0.25.0
 	github.com/stretchr/testify v1.11.1
-	github.com/xmtp/xmtpd v1.3.0
+	github.com/xmtp/xmtpd v1.3.1-0.20260402033823-6ae509c61de3
 	go.uber.org/zap v1.27.1
 	golang.org/x/net v0.52.0
 	google.golang.org/api v0.231.0
