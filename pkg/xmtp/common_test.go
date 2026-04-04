@@ -13,6 +13,10 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 )
 
+// Compile-time assertions: both listeners must implement NotificationListener
+var _ NotificationListener = (*Listener)(nil)
+var _ NotificationListener = (*V4Listener)(nil)
+
 func TestDeliveryDispatcher_ShouldDeliver_SkipsSender(t *testing.T) {
 	dispatcher := &deliveryDispatcher{
 		logger: logging.CreateLogger("console", "info"),

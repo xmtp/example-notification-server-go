@@ -63,7 +63,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	installationsService := installations.NewInstallationsService(logger, db)
 	subscriptionsService := subscriptions.NewSubscriptionsService(logger, db)
-	var listener *xmtp.Listener
+	var notifListener xmtp.NotificationListener
 	var apiServer *api.ApiServer
 
 	if opts.Xmtp.ListenerEnabled {
@@ -90,11 +90,16 @@ func main() {
 			deliveryServices = append(deliveryServices, delivery.NewHttpDelivery(logger, opts.HttpDelivery))
 		}
 
-		listener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryServices, clientVersion, appVersion)
+		switch opts.Xmtp.ListenerType {
+		case "v4":
+			notifListener, err = xmtp.NewV4Listener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryServices, clientVersion, appVersion)
+		default: // "v3"
+			notifListener, err = xmtp.NewListener(ctx, logger, opts.Xmtp, installationsService, subscriptionsService, deliveryServices, clientVersion, appVersion)
+		}
 		if err != nil {
 			logger.Fatal("failed to initialize listener", zap.Error(err))
 		}
-		listener.Start()
+		notifListener.Start()
 	}
 
 	if opts.Api.Enabled {
@@ -108,8 +113,8 @@ func main() {
 		apiServer.Stop()
 	}
 
-	if listener != nil {
-		listener.Stop()
+	if notifListener != nil {
+		notifListener.Stop()
 	}
 
 	cancel()
