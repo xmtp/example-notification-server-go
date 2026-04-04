@@ -23,5 +23,11 @@ swift/message_api
 swift/message_contents
 swift/mls
 swift/mls_validation
+
+## Working plan docs
 docs/plans
+
+## AI Tools
 .omx/
+.claude/*
+!.claude/skills
