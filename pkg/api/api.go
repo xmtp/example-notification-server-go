@@ -110,6 +110,7 @@ func (s *ApiServer) RegisterInstallation(
 		interfaces.Installation{
 			Id:                req.Msg.InstallationId,
 			DeliveryMechanism: *mechanism,
+			PayloadFormat:     interfaces.PayloadFormatFromProto(req.Msg.PayloadFormat),
 		},
 	)
 	if err != nil {

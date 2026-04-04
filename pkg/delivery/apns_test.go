@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
@@ -16,12 +15,14 @@ func Test_ApnsDelivery_BuildNotification_TopicField(t *testing.T) {
 	parsed, err := topics.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
 	require.NoError(t, err)
 
+	topicStr := topics.TopicToString(parsed)
 	a := ApnsDelivery{opts: options.ApnsOptions{Topic: "com.example.app"}}
 	req := interfaces.SendRequest{
-		Message: &v1.Envelope{Message: []byte("test")},
+		Topic:            topicStr,
+		EncryptedMessage: []byte("test"),
 		Subscription: interfaces.Subscription{
 			TopicV4: parsed,
-			Topic:   topics.TopicToString(parsed),
+			Topic:   topicStr,
 		},
 		Installation: interfaces.Installation{
 			DeliveryMechanism: interfaces.DeliveryMechanism{Token: "device-token"},

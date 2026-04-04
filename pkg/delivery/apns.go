@@ -60,10 +60,6 @@ func (a ApnsDelivery) CanDeliver(req interfaces.SendRequest) bool {
 }
 
 func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) error {
-	if req.Message == nil {
-		return errors.New("missing message")
-	}
-
 	notification := a.buildNotification(req)
 
 	res, err := a.apnsClient.PushWithContext(ctx, notification)
@@ -81,8 +77,8 @@ func (a ApnsDelivery) Send(ctx context.Context, req interfaces.SendRequest) erro
 
 func (a ApnsDelivery) buildNotification(req interfaces.SendRequest) *apns2.Notification {
 	notificationPayload := payload.NewPayload().
-		Custom("topic", req.Subscription.Topic).
-		Custom("encryptedMessage", req.Message.Message).
+		Custom("topic", req.Topic).
+		Custom("encryptedMessage", req.EncryptedMessage).
 		Custom("messageKind", string(req.MessageContext.MessageType))
 
 	if req.Subscription.IsSilent {

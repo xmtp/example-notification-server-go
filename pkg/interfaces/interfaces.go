@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"time"
 
-	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
+	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	"github.com/xmtp/xmtpd/pkg/topic"
 )
@@ -24,6 +24,47 @@ type DeliveryMechanism struct {
 	UpdatedAt time.Time             `json:"-"`
 }
 
+type PayloadFormat int
+
+const (
+	PayloadFormatUnspecified PayloadFormat = 0
+	PayloadFormatV3          PayloadFormat = 1
+	PayloadFormatV4          PayloadFormat = 2
+)
+
+func PayloadFormatFromProto(p proto.PayloadFormat) PayloadFormat {
+	switch p {
+	case proto.PayloadFormat_PAYLOAD_FORMAT_V3:
+		return PayloadFormatV3
+	case proto.PayloadFormat_PAYLOAD_FORMAT_V4:
+		return PayloadFormatV4
+	default:
+		return PayloadFormatUnspecified
+	}
+}
+
+func (p PayloadFormat) ToProto() proto.PayloadFormat {
+	switch p {
+	case PayloadFormatV3:
+		return proto.PayloadFormat_PAYLOAD_FORMAT_V3
+	case PayloadFormatV4:
+		return proto.PayloadFormat_PAYLOAD_FORMAT_V4
+	default:
+		return proto.PayloadFormat_PAYLOAD_FORMAT_UNSPECIFIED
+	}
+}
+
+func (p PayloadFormat) String() string {
+	switch p {
+	case PayloadFormatV3:
+		return "v3"
+	case PayloadFormatV4:
+		return "v4"
+	default:
+		return "unspecified"
+	}
+}
+
 type RegisterResponse struct {
 	InstallationId string
 	ValidUntil     time.Time
@@ -37,6 +78,7 @@ a new device it is expected to generate a fresh installation_id.
 type Installation struct {
 	Id                string            `json:"id"`
 	DeliveryMechanism DeliveryMechanism `json:"delivery_mechanism"`
+	PayloadFormat     PayloadFormat     `json:"payload_format"`
 }
 
 type Subscription struct {
@@ -51,11 +93,13 @@ type Subscription struct {
 }
 
 type SendRequest struct {
-	IdempotencyKey string         `json:"idempotency_key"`
-	Message        *v1.Envelope   `json:"message"`
-	MessageContext MessageContext `json:"message_context"`
-	Installation   Installation   `json:"installation"`
-	Subscription   Subscription   `json:"subscription"`
+	IdempotencyKey   string        `json:"idempotency_key"`
+	Topic            string        `json:"topic"`
+	EncryptedMessage []byte        `json:"encrypted_message"`
+	PayloadFormat    PayloadFormat `json:"payload_format"`
+	MessageContext   MessageContext `json:"message_context"`
+	Installation     Installation  `json:"installation"`
+	Subscription     Subscription  `json:"subscription"`
 }
 
 type MessageContext struct {

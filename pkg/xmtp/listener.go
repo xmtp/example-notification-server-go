@@ -210,9 +210,9 @@ func (l *Listener) deliver(req interfaces.SendRequest) error {
 	ctx, cancel := context.WithTimeout(l.ctx, DELIVERY_TIMEOUT)
 	defer cancel()
 	for _, service := range l.deliveryServices {
-		if service.CanDeliver(req) && req.Message != nil {
+		if service.CanDeliver(req) {
 			l.logger.Info("active subscription found. sending message",
-				zap.String("topic", req.Message.ContentTopic),
+				zap.String("topic", req.Topic),
 				zap.String("message_type", string(req.MessageContext.MessageType)),
 			)
 			return service.Send(ctx, req)
@@ -251,11 +251,13 @@ func buildSendRequests(envelope *v1.Envelope, t *topicpkg.Topic, installations [
 	for _, subscription := range subscriptions {
 		if installation, exists := installationMap[subscription.InstallationId]; exists {
 			out = append(out, interfaces.SendRequest{
-				IdempotencyKey: idempotencyKey,
-				Message:        envelope,
-				MessageContext: messageContext,
-				Installation:   installation,
-				Subscription:   subscription,
+				IdempotencyKey:   idempotencyKey,
+				Topic:            topics.TopicToString(t),
+				EncryptedMessage: envelope.Message,
+				PayloadFormat:    interfaces.PayloadFormatV3,
+				MessageContext:   messageContext,
+				Installation:     installation,
+				Subscription:     subscription,
 			})
 		}
 	}

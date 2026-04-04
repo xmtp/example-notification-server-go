@@ -5,6 +5,13 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1";
 
+// The payload format for push notifications
+enum PayloadFormat {
+    PAYLOAD_FORMAT_UNSPECIFIED = 0;
+    PAYLOAD_FORMAT_V3 = 1;
+    PAYLOAD_FORMAT_V4 = 2;
+}
+
 // An union of possible delibery mechanisms
 message DeliveryMechanism {
     oneof delivery_mechanism_type {
@@ -18,6 +25,7 @@ message DeliveryMechanism {
 message RegisterInstallationRequest {
     string installation_id = 1;
     DeliveryMechanism delivery_mechanism = 2;
+    PayloadFormat payload_format = 3;
 }
 
 // Response to RegisterInstallationRequest
