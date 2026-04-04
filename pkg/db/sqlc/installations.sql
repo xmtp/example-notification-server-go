@@ -26,15 +26,15 @@ SET deleted_at = sqlc.arg(deleted_at)
 WHERE id = sqlc.arg(id);
 
 -- name: GetLatestInstallations :many
-SELECT DISTINCT ON (ddm.installation_id)
-    ddm.id,
-    ddm.installation_id,
-    ddm.kind,
-    ddm.token,
-    ddm.created_at,
-    ddm.updated_at
-FROM device_delivery_mechanisms AS ddm
-INNER JOIN installations AS i ON i.id = ddm.installation_id
-WHERE ddm.installation_id = ANY(sqlc.arg(installation_ids)::text[])
+SELECT ddm.id, ddm.installation_id, ddm.kind, ddm.token, ddm.created_at, ddm.updated_at
+FROM installations i
+JOIN LATERAL (
+    SELECT d.id, d.installation_id, d.kind, d.token, d.created_at, d.updated_at
+    FROM device_delivery_mechanisms d
+    WHERE d.installation_id = i.id
+    ORDER BY d.updated_at DESC, d.id DESC
+    LIMIT 1
+) ddm ON TRUE
+WHERE i.id = ANY(sqlc.arg(installation_ids)::text[])
   AND i.deleted_at IS NULL
-ORDER BY ddm.installation_id DESC, ddm.updated_at DESC, ddm.id DESC;
+ORDER BY i.id DESC;
