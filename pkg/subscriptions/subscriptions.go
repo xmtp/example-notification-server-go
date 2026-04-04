@@ -81,26 +81,54 @@ func (s SubscriptionsService) SubscribeWithMetadata(
 		}
 	}()
 
+	if len(subscriptions) == 0 {
+		return tx.Commit()
+	}
+
+	topics := make([]string, len(subscriptions))
+	isSilents := make([]bool, len(subscriptions))
+	for i, sub := range subscriptions {
+		topics[i] = sub.Topic
+		isSilents[i] = sub.IsSilent
+	}
+
 	qtx := queries.New(tx)
+	rows, err := qtx.BatchUpsertSubscriptions(ctx, queries.BatchUpsertSubscriptionsParams{
+		InstallationID: installationID,
+		Topics:         topics,
+		IsSilents:      isSilents,
+	})
+	if err != nil {
+		return err
+	}
+
+	topicToID := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		topicToID[row.Topic] = row.ID
+	}
+
+	var (
+		subscriptionIDs []int64
+		periods         []int32
+		keys            [][]byte
+	)
 	for _, sub := range subscriptions {
-		row, err := qtx.UpsertSubscription(ctx, queries.UpsertSubscriptionParams{
-			InstallationID: installationID,
-			Topic:          sub.Topic,
-			IsSilent:       sub.IsSilent,
+		id := topicToID[sub.Topic]
+		for _, keyUpdate := range sub.HmacKeys {
+			subscriptionIDs = append(subscriptionIDs, id)
+			periods = append(periods, int32(keyUpdate.ThirtyDayPeriodsSinceEpoch))
+			keys = append(keys, keyUpdate.Key)
+		}
+	}
+
+	if len(subscriptionIDs) > 0 {
+		err = qtx.BatchUpsertSubscriptionHmacKeys(ctx, queries.BatchUpsertSubscriptionHmacKeysParams{
+			SubscriptionIds: subscriptionIDs,
+			Periods:         periods,
+			Keys:            keys,
 		})
 		if err != nil {
 			return err
-		}
-
-		for _, keyUpdate := range sub.HmacKeys {
-			err = qtx.UpsertSubscriptionHmacKey(ctx, queries.UpsertSubscriptionHmacKeyParams{
-				SubscriptionID:             row.ID,
-				ThirtyDayPeriodsSinceEpoch: int32(keyUpdate.ThirtyDayPeriodsSinceEpoch),
-				Key:                        keyUpdate.Key,
-			})
-			if err != nil {
-				return err
-			}
 		}
 	}
 
