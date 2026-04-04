@@ -51,12 +51,15 @@ func (s SubscriptionsService) Subscribe(ctx context.Context, installationID stri
 		delete(topicMap, result.Topic)
 	}
 
+	remaining := make([]string, 0, len(topicMap))
 	for topic := range topicMap {
-		err = qtx.InsertSubscription(ctx, queries.InsertSubscriptionParams{
+		remaining = append(remaining, topic)
+	}
+
+	if len(remaining) > 0 {
+		err = qtx.BatchInsertSubscriptions(ctx, queries.BatchInsertSubscriptionsParams{
 			InstallationID: installationID,
-			Topic:          topic,
-			IsActive:       true,
-			IsSilent:       false,
+			Topics:         remaining,
 		})
 		if err != nil {
 			return err
