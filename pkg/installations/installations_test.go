@@ -10,6 +10,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
 	"github.com/xmtp/example-notification-server-go/pkg/testutils"
+	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 )
 
 const INSTALLATION_ID = "foo"
@@ -230,14 +231,16 @@ func Test_DeleteDeactivatesSubscriptions(t *testing.T) {
 	_, err := installSvc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 	require.NoError(t, err)
 
-	err = subSvc.Subscribe(ctx, INSTALLATION_ID, []string{"topic1", "topic2"})
+	topic1 := topicpkg.NewTopic(topicpkg.TopicKindGroupMessagesV1, []byte{0x01})
+	topic2 := topicpkg.NewTopic(topicpkg.TopicKindGroupMessagesV1, []byte{0x02})
+	err = subSvc.Subscribe(ctx, INSTALLATION_ID, []*topicpkg.Topic{topic1, topic2})
 	require.NoError(t, err)
 
 	err = installSvc.Delete(ctx, INSTALLATION_ID)
 	require.NoError(t, err)
 
 	// Subscriptions should be deactivated
-	subs, err := subSvc.GetSubscriptions(ctx, "topic1", 1)
+	subs, err := subSvc.GetSubscriptions(ctx, topic1, 1)
 	require.NoError(t, err)
 	require.Len(t, subs, 0)
 }
