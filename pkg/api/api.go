@@ -28,14 +28,16 @@ type ApiServer struct {
 	httpServer    *http.Server
 	port          int
 	listener      net.Listener
+	listenerType  string
 }
 
-func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions) *ApiServer {
+func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions, listenerType string) *ApiServer {
 	return &ApiServer{
 		logger:        logger.Named("api"),
 		installations: installations,
 		subscriptions: subscriptions,
 		port:          opts.Port,
+		listenerType:  listenerType,
 	}
 }
 
@@ -105,12 +107,21 @@ func (s *ApiServer) RegisterInstallation(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("missing delivery mechanism"))
 	}
 	s.logger.Info("got mechanism", zap.Any("mechanism", mechanism))
+
+	payloadFormat := interfaces.PayloadFormatFromProto(req.Msg.PayloadFormat)
+	if payloadFormat == interfaces.PayloadFormatUnspecified {
+		payloadFormat = interfaces.PayloadFormatV3
+	}
+	if payloadFormat == interfaces.PayloadFormatV4 && s.listenerType == "v3" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("payload format V4 is not supported on V3 listener"))
+	}
+
 	result, err := s.installations.Register(
 		ctx,
 		interfaces.Installation{
 			Id:                req.Msg.InstallationId,
 			DeliveryMechanism: *mechanism,
-			PayloadFormat:     interfaces.PayloadFormatFromProto(req.Msg.PayloadFormat),
+			PayloadFormat:     payloadFormat,
 		},
 	)
 	if err != nil {

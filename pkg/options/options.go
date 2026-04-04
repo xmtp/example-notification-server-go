@@ -26,6 +26,7 @@ type XmtpOptions struct {
 	UseTls          bool   `long:"xmtp-listener-tls" description:"Whether to connect to XMTP network using TLS"`
 	GrpcAddress     string `short:"x" long:"xmtp-address" env:"XMTP_GRPC_ADDRESS" description:"Address (including port) of XMTP GRPC server"`
 	NumWorkers      int    `long:"num-workers" description:"Number of workers used to process messages" default:"50"`
+	ListenerType    string `long:"listener-type" env:"LISTENER_TYPE" default:"v3" choice:"v3" choice:"v4" description:"Which listener type to use (v3 or v4)"`
 }
 
 type HttpDeliveryOptions struct {

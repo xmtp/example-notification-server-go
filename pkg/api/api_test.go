@@ -35,6 +35,11 @@ type testContext struct {
 
 func setupTest(t *testing.T) testContext {
 	t.Helper()
+	return setupTestWithListenerType(t, "v3")
+}
+
+func setupTestWithListenerType(t *testing.T, listenerType string) testContext {
+	t.Helper()
 	ctx := t.Context()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -46,7 +51,7 @@ func setupTest(t *testing.T) testContext {
 			DisableKeepAlives: true,
 		},
 	}
-	apiServer := NewApiServer(testutils.TestLogger(t), options.ApiOptions{Port: port}, installationsMock, subscriptionsMock)
+	apiServer := NewApiServer(testutils.TestLogger(t), options.ApiOptions{Port: port}, installationsMock, subscriptionsMock, listenerType)
 	require.NoError(t, apiServer.SetListener(listener))
 	apiServer.Start()
 	time.Sleep(50 * time.Millisecond)
@@ -72,6 +77,7 @@ func Test_SetListenerAfterStartReturnsError(t *testing.T) {
 		options.ApiOptions{Port: 18081},
 		mocks.NewInstallations(t),
 		mocks.NewSubscriptions(t),
+		"v3",
 	)
 	apiServer.Start()
 	defer apiServer.Stop()
@@ -383,4 +389,85 @@ func Test_SubscribeWithMetadata_EmptyTopic(t *testing.T) {
 	}))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no topic")
+}
+
+func TestRegisterInstallation_WithPayloadFormatV4_OnV3Listener_ReturnsError(t *testing.T) {
+	ctx := setupTestWithListenerType(t, "v3")
+
+
+	_, err := ctx.client.RegisterInstallation(
+		ctx.ctx,
+		connect.NewRequest(&proto.RegisterInstallationRequest{
+			InstallationId: INSTALLATION_ID,
+			DeliveryMechanism: &proto.DeliveryMechanism{
+				DeliveryMechanismType: &proto.DeliveryMechanism_ApnsDeviceToken{ApnsDeviceToken: "token"},
+			},
+			PayloadFormat: proto.PayloadFormat_PAYLOAD_FORMAT_V4,
+		}),
+	)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid_argument")
+}
+
+func TestRegisterInstallation_WithPayloadFormatV4_OnV4Listener_Succeeds(t *testing.T) {
+	ctx := setupTestWithListenerType(t, "v4")
+
+
+	validUntil := time.Now()
+	ctx.installationsMock.On(
+		"Register",
+		mock.Anything,
+		mock.MatchedBy(func(inst interfaces.Installation) bool {
+			return inst.PayloadFormat == interfaces.PayloadFormatV4
+		}),
+	).Return(&interfaces.RegisterResponse{
+		InstallationId: INSTALLATION_ID,
+		ValidUntil:     validUntil,
+	}, nil)
+
+	result, err := ctx.client.RegisterInstallation(
+		ctx.ctx,
+		connect.NewRequest(&proto.RegisterInstallationRequest{
+			InstallationId: INSTALLATION_ID,
+			DeliveryMechanism: &proto.DeliveryMechanism{
+				DeliveryMechanismType: &proto.DeliveryMechanism_ApnsDeviceToken{ApnsDeviceToken: "token"},
+			},
+			PayloadFormat: proto.PayloadFormat_PAYLOAD_FORMAT_V4,
+		}),
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, INSTALLATION_ID, result.Msg.InstallationId)
+}
+
+func TestRegisterInstallation_WithUnspecified_DefaultsToV3(t *testing.T) {
+	ctx := setupTest(t)
+
+
+	validUntil := time.Now()
+	ctx.installationsMock.On(
+		"Register",
+		mock.Anything,
+		mock.MatchedBy(func(inst interfaces.Installation) bool {
+			return inst.PayloadFormat == interfaces.PayloadFormatV3
+		}),
+	).Return(&interfaces.RegisterResponse{
+		InstallationId: INSTALLATION_ID,
+		ValidUntil:     validUntil,
+	}, nil)
+
+	result, err := ctx.client.RegisterInstallation(
+		ctx.ctx,
+		connect.NewRequest(&proto.RegisterInstallationRequest{
+			InstallationId: INSTALLATION_ID,
+			DeliveryMechanism: &proto.DeliveryMechanism{
+				DeliveryMechanismType: &proto.DeliveryMechanism_ApnsDeviceToken{ApnsDeviceToken: "token"},
+			},
+			PayloadFormat: proto.PayloadFormat_PAYLOAD_FORMAT_UNSPECIFIED,
+		}),
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, INSTALLATION_ID, result.Msg.InstallationId)
 }

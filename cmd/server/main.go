@@ -98,7 +98,7 @@ func main() {
 	}
 
 	if opts.Api.Enabled {
-		apiServer = api.NewApiServer(logger, opts.Api, installationsService, subscriptionsService)
+		apiServer = api.NewApiServer(logger, opts.Api, installationsService, subscriptionsService, opts.Xmtp.ListenerType)
 		apiServer.Start()
 	}
 

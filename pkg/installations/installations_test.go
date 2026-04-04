@@ -262,41 +262,41 @@ func Test_GetDeleted(t *testing.T) {
 }
 
 func TestRegisterInstallation_PersistsPayloadFormat(t *testing.T) {
-	db := test.CreateTestDb(t)
-	service := NewInstallationsService(logging.CreateLogger("console", "info"), db)
+	db := testutils.CreateTestDb(t)
+	service := NewInstallationsService(testutils.TestLogger(t), db)
 
-	_, err := service.Register(context.Background(), interfaces.Installation{
+	_, err := service.Register(t.Context(), interfaces.Installation{
 		Id:            "test-pf-install",
 		DeliveryMechanism: interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: "tok"},
 		PayloadFormat: interfaces.PayloadFormatV4,
 	})
 	require.NoError(t, err)
 
-	installs, err := service.GetInstallations(context.Background(), []string{"test-pf-install"})
+	installs, err := service.GetInstallations(t.Context(), []string{"test-pf-install"})
 	require.NoError(t, err)
 	require.Len(t, installs, 1)
 	require.Equal(t, interfaces.PayloadFormatV4, installs[0].PayloadFormat)
 }
 
 func TestRegisterInstallation_UpdatesPayloadFormat(t *testing.T) {
-	db := test.CreateTestDb(t)
-	service := NewInstallationsService(logging.CreateLogger("console", "info"), db)
+	db := testutils.CreateTestDb(t)
+	service := NewInstallationsService(testutils.TestLogger(t), db)
 
-	_, err := service.Register(context.Background(), interfaces.Installation{
+	_, err := service.Register(t.Context(), interfaces.Installation{
 		Id:            "test-pf-update",
 		DeliveryMechanism: interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: "tok"},
 		PayloadFormat: interfaces.PayloadFormatV3,
 	})
 	require.NoError(t, err)
 
-	_, err = service.Register(context.Background(), interfaces.Installation{
+	_, err = service.Register(t.Context(), interfaces.Installation{
 		Id:            "test-pf-update",
 		DeliveryMechanism: interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: "tok"},
 		PayloadFormat: interfaces.PayloadFormatV4,
 	})
 	require.NoError(t, err)
 
-	installs, err := service.GetInstallations(context.Background(), []string{"test-pf-update"})
+	installs, err := service.GetInstallations(t.Context(), []string{"test-pf-update"})
 	require.NoError(t, err)
 	require.Len(t, installs, 1)
 	require.Equal(t, interfaces.PayloadFormatV4, installs[0].PayloadFormat)
