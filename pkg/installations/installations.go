@@ -35,7 +35,10 @@ func (s DefaultInstallationService) Register(
 	}
 
 	return database.RunInTxResult(ctx, s.db, func(qtx *queries.Queries) (*interfaces.RegisterResponse, error) {
-		if err := qtx.UpsertInstallation(ctx, installation.Id); err != nil {
+		if err := qtx.UpsertInstallation(ctx, queries.UpsertInstallationParams{
+			ID:            installation.Id,
+			PayloadFormat: int16(installation.PayloadFormat),
+		}); err != nil {
 			return nil, err
 		}
 
@@ -92,6 +95,7 @@ func (s DefaultInstallationService) GetInstallations(
 				Token:     result.Token,
 				UpdatedAt: result.UpdatedAt,
 			},
+			PayloadFormat: interfaces.PayloadFormat(result.PayloadFormat),
 		})
 	}
 	return out, nil

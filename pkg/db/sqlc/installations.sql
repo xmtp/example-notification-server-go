@@ -1,8 +1,9 @@
 -- name: UpsertInstallation :exec
-INSERT INTO installations (id)
-VALUES (sqlc.arg(id))
+INSERT INTO installations (id, payload_format)
+VALUES (sqlc.arg(id), sqlc.arg(payload_format))
 ON CONFLICT (id) DO UPDATE
-SET deleted_at = NULL;
+SET deleted_at = NULL,
+    payload_format = EXCLUDED.payload_format;
 
 -- name: UpsertDeviceDeliveryMechanism :exec
 INSERT INTO device_delivery_mechanisms (
@@ -26,7 +27,7 @@ SET deleted_at = sqlc.arg(deleted_at)
 WHERE id = sqlc.arg(id);
 
 -- name: GetLatestInstallations :many
-SELECT ddm.id, ddm.installation_id, ddm.kind, ddm.token, ddm.created_at, ddm.updated_at
+SELECT ddm.id, ddm.installation_id, ddm.kind, ddm.token, ddm.created_at, ddm.updated_at, i.payload_format
 FROM installations i
 JOIN LATERAL (
     SELECT d.id, d.installation_id, d.kind, d.token, d.created_at, d.updated_at

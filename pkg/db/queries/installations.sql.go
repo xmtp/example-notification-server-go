@@ -14,7 +14,7 @@ import (
 )
 
 const getLatestInstallations = `-- name: GetLatestInstallations :many
-SELECT ddm.id, ddm.installation_id, ddm.kind, ddm.token, ddm.created_at, ddm.updated_at
+SELECT ddm.id, ddm.installation_id, ddm.kind, ddm.token, ddm.created_at, ddm.updated_at, i.payload_format
 FROM installations i
 JOIN LATERAL (
     SELECT d.id, d.installation_id, d.kind, d.token, d.created_at, d.updated_at
@@ -35,6 +35,7 @@ type GetLatestInstallationsRow struct {
 	Token          string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	PayloadFormat  int16
 }
 
 func (q *Queries) GetLatestInstallations(ctx context.Context, installationIds []string) ([]GetLatestInstallationsRow, error) {
@@ -53,6 +54,7 @@ func (q *Queries) GetLatestInstallations(ctx context.Context, installationIds []
 			&i.Token,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PayloadFormat,
 		); err != nil {
 			return nil, err
 		}
@@ -118,13 +120,19 @@ func (q *Queries) UpsertDeviceDeliveryMechanism(ctx context.Context, arg UpsertD
 }
 
 const upsertInstallation = `-- name: UpsertInstallation :exec
-INSERT INTO installations (id)
-VALUES ($1)
+INSERT INTO installations (id, payload_format)
+VALUES ($1, $2)
 ON CONFLICT (id) DO UPDATE
-SET deleted_at = NULL
+SET deleted_at = NULL,
+    payload_format = EXCLUDED.payload_format
 `
 
-func (q *Queries) UpsertInstallation(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, upsertInstallation, id)
+type UpsertInstallationParams struct {
+	ID            string
+	PayloadFormat int16
+}
+
+func (q *Queries) UpsertInstallation(ctx context.Context, arg UpsertInstallationParams) error {
+	_, err := q.db.ExecContext(ctx, upsertInstallation, arg.ID, arg.PayloadFormat)
 	return err
 }

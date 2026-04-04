@@ -1,0 +1,2 @@
+ALTER TABLE installations
+ADD COLUMN payload_format SMALLINT NOT NULL DEFAULT 1;

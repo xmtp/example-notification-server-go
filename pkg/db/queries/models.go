@@ -19,9 +19,10 @@ type DeviceDeliveryMechanism struct {
 }
 
 type Installation struct {
-	ID        string
-	CreatedAt time.Time
-	DeletedAt sql.NullTime
+	ID            string
+	CreatedAt     time.Time
+	DeletedAt     sql.NullTime
+	PayloadFormat int16
 }
 
 type Subscription struct {
