@@ -40,3 +40,6 @@ CREATE INDEX subscriptions_topic_is_active_idx
 
 CREATE UNIQUE INDEX subscriptions_installation_id_topic_idx
     ON subscriptions (installation_id, topic);
+
+-- Step 9: Drop legacy column
+ALTER TABLE subscriptions DROP COLUMN topic_legacy;

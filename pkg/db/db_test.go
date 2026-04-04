@@ -97,7 +97,7 @@ func TestMigration_BinaryTopics_DataConversion(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	// Run migration 00004 (binary conversion)
+	// Run migration 00004 (binary conversion + drop legacy column)
 	require.NoError(t, database.MigrateUpTo(t.Context(), db, 4))
 
 	// Verify: group topic converted correctly (first byte 0x00 = TopicKindGroupMessagesV1)
@@ -115,9 +115,6 @@ func TestMigration_BinaryTopics_DataConversion(t *testing.T) {
 	).Scan(&count)
 	require.NoError(t, err)
 	require.Equal(t, 2, count)
-
-	// Run migration 00005 (drop legacy column)
-	require.NoError(t, database.MigrateUpTo(t.Context(), db, 5))
 
 	// Verify topic_legacy column does not exist
 	err = db.QueryRowContext(t.Context(),
