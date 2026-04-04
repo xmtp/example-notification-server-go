@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"errors"
+	"strconv"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -22,6 +23,31 @@ var migrationFS embed.FS
 // Reconciliation must stay pinned to that handoff point so future golang-migrate-only
 // migrations are still applied normally after older deployments upgrade.
 const legacyBunBaselineVersion = 2
+
+// LatestVersion returns the highest migration version found in the embedded
+// migration files. This is useful for tests that need to assert the current
+// schema version without hardcoding a number.
+func LatestVersion() (int, error) {
+	entries, err := migrationFS.ReadDir(".")
+	if err != nil {
+		return 0, err
+	}
+	max := 0
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || len(name) < 5 {
+			continue
+		}
+		seq, err := strconv.Atoi(name[:5])
+		if err != nil {
+			continue
+		}
+		if seq > max {
+			max = seq
+		}
+	}
+	return max, nil
+}
 
 // Migrate always uses golang-migrate's schema_migrations table as the source of truth.
 // For databases that were previously bootstrapped by Bun, we first "reconcile" by

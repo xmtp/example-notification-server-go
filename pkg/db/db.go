@@ -36,3 +36,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 func CreateMigrationFiles(name string) ([]migrations.File, error) {
 	return migrations.CreateFiles("pkg/db/migrations", name)
 }
+
+func LatestMigrationVersion() (int, error) {
+	return migrations.LatestVersion()
+}
