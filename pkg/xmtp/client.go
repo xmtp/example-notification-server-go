@@ -6,6 +6,7 @@ import (
 	"time"
 
 	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
+	notificationApi "github.com/xmtp/xmtpd/pkg/proto/xmtpv4/message_api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -48,4 +49,13 @@ func NewClient(ctx context.Context, apiAddress string, useTls bool, clientVersio
 	}
 
 	return v1.NewMessageApiClient(conn), nil
+}
+
+func NewV4Client(ctx context.Context, apiAddress string, useTls bool, clientVersion, appVersion string) (notificationApi.NotificationApiClient, error) {
+	conn, err := newConn(apiAddress, useTls, clientVersion, appVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return notificationApi.NewNotificationApiClient(conn), nil
 }

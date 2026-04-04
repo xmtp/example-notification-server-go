@@ -1,6 +1,7 @@
 package xmtp
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,6 +13,12 @@ func TestXmtpdNotificationApiImportable(t *testing.T) {
 	// This test verifies the xmtpd notification API proto types are available.
 	// It will fail until xmtpd is pinned to the notification API branch.
 	var _ messageApi.NotificationApiClient
+}
+
+func TestNewV4Client_ReturnsClient(t *testing.T) {
+	client, err := NewV4Client(context.Background(), "localhost:0", false, "test", "test")
+	require.NoError(t, err)
+	require.NotNil(t, client)
 }
 
 func TestXmtpdEnvelopeTypesImportable(t *testing.T) {
