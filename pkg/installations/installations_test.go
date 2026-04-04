@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
+	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
 	"github.com/xmtp/example-notification-server-go/test"
 )
 
@@ -215,6 +216,30 @@ func Test_GetMultiple(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res, 1)
 	require.Equal(t, "token3", res[0].DeliveryMechanism.Token)
+}
+
+func Test_DeleteDeactivatesSubscriptions(t *testing.T) {
+	ctx := context.Background()
+	db := test.CreateTestDb(t)
+
+	installSvc := createService(db)
+	subSvc := subscriptions.NewSubscriptionsService(
+		logging.CreateLogger("console", "info"), db,
+	)
+
+	_, err := installSvc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
+	require.NoError(t, err)
+
+	err = subSvc.Subscribe(ctx, INSTALLATION_ID, []string{"topic1", "topic2"})
+	require.NoError(t, err)
+
+	err = installSvc.Delete(ctx, INSTALLATION_ID)
+	require.NoError(t, err)
+
+	// Subscriptions should be deactivated
+	subs, err := subSvc.GetSubscriptions(ctx, "topic1", 1)
+	require.NoError(t, err)
+	require.Len(t, subs, 0)
 }
 
 func Test_GetDeleted(t *testing.T) {

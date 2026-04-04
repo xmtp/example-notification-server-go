@@ -68,11 +68,32 @@ func (s DefaultInstallationService) Register(
 	}, nil
 }
 
-func (s DefaultInstallationService) Delete(ctx context.Context, installationID string) error {
-	return s.queries.SoftDeleteInstallation(ctx, queries.SoftDeleteInstallationParams{
+func (s DefaultInstallationService) Delete(ctx context.Context, installationID string) (err error) {
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	qtx := queries.New(tx)
+	err = qtx.SoftDeleteInstallation(ctx, queries.SoftDeleteInstallationParams{
 		ID:        installationID,
 		DeletedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
+	if err != nil {
+		return err
+	}
+
+	err = qtx.DeactivateInstallationSubscriptions(ctx, installationID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s DefaultInstallationService) GetInstallations(
