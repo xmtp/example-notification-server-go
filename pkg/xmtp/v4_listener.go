@@ -2,14 +2,21 @@ package xmtp
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"io"
 	"time"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
+	"github.com/xmtp/xmtpd/pkg/envelopes"
+	mlsV1 "github.com/xmtp/xmtpd/pkg/proto/mls/api/v1"
 	envelopesProto "github.com/xmtp/xmtpd/pkg/proto/xmtpv4/envelopes"
 	notificationApi "github.com/xmtp/xmtpd/pkg/proto/xmtpv4/message_api"
+	"github.com/xmtp/xmtpd/pkg/topic"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 type V4Listener struct {
@@ -135,7 +142,201 @@ func (l *V4Listener) startEnvelopeWorkers() {
 }
 
 func (l *V4Listener) processOriginatorEnvelope(env *envelopesProto.OriginatorEnvelope) error {
+	origEnv, err := envelopes.NewOriginatorEnvelope(env)
+	if err != nil {
+		l.logger.Info("skipping envelope: failed to parse originator envelope", zap.Error(err))
+		return nil
+	}
+
+	clientEnvProto := origEnv.UnsignedOriginatorEnvelope.PayerEnvelope.ClientEnvelope.Proto()
+	if clientEnvProto == nil {
+		l.logger.Info("skipping envelope: client envelope proto is nil")
+		return nil
+	}
+
+	aad := clientEnvProto.GetAad()
+	if aad == nil {
+		l.logger.Info("skipping envelope: AAD is nil")
+		return nil
+	}
+
+	targetTopicBytes := aad.GetTargetTopic()
+	if len(targetTopicBytes) == 0 {
+		l.logger.Info("skipping envelope: target topic is empty")
+		return nil
+	}
+
+	targetTopic, err := topic.ParseTopic(targetTopicBytes)
+	if err != nil {
+		l.logger.Info("skipping envelope: failed to parse target topic", zap.Error(err))
+		return nil
+	}
+
+	thirtyDayPeriod := int(origEnv.OriginatorNs() / 1_000_000_000 / 60 / 60 / 24 / 30)
+	subs, err := l.subscriptions.GetSubscriptions(l.ctx, targetTopic, thirtyDayPeriod)
+	if err != nil {
+		return err
+	}
+
+	if len(subs) == 0 {
+		return nil
+	}
+
+	installationIds := make([]string, len(subs))
+	for i, sub := range subs {
+		installationIds[i] = sub.InstallationId
+	}
+
+	insts, err := l.installations.GetInstallations(l.ctx, installationIds)
+	if err != nil {
+		return err
+	}
+
+	if len(insts) == 0 {
+		return nil
+	}
+
+	idempotencyKey := buildV4IdempotencyKey(env)
+	installationMap := make(map[string]interfaces.Installation, len(insts))
+	for _, inst := range insts {
+		installationMap[inst.Id] = inst
+	}
+
+	for _, sub := range subs {
+		inst, exists := installationMap[sub.InstallationId]
+		if !exists {
+			continue
+		}
+
+		req, skip := l.buildV4SendRequest(env, origEnv, clientEnvProto, targetTopic, idempotencyKey, inst, sub)
+		if skip {
+			continue
+		}
+
+		if !l.dispatcher.shouldDeliver(req.MessageContext, req.Subscription) {
+			l.logger.Info("skipping delivery of V4 request",
+				zap.Any("message_context", req.MessageContext),
+				zap.Bool("subscription_has_hmac_key", req.Subscription.HmacKey != nil),
+			)
+			continue
+		}
+
+		if err = l.dispatcher.deliver(req); err != nil {
+			l.logger.Error("error delivering V4 request", zap.Error(err))
+		}
+	}
+
 	return nil
+}
+
+// buildV4SendRequest constructs a SendRequest for the given installation.
+// Returns (request, true) if the request should be skipped, (request, false) otherwise.
+func (l *V4Listener) buildV4SendRequest(
+	env *envelopesProto.OriginatorEnvelope,
+	origEnv *envelopes.OriginatorEnvelope,
+	clientEnvProto *envelopesProto.ClientEnvelope,
+	targetTopic *topic.Topic,
+	idempotencyKey string,
+	inst interfaces.Installation,
+	sub interfaces.Subscription,
+) (interfaces.SendRequest, bool) {
+	if inst.PayloadFormat == interfaces.PayloadFormatV4 {
+		// V4 format: deliver raw OriginatorEnvelope bytes
+		envBytes, err := proto.Marshal(env)
+		if err != nil {
+			l.logger.Error("failed to marshal originator envelope for V4 delivery", zap.Error(err))
+			return interfaces.SendRequest{}, true
+		}
+
+		var messageContext interfaces.MessageContext
+		switch payload := clientEnvProto.GetPayload().(type) {
+		case *envelopesProto.ClientEnvelope_GroupMessage:
+			v1Input := payload.GroupMessage.GetV1()
+			messageContext = buildGroupMessageContext(v1Input)
+		case *envelopesProto.ClientEnvelope_WelcomeMessage:
+			messageContext = interfaces.MessageContext{MessageType: topics.V3Welcome}
+		default:
+			messageContext = interfaces.MessageContext{MessageType: topics.Unknown}
+		}
+
+		return interfaces.SendRequest{
+			IdempotencyKey:   idempotencyKey,
+			Topic:            topics.TopicToBase64(targetTopic),
+			EncryptedMessage: envBytes,
+			PayloadFormat:    interfaces.PayloadFormatV4,
+			MessageContext:   messageContext,
+			Installation:     inst,
+			Subscription:     sub,
+		}, false
+	}
+
+	// V3 format (PayloadFormatV3 or PayloadFormatUnspecified)
+	switch payload := clientEnvProto.GetPayload().(type) {
+	case *envelopesProto.ClientEnvelope_GroupMessage:
+		v1Input := payload.GroupMessage.GetV1()
+		encryptedMsg, err := convertGroupMessageToV3(v1Input, origEnv, targetTopic)
+		if err != nil {
+			l.logger.Error("failed to convert group message to V3", zap.Error(err))
+			return interfaces.SendRequest{}, true
+		}
+		messageContext := buildGroupMessageContext(v1Input)
+		return interfaces.SendRequest{
+			IdempotencyKey:   idempotencyKey,
+			Topic:            topics.TopicToLegacy(targetTopic),
+			EncryptedMessage: encryptedMsg,
+			PayloadFormat:    interfaces.PayloadFormatV3,
+			MessageContext:   messageContext,
+			Installation:     inst,
+			Subscription:     sub,
+		}, false
+
+	case *envelopesProto.ClientEnvelope_WelcomeMessage:
+		v1Input := payload.WelcomeMessage.GetV1()
+		encryptedMsg, err := convertWelcomeMessageToV3(v1Input, origEnv)
+		if err != nil {
+			l.logger.Error("failed to convert welcome message to V3", zap.Error(err))
+			return interfaces.SendRequest{}, true
+		}
+		return interfaces.SendRequest{
+			IdempotencyKey:   idempotencyKey,
+			Topic:            topics.TopicToLegacy(targetTopic),
+			EncryptedMessage: encryptedMsg,
+			PayloadFormat:    interfaces.PayloadFormatV3,
+			MessageContext:   interfaces.MessageContext{MessageType: topics.V3Welcome},
+			Installation:     inst,
+			Subscription:     sub,
+		}, false
+
+	default:
+		// Non-convertible payload: skip V3 installations
+		l.logger.Info("skipping non-convertible payload for V3 installation")
+		return interfaces.SendRequest{}, true
+	}
+}
+
+func buildGroupMessageContext(v1Input *mlsV1.GroupMessageInput_V1) interfaces.MessageContext {
+	if v1Input == nil {
+		return interfaces.MessageContext{MessageType: topics.V3Conversation}
+	}
+	shouldPush := v1Input.ShouldPush
+	mc := interfaces.MessageContext{
+		MessageType: topics.V3Conversation,
+		ShouldPush:  &shouldPush,
+		HmacInputs:  &v1Input.Data,
+	}
+	if len(v1Input.SenderHmac) > 0 {
+		mc.SenderHmac = &v1Input.SenderHmac
+	}
+	return mc
+}
+
+func buildV4IdempotencyKey(env *envelopesProto.OriginatorEnvelope) string {
+	h := sha1.New()
+	b, err := proto.Marshal(env)
+	if err == nil {
+		h.Write(b)
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (l *V4Listener) refreshV4Client() error {
