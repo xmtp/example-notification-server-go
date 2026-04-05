@@ -5,27 +5,57 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/xmtp/xmtpd/pkg/envelopes"
-	messageApi "github.com/xmtp/xmtpd/pkg/proto/xmtpv4/message_api"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
-func TestXmtpdNotificationApiImportable(t *testing.T) {
-	// This test verifies the xmtpd notification API proto types are available.
-	// It will fail until xmtpd is pinned to the notification API branch.
-	var _ messageApi.NotificationApiClient
+type noopClientStream struct {
+	ctx context.Context
 }
 
-func TestNewV4Client_ReturnsClient(t *testing.T) {
-	client, conn, err := NewV4Client(context.Background(), "localhost:0", false, "test", "test")
+func (s noopClientStream) Header() (metadata.MD, error) { return nil, nil }
+func (s noopClientStream) Trailer() metadata.MD         { return nil }
+func (s noopClientStream) CloseSend() error             { return nil }
+func (s noopClientStream) Context() context.Context     { return s.ctx }
+func (s noopClientStream) SendMsg(any) error            { return nil }
+func (s noopClientStream) RecvMsg(any) error            { return nil }
+
+func TestMetadataUnaryInterceptor_AppendsVersionHeaders(t *testing.T) {
+	interceptor := metadataUnaryInterceptor("client-test", "app-test")
+
+	err := interceptor(
+		context.Background(),
+		"/xmtp.xmtpv4.message_api.NotificationApi/SubscribeAllEnvelopes",
+		nil,
+		nil,
+		nil,
+		func(ctx context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
+			md, ok := metadata.FromOutgoingContext(ctx)
+			require.True(t, ok)
+			require.Equal(t, []string{"client-test"}, md.Get(clientVersionMetadataKey))
+			require.Equal(t, []string{"app-test"}, md.Get(appVersionMetadataKey))
+			return nil
+		},
+	)
 	require.NoError(t, err)
-	require.NotNil(t, client)
-	require.NotNil(t, conn)
-	_ = conn.Close()
 }
 
-func TestXmtpdEnvelopeTypesImportable(t *testing.T) {
-	// Verify that importing xmtpd/pkg/envelopes does NOT cause
-	// protobuf namespace conflicts after local proto dirs are deleted.
-	_, err := envelopes.NewOriginatorEnvelopeFromBytes([]byte{})
-	require.Error(t, err) // Expected: parse error on empty bytes, not a panic
+func TestMetadataStreamInterceptor_AppendsVersionHeaders(t *testing.T) {
+	interceptor := metadataStreamInterceptor("client-test", "app-test")
+
+	stream, err := interceptor(
+		context.Background(),
+		&grpc.StreamDesc{ServerStreams: true},
+		nil,
+		"/xmtp.xmtpv4.message_api.NotificationApi/SubscribeAllEnvelopes",
+		func(ctx context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
+			md, ok := metadata.FromOutgoingContext(ctx)
+			require.True(t, ok)
+			require.Equal(t, []string{"client-test"}, md.Get(clientVersionMetadataKey))
+			require.Equal(t, []string{"app-test"}, md.Get(appVersionMetadataKey))
+			return noopClientStream{ctx: ctx}, nil
+		},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, stream)
 }

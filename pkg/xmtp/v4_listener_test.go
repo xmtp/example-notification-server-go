@@ -15,6 +15,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
+	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
 	"github.com/xmtp/example-notification-server-go/test"
 	mlsV1 "github.com/xmtp/xmtpd/pkg/proto/mls/api/v1"
 	envelopesProto "github.com/xmtp/xmtpd/pkg/proto/xmtpv4/envelopes"
@@ -53,6 +54,22 @@ func getSendRequests(mockDelivery *mocks.Delivery) []interfaces.SendRequest {
 		}
 	}
 	return reqs
+}
+
+func requireSendRequestForInstallation(
+	t *testing.T,
+	reqs []interfaces.SendRequest,
+	installationID string,
+) interfaces.SendRequest {
+	t.Helper()
+
+	for _, req := range reqs {
+		if req.Installation.Id == installationID {
+			return req
+		}
+	}
+	require.Failf(t, "missing send request", "installation %q was not delivered", installationID)
+	return interfaces.SendRequest{}
 }
 
 // buildV4TestListener creates a V4Listener with real DB services and mock delivery.
@@ -175,22 +192,6 @@ func buildWelcomeMessageOriginatorEnvelope(
 	return testEnvelopes.CreateOriginatorEnvelopeWithTimestamp(t, nodeID, sequenceID, time.Unix(0, timestampNs), payerEnv)
 }
 
-// buildPayerReportOriginatorEnvelope creates an OriginatorEnvelope containing a PayerReport (non-convertible).
-func buildPayerReportOriginatorEnvelope(
-	t *testing.T,
-	nodeID uint32,
-	sequenceID uint64,
-	timestampNs int64,
-) *envelopesProto.OriginatorEnvelope {
-	t.Helper()
-	// Use a PayerReport payload which is non-group/welcome
-	reportID := []byte{0xDE, 0xAD, 0xBE, 0xEF}
-	clientEnv := testEnvelopes.CreatePayerReportClientEnvelope(nodeID)
-	_ = reportID // topic bytes are set by CreatePayerReportClientEnvelope internally
-	payerEnv := testEnvelopes.CreatePayerEnvelope(t, nodeID, clientEnv)
-	return testEnvelopes.CreateOriginatorEnvelopeWithTimestamp(t, nodeID, sequenceID, time.Unix(0, timestampNs), payerEnv)
-}
-
 // TestV4Listener_ProcessGroupMessage_V3Format tests that a GroupMessageInput envelope is converted
 // to V3 format and delivered to a V3 installation.
 func TestV4Listener_ProcessGroupMessage_V3Format(t *testing.T) {
@@ -215,15 +216,18 @@ func TestV4Listener_ProcessGroupMessage_V3Format(t *testing.T) {
 	// Verify payload format is V3
 	sendReqs := getSendRequests(mockDelivery)
 	require.Len(t, sendReqs, 1)
-	capturedReq := sendReqs[0]
+	capturedReq := requireSendRequestForInstallation(t, sendReqs, "inst-v3")
 	require.Equal(t, interfaces.PayloadFormatV3, capturedReq.PayloadFormat)
+	require.Equal(t, topicutil.TopicToLegacy(groupTopic), capturedReq.Topic)
 	require.NotEmpty(t, capturedReq.EncryptedMessage)
+	require.Equal(t, topicutil.V3Conversation, capturedReq.MessageContext.MessageType)
 
 	// Deserialize and verify it's a V3 GroupMessage
 	var groupMsg mlsV1.GroupMessage
 	require.NoError(t, proto.Unmarshal(capturedReq.EncryptedMessage, &groupMsg))
 	require.NotNil(t, groupMsg.GetV1())
 	require.Equal(t, groupID, groupMsg.GetV1().GetGroupId())
+	require.True(t, groupMsg.GetV1().GetShouldPush())
 }
 
 // TestV4Listener_ProcessGroupMessage_V4Format tests that a GroupMessageInput envelope is delivered
@@ -249,13 +253,16 @@ func TestV4Listener_ProcessGroupMessage_V4Format(t *testing.T) {
 
 	sendReqs := getSendRequests(mockDelivery)
 	require.Len(t, sendReqs, 1)
-	capturedReq := sendReqs[0]
+	capturedReq := requireSendRequestForInstallation(t, sendReqs, "inst-v4")
 	require.Equal(t, interfaces.PayloadFormatV4, capturedReq.PayloadFormat)
+	require.Equal(t, topicutil.TopicToBase64(groupTopic), capturedReq.Topic)
 	require.NotEmpty(t, capturedReq.EncryptedMessage)
+	require.Equal(t, topicutil.V3Conversation, capturedReq.MessageContext.MessageType)
 
 	// Verify it's a valid OriginatorEnvelope
-	var origEnv envelopesProto.OriginatorEnvelope
-	require.NoError(t, proto.Unmarshal(capturedReq.EncryptedMessage, &origEnv))
+	var deliveredEnv envelopesProto.OriginatorEnvelope
+	require.NoError(t, proto.Unmarshal(capturedReq.EncryptedMessage, &deliveredEnv))
+	require.True(t, proto.Equal(env, &deliveredEnv))
 }
 
 // TestV4Listener_ProcessWelcomeMessage_V3Format tests that a WelcomeMessageInput envelope is
@@ -281,9 +288,11 @@ func TestV4Listener_ProcessWelcomeMessage_V3Format(t *testing.T) {
 
 	sendReqs := getSendRequests(mockDelivery)
 	require.Len(t, sendReqs, 1)
-	capturedReq := sendReqs[0]
+	capturedReq := requireSendRequestForInstallation(t, sendReqs, "inst-welcome-v3")
 	require.Equal(t, interfaces.PayloadFormatV3, capturedReq.PayloadFormat)
+	require.Equal(t, topicutil.TopicToLegacy(welcomeTopic), capturedReq.Topic)
 	require.NotEmpty(t, capturedReq.EncryptedMessage)
+	require.Equal(t, topicutil.V3Welcome, capturedReq.MessageContext.MessageType)
 
 	// Deserialize and verify it's a V3 WelcomeMessage
 	var welcomeMsg mlsV1.WelcomeMessage
@@ -315,15 +324,16 @@ func TestV4Listener_ProcessGroupMessage_MixedFormats(t *testing.T) {
 
 	mockDelivery.AssertNumberOfCalls(t, "Send", 2)
 
-	formats := map[interfaces.PayloadFormat]int{}
-	for _, call := range mockDelivery.Calls {
-		if call.Method == "Send" {
-			req := call.Arguments.Get(1).(interfaces.SendRequest)
-			formats[req.PayloadFormat]++
-		}
-	}
-	require.Equal(t, 1, formats[interfaces.PayloadFormatV3])
-	require.Equal(t, 1, formats[interfaces.PayloadFormatV4])
+	sendReqs := getSendRequests(mockDelivery)
+	require.Len(t, sendReqs, 2)
+
+	v3Req := requireSendRequestForInstallation(t, sendReqs, "inst-mixed-v3")
+	require.Equal(t, interfaces.PayloadFormatV3, v3Req.PayloadFormat)
+	require.Equal(t, topicutil.TopicToLegacy(groupTopic), v3Req.Topic)
+
+	v4Req := requireSendRequestForInstallation(t, sendReqs, "inst-mixed-v4")
+	require.Equal(t, interfaces.PayloadFormatV4, v4Req.PayloadFormat)
+	require.Equal(t, topicutil.TopicToBase64(groupTopic), v4Req.Topic)
 }
 
 // TestV4Listener_SkipNonConvertiblePayload_V3Format tests that a non-group/welcome payload
@@ -334,13 +344,25 @@ func TestV4Listener_SkipNonConvertiblePayload_V3Format(t *testing.T) {
 
 	l := buildV4TestListener(t, mockDelivery)
 
-	// We need a subscription for the payer report topic. PayerReport uses TopicKindPayerReportsV1.
+	// Build a payer report envelope targeting a specific topic, then subscribe to that exact topic.
+	// We construct the clientEnv inline (matching TestV4Listener_DeliverNonConvertiblePayload_V4Format)
+	// to ensure the subscription topic bytes match exactly.
 	payerReportTopic := topic.NewTopic(topic.TopicKindPayerReportsV1, []byte{0x00, 0x00, 0x00, 0x01})
 
 	registerV4Installation(t, l, "inst-payer-v3", interfaces.PayloadFormatV3)
 	subscribeV4ToTopic(t, l, "inst-payer-v3", payerReportTopic)
 
-	env := buildPayerReportOriginatorEnvelope(t, 1, 5, int64(time.Second))
+	clientEnv := &envelopesProto.ClientEnvelope{
+		Payload: &envelopesProto.ClientEnvelope_PayerReport{
+			PayerReport: &envelopesProto.PayerReport{},
+		},
+		Aad: &envelopesProto.AuthenticatedData{
+			TargetTopic: payerReportTopic.Bytes(),
+		},
+	}
+	payerEnv := testEnvelopes.CreatePayerEnvelope(t, 1, clientEnv)
+	env := testEnvelopes.CreateOriginatorEnvelopeWithTimestamp(t, 1, 5, time.Unix(0, int64(time.Second)), payerEnv)
+
 	err := l.processOriginatorEnvelope(env)
 	require.NoError(t, err)
 
@@ -380,7 +402,14 @@ func TestV4Listener_DeliverNonConvertiblePayload_V4Format(t *testing.T) {
 
 	sendReqs := getSendRequests(mockDelivery)
 	require.Len(t, sendReqs, 1)
-	require.Equal(t, interfaces.PayloadFormatV4, sendReqs[0].PayloadFormat)
+	capturedReq := requireSendRequestForInstallation(t, sendReqs, "inst-payer-v4")
+	require.Equal(t, interfaces.PayloadFormatV4, capturedReq.PayloadFormat)
+	require.Equal(t, topicutil.TopicToBase64(payerReportTopic), capturedReq.Topic)
+	require.Equal(t, topicutil.Unknown, capturedReq.MessageContext.MessageType)
+
+	var deliveredEnv envelopesProto.OriginatorEnvelope
+	require.NoError(t, proto.Unmarshal(capturedReq.EncryptedMessage, &deliveredEnv))
+	require.True(t, proto.Equal(env, &deliveredEnv))
 }
 
 // TestV4Listener_ShouldPushFalse_SkipsDelivery tests that a GroupMessageInput with
@@ -484,11 +513,14 @@ func TestV4Listener_ProcessWelcomePointer_V3Format(t *testing.T) {
 	mockDelivery.AssertNumberOfCalls(t, "Send", 1)
 	sendReqs := getSendRequests(mockDelivery)
 	require.Len(t, sendReqs, 1)
-	require.Equal(t, interfaces.PayloadFormatV3, sendReqs[0].PayloadFormat)
+	capturedReq := requireSendRequestForInstallation(t, sendReqs, "inst-wp-v3")
+	require.Equal(t, interfaces.PayloadFormatV3, capturedReq.PayloadFormat)
+	require.Equal(t, topicutil.TopicToLegacy(welcomeTopic), capturedReq.Topic)
+	require.Equal(t, topicutil.V3Welcome, capturedReq.MessageContext.MessageType)
 
 	// Verify it's a WelcomeMessage with WelcomePointer variant
 	var welcomeMsg mlsV1.WelcomeMessage
-	require.NoError(t, proto.Unmarshal(sendReqs[0].EncryptedMessage, &welcomeMsg))
+	require.NoError(t, proto.Unmarshal(capturedReq.EncryptedMessage, &welcomeMsg))
 	wp := welcomeMsg.GetWelcomePointer()
 	require.NotNil(t, wp, "expected WelcomePointer variant")
 	require.Equal(t, installationKeyID, wp.GetInstallationKey())
@@ -535,6 +567,9 @@ func TestV4Listener_NonConvertiblePayload_LogsWarning(t *testing.T) {
 	require.NoError(t, err)
 
 	// Should log a warning (not error) for non-convertible payload
-	warnLogs := logs.FilterMessage("v4 payload cannot be converted to v3")
+	mockDelivery.AssertNotCalled(t, "Send")
+	warnLogs := logs.FilterField(zap.Error(ErrUnknownPayloadType))
 	require.Equal(t, 1, warnLogs.Len(), "expected 1 warning log for non-convertible payload")
+	require.Equal(t, "error building send request", warnLogs.All()[0].Message)
+	require.Equal(t, interfaces.PayloadFormatV3.String(), warnLogs.All()[0].ContextMap()["payload_format"])
 }

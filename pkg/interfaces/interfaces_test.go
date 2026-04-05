@@ -9,6 +9,25 @@ import (
 	"github.com/xmtp/xmtpd/pkg/topic"
 )
 
+type subscriptionJSON struct {
+	Topic         string `json:"topic"`
+	IsSilent      bool   `json:"is_silent"`
+	TopicBytesB64 string `json:"topicBytesB64"`
+}
+
+type sendRequestJSONFixture struct {
+	IdempotencyKey string `json:"idempotency_key"`
+	Message        struct {
+		ContentTopic string `json:"content_topic"`
+		Message      string `json:"message"`
+	} `json:"message"`
+	MessageContext struct {
+		MessageType string `json:"message_type"`
+	} `json:"message_context"`
+	Topic            string `json:"topic"`
+	EncryptedMessage string `json:"encrypted_message"`
+}
+
 func TestPayloadFormat_String(t *testing.T) {
 	require.Equal(t, "v3", PayloadFormatV3.String())
 	require.Equal(t, "v4", PayloadFormatV4.String())
@@ -50,11 +69,11 @@ func Test_Subscription_MarshalJSON_TopicOnly(t *testing.T) {
 	data, err := json.Marshal(sub)
 	require.NoError(t, err)
 
-	var result map[string]interface{}
+	var result subscriptionJSON
 	require.NoError(t, json.Unmarshal(data, &result))
-	require.Equal(t, "/xmtp/mls/1/g-24ce/proto", result["topic"])
-	require.NotContains(t, result, "topicBytesB64")
-	require.Equal(t, true, result["is_silent"])
+	require.Equal(t, "/xmtp/mls/1/g-24ce/proto", result.Topic)
+	require.Empty(t, result.TopicBytesB64)
+	require.True(t, result.IsSilent)
 }
 
 func TestSendRequest_MarshalJSON_BackwardCompatible(t *testing.T) {
@@ -77,25 +96,16 @@ func TestSendRequest_MarshalJSON_BackwardCompatible(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 
-	var result map[string]interface{}
+	var result sendRequestJSONFixture
 	require.NoError(t, json.Unmarshal(data, &result))
 
-	// Must have nested message object with content_topic and message
-	msg, ok := result["message"].(map[string]interface{})
-	require.True(t, ok, "expected 'message' object in JSON")
-	require.Equal(t, "/xmtp/mls/1/w-test/proto", msg["content_topic"])
-	require.NotEmpty(t, msg["message"])
+	require.Equal(t, "/xmtp/mls/1/w-test/proto", result.Message.ContentTopic)
+	require.NotEmpty(t, result.Message.Message)
 
-	// Must NOT have top-level topic or encrypted_message
-	_, hasTopic := result["topic"]
-	require.False(t, hasTopic, "top-level 'topic' should not exist")
-	_, hasEncMsg := result["encrypted_message"]
-	require.False(t, hasEncMsg, "top-level 'encrypted_message' should not exist")
-
-	// Other fields
-	require.Equal(t, "abc123", result["idempotency_key"])
-	mc := result["message_context"].(map[string]interface{})
-	require.Equal(t, "v3-welcome", mc["message_type"])
+	require.Empty(t, result.Topic)
+	require.Empty(t, result.EncryptedMessage)
+	require.Equal(t, "abc123", result.IdempotencyKey)
+	require.Equal(t, "v3-welcome", result.MessageContext.MessageType)
 }
 
 func Test_Subscription_MarshalJSON_TopicV4NotSerialized(t *testing.T) {
@@ -104,10 +114,8 @@ func Test_Subscription_MarshalJSON_TopicV4NotSerialized(t *testing.T) {
 	data, err := json.Marshal(sub)
 	require.NoError(t, err)
 
-	var result map[string]interface{}
+	var result subscriptionJSON
 	require.NoError(t, json.Unmarshal(data, &result))
-	require.Equal(t, "", result["topic"])
-	// TopicV4 is json:"-", should not appear in output
-	_, hasTopicV4 := result["topicV4"]
-	require.False(t, hasTopicV4)
+	require.Empty(t, result.Topic)
+	require.Empty(t, result.TopicBytesB64)
 }

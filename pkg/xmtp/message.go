@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
+	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	messageApi "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	mlsV1 "github.com/xmtp/xmtpd/pkg/proto/mls/api/v1"
-	"github.com/xmtp/example-notification-server-go/pkg/topics"
 	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 	"google.golang.org/protobuf/proto"
 )

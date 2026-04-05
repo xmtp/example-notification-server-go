@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/xmtpd/pkg/envelopes"
 	mlsV1 "github.com/xmtp/xmtpd/pkg/proto/mls/api/v1"
-	"github.com/xmtp/xmtpd/pkg/topic"
 	testEnvelopes "github.com/xmtp/xmtpd/pkg/testutils/envelopes"
+	"github.com/xmtp/xmtpd/pkg/topic"
 	"google.golang.org/protobuf/proto"
 )
 

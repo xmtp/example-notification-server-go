@@ -266,9 +266,9 @@ func TestRegisterInstallation_PersistsPayloadFormat(t *testing.T) {
 	service := NewInstallationsService(testutils.TestLogger(t), db)
 
 	_, err := service.Register(t.Context(), interfaces.Installation{
-		Id:            "test-pf-install",
+		Id:                "test-pf-install",
 		DeliveryMechanism: interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: "tok"},
-		PayloadFormat: interfaces.PayloadFormatV4,
+		PayloadFormat:     interfaces.PayloadFormatV4,
 	})
 	require.NoError(t, err)
 
@@ -283,16 +283,16 @@ func TestRegisterInstallation_UpdatesPayloadFormat(t *testing.T) {
 	service := NewInstallationsService(testutils.TestLogger(t), db)
 
 	_, err := service.Register(t.Context(), interfaces.Installation{
-		Id:            "test-pf-update",
+		Id:                "test-pf-update",
 		DeliveryMechanism: interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: "tok"},
-		PayloadFormat: interfaces.PayloadFormatV3,
+		PayloadFormat:     interfaces.PayloadFormatV3,
 	})
 	require.NoError(t, err)
 
 	_, err = service.Register(t.Context(), interfaces.Installation{
-		Id:            "test-pf-update",
+		Id:                "test-pf-update",
 		DeliveryMechanism: interfaces.DeliveryMechanism{Kind: interfaces.APNS, Token: "tok"},
-		PayloadFormat: interfaces.PayloadFormatV4,
+		PayloadFormat:     interfaces.PayloadFormatV4,
 	})
 	require.NoError(t, err)
 

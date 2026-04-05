@@ -139,9 +139,9 @@ type sendRequestJSON struct {
 		Message      []byte `json:"message"`
 	} `json:"message"`
 	MessageContext MessageContext `json:"message_context"`
-	Installation   Installation  `json:"installation"`
-	Subscription   Subscription  `json:"subscription"`
-	PayloadFormat  PayloadFormat `json:"payloadFormat,omitempty"`
+	Installation   Installation   `json:"installation"`
+	Subscription   Subscription   `json:"subscription"`
+	PayloadFormat  PayloadFormat  `json:"payload_format,omitempty"`
 }
 
 func (r SendRequest) MarshalJSON() ([]byte, error) {

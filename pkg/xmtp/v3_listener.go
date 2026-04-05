@@ -3,6 +3,7 @@ package xmtp
 import (
 	"context"
 	"crypto/sha1"
+	"encoding/binary"
 	"encoding/hex"
 	"io"
 	"strings"
@@ -10,8 +11,8 @@ import (
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
+	v1 "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 	"go.uber.org/zap"
 )
@@ -106,7 +107,7 @@ func (l *Listener) startMessageListener() {
 				}
 
 				if err != nil {
-					l.logger.Error("error reading from stream", zap.Error(err))
+					l.logger.Warn("error reading from stream", zap.Error(err))
 					// Wait 100ms to avoid hammering the API and getting rate limited
 					time.Sleep(sleepTime)
 					sleepTime = cappedBackoff(sleepTime)
@@ -133,7 +134,7 @@ func (l *Listener) startMessageWorkers() {
 			for msg := range l.messageChannel {
 				err = l.processEnvelope(msg)
 				if err != nil {
-					l.logger.Error("error processing envelope", zap.String("topic", msg.ContentTopic), zap.Error(err))
+					l.logger.Error("error processing envelope", zap.String("v3_topic", msg.ContentTopic), zap.Error(err))
 					continue
 				}
 			}
@@ -144,15 +145,18 @@ func (l *Listener) startMessageWorkers() {
 func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	// Fast-path: skip expensive parsing for topics that can't be V3
 	if !strings.HasPrefix(env.ContentTopic, topics.V3_PREFIX) {
-		l.logger.Debug("ignoring message", zap.String("topic", env.ContentTopic))
+		l.logger.Debug("ignoring message", zap.String("v3_topic", env.ContentTopic))
 		return nil
 	}
+
 	t, err := topics.ParseV3Topic(env.ContentTopic)
 	if err != nil {
-		l.logger.Info("ignoring message with non-convertible topic",
-			zap.String("topic", env.ContentTopic), zap.Error(err))
+		l.logger.Warn("ignoring message with unsupported topic format", zap.String("v3_topic", env.ContentTopic))
+		//nolint:nilerr
 		return nil
 	}
+
+	logger := l.logger.With(zap.String("topic", t.String()))
 	subs, err := l.subscriptions.GetSubscriptions(l.ctx, t, getThirtyDayPeriodsFromEpoch(env))
 	if err != nil {
 		return err
@@ -173,21 +177,21 @@ func (l *Listener) processEnvelope(env *v1.Envelope) error {
 	}
 
 	if len(installations) == 0 {
-		l.logger.Info("No matching installations found for topic", zap.String("topic", env.ContentTopic))
+		logger.Debug("No matching installations found for topic")
 		return nil
 	}
 
 	sendRequests := buildSendRequests(env, t, installations, subs)
 	for _, request := range sendRequests {
 		if !l.dispatcher.shouldDeliver(request.MessageContext, request.Subscription) {
-			l.logger.Info("Skipping delivery of request",
+			logger.Debug("Skipping delivery of request",
 				zap.Any("message_context", request.MessageContext),
 				zap.Bool("subscription_has_hmac_key", request.Subscription.HmacKey != nil),
 			)
 			continue
 		}
 		if err = l.dispatcher.deliver(request); err != nil {
-			l.logger.Error("error delivering request", zap.Error(err), zap.String("content_topic", env.ContentTopic))
+			logger.Error("error delivering request", zap.Error(err))
 		}
 	}
 	return err
@@ -207,6 +211,8 @@ func buildIdempotencyKey(env *v1.Envelope) string {
 	h := sha1.New()
 	h.Write([]byte(env.ContentTopic))
 	h.Write(env.Message)
+	h.Write(binary.BigEndian.AppendUint64(nil, env.TimestampNs))
+
 	return hex.EncodeToString(h.Sum(nil))
 }
 

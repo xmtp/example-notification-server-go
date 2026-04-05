@@ -175,7 +175,7 @@ func TestHttp_PayloadIncludesPayloadFormat(t *testing.T) {
 
 	var p map[string]interface{}
 	require.NoError(t, json.Unmarshal(jsonData, &p))
-	require.Equal(t, "v4", p["payloadFormat"])
+	require.Equal(t, "v4", p["payload_format"])
 }
 
 func TestHttpDelivery_CanDeliver(t *testing.T) {

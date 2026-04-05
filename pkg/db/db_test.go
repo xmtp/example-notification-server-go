@@ -7,8 +7,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 	database "github.com/xmtp/example-notification-server-go/pkg/db"
+	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
 	testdb "github.com/xmtp/example-notification-server-go/pkg/testutils"
 )
+
+func mustParseTopic(t *testing.T, topicStr string) []byte {
+	t.Helper()
+
+	parsed, err := topicutil.ParseV3Topic(topicStr)
+	require.NoError(t, err)
+	return parsed.Bytes()
+}
 
 func TestMigrateFreshDatabase(t *testing.T) {
 	db := createRawDB(t)
@@ -100,23 +109,30 @@ func TestMigration_BinaryTopics_DataConversion(t *testing.T) {
 	// Run migration 00004 (binary conversion + drop legacy column)
 	require.NoError(t, database.MigrateUpTo(t.Context(), db, 4))
 
-	// Verify: group topic converted correctly (first byte 0x00 = TopicKindGroupMessagesV1)
-	var topicBytes []byte
-	err = db.QueryRowContext(t.Context(),
-		"SELECT topic FROM subscriptions WHERE installation_id = 'inst1' AND get_byte(topic, 0) = 0 LIMIT 1",
-	).Scan(&topicBytes)
+	rows, err := db.QueryContext(t.Context(),
+		"SELECT topic FROM subscriptions WHERE installation_id = 'inst1' ORDER BY topic",
+	)
 	require.NoError(t, err)
-	require.Equal(t, byte(0x00), topicBytes[0]) // TopicKindGroupMessagesV1
+	defer func() {
+		require.NoError(t, rows.Close())
+	}()
 
-	// Verify: non-conforming row deleted, duplicate collapsed — 2 rows remain
-	var count int
-	err = db.QueryRowContext(t.Context(),
-		"SELECT COUNT(*) FROM subscriptions WHERE installation_id = 'inst1'",
-	).Scan(&count)
-	require.NoError(t, err)
-	require.Equal(t, 2, count)
+	var actualTopics [][]byte
+	for rows.Next() {
+		var topicBytes []byte
+		require.NoError(t, rows.Scan(&topicBytes))
+		actualTopics = append(actualTopics, topicBytes)
+	}
+	require.NoError(t, rows.Err())
+
+	expectedGroup := mustParseTopic(t, "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
+	expectedWelcome := mustParseTopic(t, "/xmtp/mls/1/w-f3ac64eba2272334/proto")
+
+	// Verify: non-conforming row deleted, duplicate collapsed, and valid rows converted exactly.
+	require.ElementsMatch(t, [][]byte{expectedGroup, expectedWelcome}, actualTopics)
 
 	// Verify topic_legacy column does not exist
+	var count int
 	err = db.QueryRowContext(t.Context(),
 		"SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'subscriptions' AND column_name = 'topic_legacy'",
 	).Scan(&count)

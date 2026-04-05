@@ -25,12 +25,41 @@ func newConn(apiAddress string, useTls bool, clientVersion, appVersion string) (
 		grpc.WithConnectParams(grpc.ConnectParams{
 			MinConnectTimeout: 5 * time.Second,
 		}),
-		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-			ctx = metadata.AppendToOutgoingContext(ctx, clientVersionMetadataKey, clientVersion)
-			ctx = metadata.AppendToOutgoingContext(ctx, appVersionMetadataKey, appVersion)
-			return invoker(ctx, method, req, reply, cc, opts...)
-		}),
+		grpc.WithUnaryInterceptor(metadataUnaryInterceptor(clientVersion, appVersion)),
+		grpc.WithStreamInterceptor(metadataStreamInterceptor(clientVersion, appVersion)),
 	)
+}
+
+func appendVersionMetadata(ctx context.Context, clientVersion, appVersion string) context.Context {
+	ctx = metadata.AppendToOutgoingContext(ctx, clientVersionMetadataKey, clientVersion)
+	ctx = metadata.AppendToOutgoingContext(ctx, appVersionMetadataKey, appVersion)
+	return ctx
+}
+
+func metadataUnaryInterceptor(clientVersion, appVersion string) grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply any,
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		return invoker(appendVersionMetadata(ctx, clientVersion, appVersion), method, req, reply, cc, opts...)
+	}
+}
+
+func metadataStreamInterceptor(clientVersion, appVersion string) grpc.StreamClientInterceptor {
+	return func(
+		ctx context.Context,
+		desc *grpc.StreamDesc,
+		cc *grpc.ClientConn,
+		method string,
+		streamer grpc.Streamer,
+		opts ...grpc.CallOption,
+	) (grpc.ClientStream, error) {
+		return streamer(appendVersionMetadata(ctx, clientVersion, appVersion), desc, cc, method, opts...)
+	}
 }
 
 func getCredentials(useTls bool) credentials.TransportCredentials {

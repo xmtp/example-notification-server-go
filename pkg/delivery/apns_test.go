@@ -11,16 +11,18 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
 )
 
-func TestApns_PayloadIncludesPayloadFormat(t *testing.T) {
-	parsed, err := topics.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
-	require.NoError(t, err)
+const deliveryTestTopic = "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto"
 
+func buildDeliveryRequest(t *testing.T, payloadFormat interfaces.PayloadFormat) interfaces.SendRequest {
+	t.Helper()
+
+	parsed, err := topics.ParseV3Topic(deliveryTestTopic)
+	require.NoError(t, err)
 	topicStr := topics.TopicToString(parsed)
-	a := ApnsDelivery{opts: options.ApnsOptions{Topic: "com.example.app"}}
-	req := interfaces.SendRequest{
+	return interfaces.SendRequest{
 		Topic:            topicStr,
 		EncryptedMessage: []byte("test"),
-		PayloadFormat:    interfaces.PayloadFormatV3,
+		PayloadFormat:    payloadFormat,
 		Subscription: interfaces.Subscription{
 			TopicV4: parsed,
 			Topic:   topicStr,
@@ -30,6 +32,11 @@ func TestApns_PayloadIncludesPayloadFormat(t *testing.T) {
 		},
 		MessageContext: interfaces.MessageContext{MessageType: topics.V3Conversation},
 	}
+}
+
+func TestApns_PayloadIncludesPayloadFormat(t *testing.T) {
+	a := ApnsDelivery{opts: options.ApnsOptions{Topic: "com.example.app"}}
+	req := buildDeliveryRequest(t, interfaces.PayloadFormatV3)
 
 	notification := a.buildNotification(req)
 	payloadBytes, err := notification.Payload.(*payload.Payload).MarshalJSON()
@@ -41,23 +48,8 @@ func TestApns_PayloadIncludesPayloadFormat(t *testing.T) {
 }
 
 func Test_ApnsDelivery_BuildNotification_TopicField(t *testing.T) {
-	parsed, err := topics.ParseV3Topic("/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
-	require.NoError(t, err)
-
-	topicStr := topics.TopicToString(parsed)
 	a := ApnsDelivery{opts: options.ApnsOptions{Topic: "com.example.app"}}
-	req := interfaces.SendRequest{
-		Topic:            topicStr,
-		EncryptedMessage: []byte("test"),
-		Subscription: interfaces.Subscription{
-			TopicV4: parsed,
-			Topic:   topicStr,
-		},
-		Installation: interfaces.Installation{
-			DeliveryMechanism: interfaces.DeliveryMechanism{Token: "device-token"},
-		},
-		MessageContext: interfaces.MessageContext{MessageType: topics.V3Conversation},
-	}
+	req := buildDeliveryRequest(t, interfaces.PayloadFormatV3)
 
 	notification := a.buildNotification(req)
 	payloadBytes, err := notification.Payload.(*payload.Payload).MarshalJSON()
@@ -65,7 +57,7 @@ func Test_ApnsDelivery_BuildNotification_TopicField(t *testing.T) {
 
 	var p map[string]interface{}
 	require.NoError(t, json.Unmarshal(payloadBytes, &p))
-	require.Equal(t, "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto", p["topic"])
+	require.Equal(t, deliveryTestTopic, p["topic"])
 	require.NotContains(t, p, "topicBytesB64")
 	require.Equal(t, "device-token", notification.DeviceToken)
 	require.Equal(t, "com.example.app", notification.Topic)

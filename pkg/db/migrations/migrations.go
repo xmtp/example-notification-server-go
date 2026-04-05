@@ -17,8 +17,8 @@ var migrationFS embed.FS
 
 // Legacy Bun deployments are considered equivalent to the first two golang-migrate
 // migrations:
-//   1. init schema
-//   2. add subscription_hmac_keys + is_silent + unique subscription index
+//  1. init schema
+//  2. add subscription_hmac_keys + is_silent + unique subscription index
 //
 // Reconciliation must stay pinned to that handoff point so future golang-migrate-only
 // migrations are still applied normally after older deployments upgrade.

@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	messageApi "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/topics"
+	messageApi "github.com/xmtp/xmtpd/pkg/proto/message_api/v1"
 	"google.golang.org/protobuf/proto"
 )
 
