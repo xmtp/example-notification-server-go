@@ -1,7 +1,6 @@
 package xmtp
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"testing"
@@ -51,7 +50,7 @@ func TestDeliveryDispatcher_Deliver_CallsMatchingService(t *testing.T) {
 
 	dispatcher := &deliveryDispatcher{
 		logger:           testutils.TestLogger(t),
-		ctx:              context.Background(),
+		ctx:              t.Context(),
 		deliveryServices: []interfaces.Delivery{mockDelivery},
 	}
 	req := interfaces.SendRequest{

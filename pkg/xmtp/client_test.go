@@ -24,7 +24,7 @@ func TestMetadataUnaryInterceptor_AppendsVersionHeaders(t *testing.T) {
 	interceptor := metadataUnaryInterceptor("client-test", "app-test")
 
 	err := interceptor(
-		context.Background(),
+		t.Context(),
 		"/xmtp.xmtpv4.message_api.NotificationApi/SubscribeAllEnvelopes",
 		nil,
 		nil,
@@ -44,7 +44,7 @@ func TestMetadataStreamInterceptor_AppendsVersionHeaders(t *testing.T) {
 	interceptor := metadataStreamInterceptor("client-test", "app-test")
 
 	stream, err := interceptor(
-		context.Background(),
+		t.Context(),
 		&grpc.StreamDesc{ServerStreams: true},
 		nil,
 		"/xmtp.xmtpv4.message_api.NotificationApi/SubscribeAllEnvelopes",

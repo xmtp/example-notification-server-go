@@ -26,7 +26,7 @@ import (
 
 func TestV4Listener_NewAndStop(t *testing.T) {
 	logger := testutils.TestLogger(t)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	db := testutils.CreateTestDb(t)
 	instSvc := installations.NewInstallationsService(logger, db)
@@ -47,7 +47,7 @@ func TestV4Listener_NewAndStop(t *testing.T) {
 func buildV4TestListener(t *testing.T, deliveryService interfaces.Delivery) *V4Listener {
 	t.Helper()
 	logger := testutils.TestLogger(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	db := testutils.CreateTestDb(t)
 	instSvc := installations.NewInstallationsService(logger, db)
 	subsSvc := subscriptions.NewSubscriptionsService(logger, db)
@@ -75,7 +75,7 @@ func buildV4TestListener(t *testing.T, deliveryService interfaces.Delivery) *V4L
 // registerV4Installation registers an installation with the given payload format.
 func registerV4Installation(t *testing.T, l *V4Listener, installationID string, format interfaces.PayloadFormat) {
 	t.Helper()
-	_, err := l.installations.Register(context.Background(), interfaces.Installation{
+	_, err := l.installations.Register(t.Context(), interfaces.Installation{
 		Id: installationID,
 		DeliveryMechanism: interfaces.DeliveryMechanism{
 			Kind:  interfaces.APNS,
@@ -90,7 +90,7 @@ func registerV4Installation(t *testing.T, l *V4Listener, installationID string, 
 func subscribeV4ToTopic(t *testing.T, l *V4Listener, installationID string, tp *topic.Topic, hmacKeys ...interfaces.HmacKey) {
 	t.Helper()
 	input := interfaces.SubscriptionInput{Topic: tp, HmacKeys: hmacKeys}
-	err := l.subscriptions.SubscribeWithMetadata(context.Background(), installationID, []interfaces.SubscriptionInput{input})
+	err := l.subscriptions.SubscribeWithMetadata(t.Context(), installationID, []interfaces.SubscriptionInput{input})
 	require.NoError(t, err)
 }
 
@@ -499,7 +499,7 @@ func TestV4Listener_NonConvertiblePayload_LogsWarning(t *testing.T) {
 	subsSvc := subscriptions.NewSubscriptionsService(testutils.TestLogger(t), db)
 	mockDelivery := mocks.NewDelivery(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	l := &V4Listener{
