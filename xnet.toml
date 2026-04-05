@@ -1,0 +1,22 @@
+[xnet]
+use_standard_ports = true
+
+[xmtpd]
+image = "ghcr.io/xmtp/xmtpd"
+version = "04-01-implement_api_schema_changes"
+
+[gateway]
+image = "ghcr.io/xmtp/xmtpd-gateway"
+version = "04-01-implement_api_schema_changes"
+
+[v3]
+image = "ghcr.io/xmtp/node-go"
+version = "main"
+port = 4446
+
+[validation]
+image = "ghcr.io/xmtp/mls-validation-service"
+version = "main"
+
+[[xmtpd.nodes]]
+enable = true
