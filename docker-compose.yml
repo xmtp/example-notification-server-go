@@ -45,6 +45,7 @@ services:
     environment:
       - XMTP_NODE_URL=${XMTP_CLIENT_URL:-http://xnet-node:5556}
       - NOTIFICATION_SERVER_URL=http://notification_server:8080
+      - XMTP_GATEWAY_URL=${XMTP_GATEWAY_URL:-}
     networks:
       - xnet
     command:

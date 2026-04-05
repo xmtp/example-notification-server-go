@@ -10,4 +10,5 @@ function assertEnvVar(key: string): string {
 export const config = {
   nodeUrl: assertEnvVar("XMTP_NODE_URL"),
   notificationServerUrl: assertEnvVar("NOTIFICATION_SERVER_URL"),
+  gatewayUrl: process.env.XMTP_GATEWAY_URL || undefined,
 } as const;

@@ -51,6 +51,7 @@ export async function randomClient() {
     env: "local",
     dbEncryptionKey: encKey,
     dbPath: `/tmp/test-${wallet.account.address}.db3`,
+    ...(config.gatewayUrl ? { gatewayUrl: config.gatewayUrl } : {}),
   };
   return await Client.create(signer, opts);
 }

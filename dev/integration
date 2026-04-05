@@ -21,6 +21,7 @@ case "$SCENARIO" in
     export LISTENER_TYPE=v4
     export XMTP_LISTENER_ADDRESS=xnet-100:5050
     export XMTP_CLIENT_URL=http://xnet-gateway:5050
+    export XMTP_GATEWAY_URL=http://xnet-gateway:5050
     ;;
   *)
     echo "Unknown scenario: $SCENARIO (use v3-writes or v4-writes)"
