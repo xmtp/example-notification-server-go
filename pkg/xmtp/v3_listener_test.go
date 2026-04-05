@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	XMTP_ADDRESS      = "localhost:25556"
+	XMTP_ADDRESS      = "localhost:5556"
 	INSTALLATION_ID   = "test_installation"
 	INSTALLATION_ID_2 = "test_installation_2"
 	TEST_TOPIC        = "/xmtp/mls/1/w-abcdef0123456789/proto"

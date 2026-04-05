@@ -35,7 +35,7 @@ func TestV4Listener_NewAndStop(t *testing.T) {
 
 	l, err := NewV4Listener(ctx, logger, options.XmtpOptions{
 		ListenerEnabled: true,
-		GrpcAddress:     "localhost:25556",
+		GrpcAddress:     "localhost:5556",
 		NumWorkers:      5,
 	}, instSvc, subsSvc, []interfaces.Delivery{mockDelivery}, "test", "test")
 	require.NoError(t, err)

@@ -27,7 +27,7 @@ LABEL description="XMTP Example Notification Server"
 ENV GOLOG_LOG_FMT=nocolor
 
 # go-waku default port
-EXPOSE 5556
+EXPOSE 8080
 
 COPY --from=builder /app/bin/notifications-server /usr/bin/
 
