@@ -57,6 +57,47 @@ func Test_Subscription_MarshalJSON_TopicOnly(t *testing.T) {
 	require.Equal(t, true, result["is_silent"])
 }
 
+func TestSendRequest_MarshalJSON_BackwardCompatible(t *testing.T) {
+	req := SendRequest{
+		IdempotencyKey:   "abc123",
+		Topic:            "/xmtp/mls/1/w-test/proto",
+		EncryptedMessage: []byte("encrypted-data"),
+		PayloadFormat:    PayloadFormatV3,
+		MessageContext:   MessageContext{MessageType: "v3-welcome"},
+		Installation: Installation{
+			Id:                "install-1",
+			DeliveryMechanism: DeliveryMechanism{Kind: "apns", Token: "token"},
+		},
+		Subscription: Subscription{
+			Topic:    "/xmtp/mls/1/w-test/proto",
+			IsSilent: true,
+		},
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var result map[string]interface{}
+	require.NoError(t, json.Unmarshal(data, &result))
+
+	// Must have nested message object with content_topic and message
+	msg, ok := result["message"].(map[string]interface{})
+	require.True(t, ok, "expected 'message' object in JSON")
+	require.Equal(t, "/xmtp/mls/1/w-test/proto", msg["content_topic"])
+	require.NotEmpty(t, msg["message"])
+
+	// Must NOT have top-level topic or encrypted_message
+	_, hasTopic := result["topic"]
+	require.False(t, hasTopic, "top-level 'topic' should not exist")
+	_, hasEncMsg := result["encrypted_message"]
+	require.False(t, hasEncMsg, "top-level 'encrypted_message' should not exist")
+
+	// Other fields
+	require.Equal(t, "abc123", result["idempotency_key"])
+	mc := result["message_context"].(map[string]interface{})
+	require.Equal(t, "v3-welcome", mc["message_type"])
+}
+
 func Test_Subscription_MarshalJSON_TopicV4NotSerialized(t *testing.T) {
 	tp := topic.NewTopic(topic.TopicKindGroupMessagesV1, []byte{0x24, 0xce})
 	sub := Subscription{TopicV4: tp, Topic: "", IsSilent: false}

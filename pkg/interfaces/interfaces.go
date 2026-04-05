@@ -121,13 +121,40 @@ type Subscription struct {
 }
 
 type SendRequest struct {
-	IdempotencyKey   string        `json:"idempotency_key"`
-	Topic            string        `json:"topic"`
-	EncryptedMessage []byte        `json:"encrypted_message"`
-	PayloadFormat    PayloadFormat `json:"payloadFormat"`
-	MessageContext   MessageContext `json:"message_context"`
-	Installation     Installation  `json:"installation"`
-	Subscription     Subscription  `json:"subscription"`
+	IdempotencyKey   string         `json:"-"`
+	Topic            string         `json:"-"`
+	EncryptedMessage []byte         `json:"-"`
+	PayloadFormat    PayloadFormat  `json:"-"`
+	MessageContext   MessageContext `json:"-"`
+	Installation     Installation   `json:"-"`
+	Subscription     Subscription   `json:"-"`
+}
+
+// sendRequestJSON is the HTTP delivery JSON format, preserving backward
+// compatibility with the original V3 envelope-based payload shape.
+type sendRequestJSON struct {
+	IdempotencyKey string `json:"idempotency_key"`
+	Message        struct {
+		ContentTopic string `json:"content_topic"`
+		Message      []byte `json:"message"`
+	} `json:"message"`
+	MessageContext MessageContext `json:"message_context"`
+	Installation   Installation  `json:"installation"`
+	Subscription   Subscription  `json:"subscription"`
+	PayloadFormat  PayloadFormat `json:"payloadFormat,omitempty"`
+}
+
+func (r SendRequest) MarshalJSON() ([]byte, error) {
+	out := sendRequestJSON{
+		IdempotencyKey: r.IdempotencyKey,
+		MessageContext: r.MessageContext,
+		Installation:   r.Installation,
+		Subscription:   r.Subscription,
+		PayloadFormat:  r.PayloadFormat,
+	}
+	out.Message.ContentTopic = r.Topic
+	out.Message.Message = r.EncryptedMessage
+	return json.Marshal(out)
 }
 
 type MessageContext struct {
