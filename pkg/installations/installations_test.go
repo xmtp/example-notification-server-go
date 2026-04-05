@@ -8,9 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
-	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
-	"github.com/xmtp/example-notification-server-go/test"
+	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 )
 
 const INSTALLATION_ID = "foo"
@@ -31,9 +30,10 @@ type storedDeliveryMechanism struct {
 	Token     string
 }
 
-func createService(db *sql.DB) interfaces.Installations {
+func createService(t *testing.T, db *sql.DB) interfaces.Installations {
+	t.Helper()
 	return NewInstallationsService(
-		logging.CreateLogger("console", "info"),
+		testutils.TestLogger(t),
 		db,
 	)
 }
@@ -89,10 +89,10 @@ func fetchInstallation(t *testing.T, ctx context.Context, db *sql.DB, installati
 }
 
 func Test_Register(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
 
-	svc := createService(db)
+	svc := createService(t, db)
 	res, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 
 	require.NoError(t, err)
@@ -106,9 +106,9 @@ func Test_Register(t *testing.T) {
 }
 
 func Test_RegisterDuplicate(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	req := buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN)
 	_, err := svc.Register(ctx, req)
@@ -127,9 +127,9 @@ func Test_RegisterDuplicate(t *testing.T) {
 }
 
 func Test_RegisterUpdate(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	req1 := buildInstallation(INSTALLATION_ID, interfaces.APNS, "token1")
 	_, err := svc.Register(ctx, req1)
@@ -149,9 +149,9 @@ func Test_RegisterUpdate(t *testing.T) {
 }
 
 func Test_Delete(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 	require.NoError(t, err)
@@ -164,9 +164,9 @@ func Test_Delete(t *testing.T) {
 }
 
 func Test_DeleteAndRegisterAgain(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 	require.NoError(t, err)
@@ -182,9 +182,9 @@ func Test_DeleteAndRegisterAgain(t *testing.T) {
 }
 
 func Test_Get(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	installationIDs := []string{"install1", "install2", "install3"}
 	for _, installationID := range installationIDs {
@@ -203,9 +203,9 @@ func Test_Get(t *testing.T) {
 }
 
 func Test_GetMultiple(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	for _, token := range []string{"token1", "token2", "token3"} {
 		_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, token))
@@ -219,12 +219,12 @@ func Test_GetMultiple(t *testing.T) {
 }
 
 func Test_DeleteDeactivatesSubscriptions(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
 
-	installSvc := createService(db)
+	installSvc := createService(t, db)
 	subSvc := subscriptions.NewSubscriptionsService(
-		logging.CreateLogger("console", "info"), db,
+		testutils.TestLogger(t), db,
 	)
 
 	_, err := installSvc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
@@ -243,9 +243,9 @@ func Test_DeleteDeactivatesSubscriptions(t *testing.T) {
 }
 
 func Test_GetDeleted(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	_, err := svc.Register(ctx, buildInstallation(INSTALLATION_ID, interfaces.APNS, TOKEN))
 	require.NoError(t, err)

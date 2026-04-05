@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/mocks"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
-	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
+	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	protoconnect "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
 )
@@ -23,7 +23,6 @@ import (
 const INSTALLATION_ID = "install1"
 
 type testContext struct {
-	cleanup           func()
 	client            protoconnect.NotificationsClient
 	ctx               context.Context
 	httpClient        *http.Client
@@ -33,7 +32,8 @@ type testContext struct {
 }
 
 func setupTest(t *testing.T) testContext {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
@@ -44,18 +44,17 @@ func setupTest(t *testing.T) testContext {
 			DisableKeepAlives: true,
 		},
 	}
-	apiServer := NewApiServer(logging.CreateLogger("console", "info"), options.ApiOptions{Port: port}, installationsMock, subscriptionsMock)
+	apiServer := NewApiServer(testutils.TestLogger(t), options.ApiOptions{Port: port}, installationsMock, subscriptionsMock)
 	require.NoError(t, apiServer.SetListener(listener))
 	apiServer.Start()
 	time.Sleep(50 * time.Millisecond)
 
-	cleanup := func() {
+	t.Cleanup(func() {
 		httpClient.CloseIdleConnections()
 		apiServer.Stop()
-	}
+	})
 
 	return testContext{
-		cleanup:           cleanup,
 		client:            protoconnect.NewNotificationsClient(httpClient, fmt.Sprintf("http://127.0.0.1:%d", port)),
 		ctx:               ctx,
 		httpClient:        httpClient,
@@ -67,7 +66,7 @@ func setupTest(t *testing.T) testContext {
 
 func Test_SetListenerAfterStartReturnsError(t *testing.T) {
 	apiServer := NewApiServer(
-		logging.CreateLogger("console", "info"),
+		testutils.TestLogger(t),
 		options.ApiOptions{Port: 18081},
 		mocks.NewInstallations(t),
 		mocks.NewSubscriptions(t),
@@ -87,7 +86,6 @@ func Test_SetListenerAfterStartReturnsError(t *testing.T) {
 
 func Test_RegisterInstallation(t *testing.T) {
 	ctx := setupTest(t)
-	defer ctx.cleanup()
 
 	deviceToken := "foo"
 	validUntil := time.Now()
@@ -118,7 +116,6 @@ func Test_RegisterInstallation(t *testing.T) {
 
 func Test_RegisterInstallationError(t *testing.T) {
 	ctx := setupTest(t)
-	defer ctx.cleanup()
 
 	ctx.installationsMock.On(
 		"Register",
@@ -142,7 +139,6 @@ func Test_RegisterInstallationError(t *testing.T) {
 
 func Test_DeleteInstallation(t *testing.T) {
 	ctx := setupTest(t)
-	defer ctx.cleanup()
 
 	ctx.installationsMock.On("Delete", mock.Anything, mock.Anything).
 		Return(nil)
@@ -165,7 +161,6 @@ func Test_DeleteInstallation(t *testing.T) {
 
 func Test_Subscribe(t *testing.T) {
 	ctx := setupTest(t)
-	defer ctx.cleanup()
 	topics := []string{"topic1"}
 
 	ctx.subscriptionsMock.On(
@@ -195,7 +190,6 @@ func Test_Subscribe(t *testing.T) {
 
 func Test_SubscribeError(t *testing.T) {
 	ctx := setupTest(t)
-	defer ctx.cleanup()
 
 	ctx.subscriptionsMock.On(
 		"Subscribe",
@@ -218,7 +212,6 @@ func Test_SubscribeError(t *testing.T) {
 
 func Test_Unsubscribe(t *testing.T) {
 	ctx := setupTest(t)
-	defer ctx.cleanup()
 	topics := []string{"topic1"}
 
 	ctx.subscriptionsMock.On(

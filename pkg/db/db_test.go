@@ -1,14 +1,13 @@
 package db_test
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	database "github.com/xmtp/example-notification-server-go/pkg/db"
-	testdb "github.com/xmtp/example-notification-server-go/test"
+	testdb "github.com/xmtp/example-notification-server-go/pkg/testutils"
 )
 
 func TestMigrateFreshDatabase(t *testing.T) {
@@ -73,7 +72,7 @@ func TestMigrateExistingLegacySchema(t *testing.T) {
 	require.NoError(t, database.Migrate(t.Context(), db))
 
 	var version int
-	err := db.QueryRowContext(context.Background(), `SELECT version FROM schema_migrations`).Scan(&version)
+	err := db.QueryRowContext(t.Context(), `SELECT version FROM schema_migrations`).Scan(&version)
 	require.NoError(t, err)
 
 	latest, latestErr := database.LatestMigrationVersion()
@@ -113,7 +112,7 @@ func assertRelationExists(t *testing.T, db *sql.DB, name string) {
 	t.Helper()
 
 	var exists bool
-	err := db.QueryRowContext(context.Background(), `SELECT to_regclass($1) IS NOT NULL`, "public."+name).Scan(&exists)
+	err := db.QueryRowContext(t.Context(), `SELECT to_regclass($1) IS NOT NULL`, "public."+name).Scan(&exists)
 	require.NoError(t, err)
 	require.True(t, exists, name)
 }

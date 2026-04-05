@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
@@ -48,9 +47,9 @@ func TestHttpDelivery_SendSuccess(t *testing.T) {
 	server, d := testServerAndDelivery(t, countingHandler(&requestCount, http.StatusOK), 3, 10)
 	defer server.Close()
 
-	err := d.Send(context.Background(), newTestRequest())
+	err := d.Send(t.Context(), newTestRequest())
 	require.NoError(t, err)
-	assert.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
+	require.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
 }
 
 func TestHttpDelivery_RetryOnFailureThenSuccess(t *testing.T) {
@@ -65,9 +64,9 @@ func TestHttpDelivery_RetryOnFailureThenSuccess(t *testing.T) {
 	}, 3, 10)
 	defer server.Close()
 
-	err := d.Send(context.Background(), newTestRequest())
+	err := d.Send(t.Context(), newTestRequest())
 	require.NoError(t, err)
-	assert.Equal(t, int32(2), atomic.LoadInt32(&requestCount))
+	require.Equal(t, int32(2), atomic.LoadInt32(&requestCount))
 }
 
 func TestHttpDelivery_ExhaustsAttempts(t *testing.T) {
@@ -76,10 +75,10 @@ func TestHttpDelivery_ExhaustsAttempts(t *testing.T) {
 	server, d := testServerAndDelivery(t, countingHandler(&requestCount, http.StatusInternalServerError), maxAttempts, 10)
 	defer server.Close()
 
-	err := d.Send(context.Background(), newTestRequest())
+	err := d.Send(t.Context(), newTestRequest())
 	require.Error(t, err)
-	assert.Equal(t, "HTTP request failed", err.Error())
-	assert.Equal(t, int32(maxAttempts), atomic.LoadInt32(&requestCount))
+	require.Equal(t, "HTTP request failed", err.Error())
+	require.Equal(t, int32(maxAttempts), atomic.LoadInt32(&requestCount))
 }
 
 func TestHttpDelivery_ContextCancellation(t *testing.T) {
@@ -87,7 +86,7 @@ func TestHttpDelivery_ContextCancellation(t *testing.T) {
 	server, d := testServerAndDelivery(t, countingHandler(&requestCount, http.StatusInternalServerError), 5, 500)
 	defer server.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	done := make(chan error, 1)
 	go func() {
@@ -100,9 +99,9 @@ func TestHttpDelivery_ContextCancellation(t *testing.T) {
 
 	err := <-done
 	require.Error(t, err)
-	assert.Equal(t, context.Canceled, err)
+	require.Equal(t, context.Canceled, err)
 	// Should have made only 1 request before context was cancelled during backoff
-	assert.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
+	require.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
 }
 
 func TestHttpDelivery_DefaultConfig(t *testing.T) {
@@ -112,8 +111,8 @@ func TestHttpDelivery_DefaultConfig(t *testing.T) {
 		InitialRetryDelayMs: 250,
 	})
 
-	assert.Equal(t, 1, d.maxAttempts)
-	assert.Equal(t, 250*time.Millisecond, d.initialRetryDelay)
+	require.Equal(t, 1, d.maxAttempts)
+	require.Equal(t, 250*time.Millisecond, d.initialRetryDelay)
 }
 
 func TestHttpDelivery_ExponentialBackoff(t *testing.T) {
@@ -124,7 +123,7 @@ func TestHttpDelivery_ExponentialBackoff(t *testing.T) {
 	}, 4, 50)
 	defer server.Close()
 
-	_ = d.Send(context.Background(), newTestRequest())
+	_ = d.Send(t.Context(), newTestRequest())
 
 	// Should have 4 requests total (maxAttempts=4)
 	require.Len(t, timestamps, 4)
@@ -135,7 +134,7 @@ func TestHttpDelivery_ExponentialBackoff(t *testing.T) {
 		gap := timestamps[i].Sub(timestamps[i-1])
 		expectedDelay := time.Duration(50*(1<<uint(i-1))) * time.Millisecond
 		// Allow 30ms tolerance for test timing
-		assert.InDelta(t, expectedDelay.Milliseconds(), gap.Milliseconds(), 30,
+		require.InDelta(t, expectedDelay.Milliseconds(), gap.Milliseconds(), 30,
 			"gap between request %d and %d should be ~%v, got %v", i-1, i, expectedDelay, gap)
 	}
 }
@@ -145,10 +144,10 @@ func TestHttpDelivery_SingleAttempt(t *testing.T) {
 	server, d := testServerAndDelivery(t, countingHandler(&requestCount, http.StatusInternalServerError), 1, 10)
 	defer server.Close()
 
-	err := d.Send(context.Background(), newTestRequest())
+	err := d.Send(t.Context(), newTestRequest())
 	require.Error(t, err)
 	// With maxAttempts=1, only one attempt is made (no retries)
-	assert.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
+	require.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
 }
 
 func TestHttpDelivery_MaxAttemptsClampsToMinimumOne(t *testing.T) {
@@ -159,12 +158,12 @@ func TestHttpDelivery_MaxAttemptsClampsToMinimumOne(t *testing.T) {
 	})
 
 	// Value of 0 should be clamped to 1
-	assert.Equal(t, 1, d.maxAttempts)
+	require.Equal(t, 1, d.maxAttempts)
 }
 
 func TestHttpDelivery_CanDeliver(t *testing.T) {
 	d := NewHttpDelivery(zaptest.NewLogger(t), options.HttpDeliveryOptions{})
-	assert.True(t, d.CanDeliver(newTestRequest()))
+	require.True(t, d.CanDeliver(newTestRequest()))
 }
 
 func TestHttpDelivery_AuthHeader(t *testing.T) {
@@ -182,7 +181,7 @@ func TestHttpDelivery_AuthHeader(t *testing.T) {
 		InitialRetryDelayMs: 10,
 	})
 
-	err := d.Send(context.Background(), newTestRequest())
+	err := d.Send(t.Context(), newTestRequest())
 	require.NoError(t, err)
-	assert.Equal(t, "Bearer test-token", receivedAuth)
+	require.Equal(t, "Bearer test-token", receivedAuth)
 }

@@ -11,11 +11,10 @@ import (
 	"github.com/xmtp/example-notification-server-go/mocks"
 	"github.com/xmtp/example-notification-server-go/pkg/installations"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
-	"github.com/xmtp/example-notification-server-go/pkg/logging"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
 	v1 "github.com/xmtp/example-notification-server-go/pkg/proto/message_api/v1"
 	"github.com/xmtp/example-notification-server-go/pkg/subscriptions"
-	"github.com/xmtp/example-notification-server-go/test"
+	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 )
 
 const (
@@ -27,10 +26,10 @@ const (
 )
 
 func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*Listener, func()) {
-	logger := logging.CreateLogger("console", "info")
-	ctx, cancel := context.WithCancel(context.Background())
+	logger := testutils.TestLogger(t)
+	ctx, cancel := context.WithCancel(t.Context())
 	opts := options.XmtpOptions{ListenerEnabled: true, GrpcAddress: XMTP_ADDRESS, UseTls: false, NumWorkers: 5}
-	db := test.CreateTestDb(t)
+	db := testutils.CreateTestDb(t)
 	installations := installations.NewInstallationsService(logger, db)
 	subscriptions := subscriptions.NewSubscriptionsService(logger, db)
 
@@ -55,7 +54,7 @@ func injectMessage(listener *Listener, topic string, message []byte) {
 }
 
 func subscribeToTopic(t *testing.T, l *Listener, installationId, topic string, isSilent bool) {
-	_, err := l.installations.Register(context.Background(), interfaces.Installation{
+	_, err := l.installations.Register(t.Context(), interfaces.Installation{
 		Id: installationId,
 		DeliveryMechanism: interfaces.DeliveryMechanism{
 			Kind:  interfaces.APNS,
@@ -64,7 +63,7 @@ func subscribeToTopic(t *testing.T, l *Listener, installationId, topic string, i
 	})
 	require.NoError(t, err)
 
-	err = l.subscriptions.SubscribeWithMetadata(context.Background(), installationId, []interfaces.SubscriptionInput{{Topic: topic, IsSilent: isSilent}})
+	err = l.subscriptions.SubscribeWithMetadata(t.Context(), installationId, []interfaces.SubscriptionInput{{Topic: topic, IsSilent: isSilent}})
 	require.NoError(t, err)
 }
 

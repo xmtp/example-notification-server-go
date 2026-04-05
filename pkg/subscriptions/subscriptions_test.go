@@ -8,8 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
-	"github.com/xmtp/example-notification-server-go/pkg/logging"
-	"github.com/xmtp/example-notification-server-go/test"
+	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 )
 
 const INSTALLATION_ID = "installation_1"
@@ -24,9 +23,10 @@ type storedSubscription struct {
 	IsSilent       bool
 }
 
-func createService(db *sql.DB) interfaces.Subscriptions {
+func createService(t *testing.T, db *sql.DB) interfaces.Subscriptions {
+	t.Helper()
 	return NewSubscriptionsService(
-		logging.CreateLogger("console", "info"),
+		testutils.TestLogger(t),
 		db,
 	)
 }
@@ -66,10 +66,10 @@ func fetchSubscriptions(t *testing.T, ctx context.Context, db *sql.DB, installat
 }
 
 func Test_Subscribe(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
 
-	svc := createService(db)
+	svc := createService(t, db)
 
 	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
 	require.NoError(t, err)
@@ -82,9 +82,9 @@ func Test_Subscribe(t *testing.T) {
 }
 
 func Test_SubscribeMultiple(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	topics := []string{"topic_1", "topic_2", "topic_3"}
 	err := svc.Subscribe(ctx, INSTALLATION_ID, topics)
@@ -100,9 +100,9 @@ func Test_SubscribeMultiple(t *testing.T) {
 }
 
 func Test_Unsubscribe(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	err := svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC})
 	require.NoError(t, err)
@@ -116,9 +116,9 @@ func Test_Unsubscribe(t *testing.T) {
 }
 
 func Test_UnsubscribeResubscribe(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC}))
 	require.NoError(t, svc.Unsubscribe(ctx, INSTALLATION_ID, []string{TOPIC}))
@@ -130,9 +130,9 @@ func Test_UnsubscribeResubscribe(t *testing.T) {
 }
 
 func Test_SubscribeWithMetadata(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	key := []byte("key")
 	err := svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
@@ -155,9 +155,9 @@ func Test_SubscribeWithMetadata(t *testing.T) {
 }
 
 func Test_UpdateIsSilent(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	require.NoError(t, svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
 		Topic:    TOPIC,
@@ -181,9 +181,9 @@ func Test_UpdateIsSilent(t *testing.T) {
 }
 
 func Test_UpdateHmacKeys(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	require.NoError(t, svc.SubscribeWithMetadata(ctx, INSTALLATION_ID, []interfaces.SubscriptionInput{{
 		Topic:    TOPIC,
@@ -210,9 +210,9 @@ func Test_UpdateHmacKeys(t *testing.T) {
 }
 
 func Test_GetSubscriptions(t *testing.T) {
-	ctx := context.Background()
-	db := test.CreateTestDb(t)
-	svc := createService(db)
+	ctx := t.Context()
+	db := testutils.CreateTestDb(t)
+	svc := createService(t, db)
 
 	require.NoError(t, svc.Subscribe(ctx, INSTALLATION_ID, []string{TOPIC}))
 
