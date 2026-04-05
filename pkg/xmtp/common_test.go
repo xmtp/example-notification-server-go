@@ -8,9 +8,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/xmtp/example-notification-server-go/mocks"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
-	"github.com/xmtp/example-notification-server-go/pkg/logging"
+	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 )
 
 // Compile-time assertions: both listeners must implement NotificationListener
@@ -19,7 +18,7 @@ var _ NotificationListener = (*V4Listener)(nil)
 
 func TestDeliveryDispatcher_ShouldDeliver_SkipsSender(t *testing.T) {
 	dispatcher := &deliveryDispatcher{
-		logger: logging.CreateLogger("console", "info"),
+		logger: testutils.TestLogger(t),
 	}
 	hmacKey := []byte("test-key")
 	data := []byte("test-data")
@@ -39,7 +38,7 @@ func TestDeliveryDispatcher_ShouldDeliver_SkipsSender(t *testing.T) {
 
 func TestDeliveryDispatcher_ShouldDeliver_RespectsNotPush(t *testing.T) {
 	dispatcher := &deliveryDispatcher{
-		logger: logging.CreateLogger("console", "info"),
+		logger: testutils.TestLogger(t),
 	}
 	shouldPush := false
 	mc := interfaces.MessageContext{ShouldPush: &shouldPush}
@@ -48,12 +47,10 @@ func TestDeliveryDispatcher_ShouldDeliver_RespectsNotPush(t *testing.T) {
 }
 
 func TestDeliveryDispatcher_Deliver_CallsMatchingService(t *testing.T) {
-	mockDelivery := mocks.NewDelivery(t)
-	mockDelivery.On("CanDeliver", mock.Anything).Return(true)
-	mockDelivery.On("Send", mock.Anything, mock.Anything).Return(nil)
+	mockDelivery := testutils.MockDeliveryAcceptAll(t)
 
 	dispatcher := &deliveryDispatcher{
-		logger:           logging.CreateLogger("console", "info"),
+		logger:           testutils.TestLogger(t),
 		ctx:              context.Background(),
 		deliveryServices: []interfaces.Delivery{mockDelivery},
 	}

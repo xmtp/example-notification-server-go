@@ -27,7 +27,8 @@ const (
 	DELIVERY_TOKEN    = "test_token"
 )
 
-func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*Listener, func()) {
+func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) *Listener {
+	t.Helper()
 	logger := testutils.TestLogger(t)
 	ctx, cancel := context.WithCancel(t.Context())
 	opts := options.XmtpOptions{ListenerEnabled: true, GrpcAddress: XMTP_ADDRESS, UseTls: false, NumWorkers: 5}
@@ -41,10 +42,12 @@ func buildTestListener(t *testing.T, deliveryService interfaces.Delivery) (*List
 	}
 	l.Start()
 
-	return l, func() {
+	t.Cleanup(func() {
 		cancel()
 		l.Stop()
-	}
+	})
+
+	return l
 }
 
 func injectMessage(listener *Listener, topic string, message []byte) {
@@ -72,35 +75,18 @@ func subscribeToTopic(t *testing.T, l *Listener, installationId, topicStr string
 	require.NoError(t, err)
 }
 
-func requireEventuallySendCount(t *testing.T, sendCount *atomic.Int32, want int32) {
-	t.Helper()
-
-	require.Eventually(t, func() bool {
-		return sendCount.Load() == want
-	}, time.Second, 10*time.Millisecond)
-}
-
 func Test_BasicDelivery(t *testing.T) {
-	mockDeliveryService := mocks.NewDelivery(t)
-	l, cleanup := buildTestListener(t, mockDeliveryService)
-	defer cleanup()
-
-	mockDeliveryService.On("CanDeliver", mock.Anything).Return(true)
-	var sendCount atomic.Int32
-	mockDeliveryService.On("Send", mock.Anything, mock.Anything).
-		Run(func(mock.Arguments) {
-			sendCount.Add(1)
-		}).
-		Return(nil)
+	mockDeliveryService, sendCount := testutils.MockDeliveryWithSendCounter(t)
+	l := buildTestListener(t, mockDeliveryService)
 
 	subscribeToTopic(t, l, INSTALLATION_ID, TEST_TOPIC, false)
 	injectMessage(l, TEST_TOPIC, []byte("test"))
-	requireEventuallySendCount(t, &sendCount, 1)
+	testutils.RequireEventuallySendCount(t, sendCount, 1)
 
 	mockDeliveryService.AssertCalled(t, "CanDeliver", mock.Anything)
 	mockDeliveryService.AssertNumberOfCalls(t, "Send", 1)
 
-	sendReqs := getSendRequests(mockDeliveryService)
+	sendReqs := testutils.GetSendRequests(mockDeliveryService)
 	require.Len(t, sendReqs, 1)
 	require.Equal(t, INSTALLATION_ID, sendReqs[0].Installation.Id)
 	require.Equal(t, TEST_TOPIC, sendReqs[0].Topic)
@@ -109,8 +95,7 @@ func Test_BasicDelivery(t *testing.T) {
 
 func Test_MultipleDeliveries(t *testing.T) {
 	mockDeliveryService := mocks.NewDelivery(t)
-	l, cleanup := buildTestListener(t, mockDeliveryService)
-	defer cleanup()
+	l := buildTestListener(t, mockDeliveryService)
 
 	mockDeliveryService.On("CanDeliver", mock.Anything).Return(true)
 	var sendCount atomic.Int32
@@ -131,12 +116,12 @@ func Test_MultipleDeliveries(t *testing.T) {
 	subscribeToTopic(t, l, INSTALLATION_ID_2, TEST_TOPIC, false)
 
 	injectMessage(l, TEST_TOPIC, []byte("test"))
-	requireEventuallySendCount(t, &sendCount, 2)
+	testutils.RequireEventuallySendCount(t, &sendCount, 2)
 
 	mockDeliveryService.AssertCalled(t, "CanDeliver", mock.Anything)
 	mockDeliveryService.AssertNumberOfCalls(t, "Send", 2)
 
-	sendReqs := getSendRequests(mockDeliveryService)
+	sendReqs := testutils.GetSendRequests(mockDeliveryService)
 	require.Len(t, sendReqs, 2)
 	require.ElementsMatch(t, []string{INSTALLATION_ID, INSTALLATION_ID_2}, []string{
 		sendReqs[0].Installation.Id,

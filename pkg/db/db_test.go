@@ -7,17 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	database "github.com/xmtp/example-notification-server-go/pkg/db"
-	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
 	testdb "github.com/xmtp/example-notification-server-go/pkg/testutils"
 )
-
-func mustParseTopic(t *testing.T, topicStr string) []byte {
-	t.Helper()
-
-	parsed, err := topicutil.ParseV3Topic(topicStr)
-	require.NoError(t, err)
-	return parsed.Bytes()
-}
 
 func TestMigrateFreshDatabase(t *testing.T) {
 	db := createRawDB(t)
@@ -125,8 +116,8 @@ func TestMigration_BinaryTopics_DataConversion(t *testing.T) {
 	}
 	require.NoError(t, rows.Err())
 
-	expectedGroup := mustParseTopic(t, "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
-	expectedWelcome := mustParseTopic(t, "/xmtp/mls/1/w-f3ac64eba2272334/proto")
+	expectedGroup := testdb.MustParseTopicBytes(t, "/xmtp/mls/1/g-24ce39d660600b3a98adff3075b6d1f4/proto")
+	expectedWelcome := testdb.MustParseTopicBytes(t, "/xmtp/mls/1/w-f3ac64eba2272334/proto")
 
 	// Verify: non-conforming row deleted, duplicate collapsed, and valid rows converted exactly.
 	require.ElementsMatch(t, [][]byte{expectedGroup, expectedWelcome}, actualTopics)

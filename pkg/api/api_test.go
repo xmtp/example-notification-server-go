@@ -19,7 +19,7 @@ import (
 	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	protoconnect "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
-	topicutil "github.com/xmtp/example-notification-server-go/pkg/topics"
+
 	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 )
 
@@ -36,13 +36,6 @@ type testContext struct {
 	apiServer         *ApiServer
 }
 
-func mustParseTopic(t *testing.T, topicStr string) *topicpkg.Topic {
-	t.Helper()
-
-	parsed, err := topicutil.ParseV3Topic(topicStr)
-	require.NoError(t, err)
-	return parsed
-}
 
 func matchTopics(expected ...*topicpkg.Topic) interface{} {
 	return mock.MatchedBy(func(actual []*topicpkg.Topic) bool {
@@ -241,7 +234,7 @@ func Test_DeleteInstallation(t *testing.T) {
 func Test_Subscribe(t *testing.T) {
 	ctx := setupTest(t)
 
-	parsed := mustParseTopic(t, testGroupTopic)
+	parsed := testutils.MustParseTopic(t, testGroupTopic)
 
 	ctx.subscriptionsMock.On(
 		"Subscribe",
@@ -286,7 +279,7 @@ func Test_SubscribeError(t *testing.T) {
 func Test_Unsubscribe(t *testing.T) {
 	ctx := setupTest(t)
 
-	parsed := mustParseTopic(t, testGroupTopic)
+	parsed := testutils.MustParseTopic(t, testGroupTopic)
 
 	ctx.subscriptionsMock.On(
 		"Unsubscribe",
@@ -309,7 +302,7 @@ func Test_Unsubscribe(t *testing.T) {
 func Test_Subscribe_BytesTopics(t *testing.T) {
 	ctx := setupTest(t)
 
-	parsed := mustParseTopic(t, testGroupTopic)
+	parsed := testutils.MustParseTopic(t, testGroupTopic)
 	ctx.subscriptionsMock.On("Subscribe", mock.Anything, INSTALLATION_ID, matchTopics(parsed)).Return(nil)
 	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
 		InstallationId: INSTALLATION_ID,
@@ -342,7 +335,7 @@ func Test_Subscribe_InvalidBytesTopics(t *testing.T) {
 func Test_Subscribe_MergedTopics(t *testing.T) {
 	ctx := setupTest(t)
 
-	parsed := mustParseTopic(t, testGroupTopic)
+	parsed := testutils.MustParseTopic(t, testGroupTopic)
 	ctx.subscriptionsMock.On("Subscribe", mock.Anything, INSTALLATION_ID, matchTopics(parsed)).Return(nil)
 	_, err := ctx.client.Subscribe(ctx.ctx, connect.NewRequest(&proto.SubscribeRequest{
 		InstallationId: INSTALLATION_ID,
@@ -365,7 +358,7 @@ func Test_Subscribe_EmptyTopics(t *testing.T) {
 func Test_Unsubscribe_BytesTopics(t *testing.T) {
 	ctx := setupTest(t)
 
-	parsed := mustParseTopic(t, testGroupTopic)
+	parsed := testutils.MustParseTopic(t, testGroupTopic)
 	ctx.subscriptionsMock.On("Unsubscribe", mock.Anything, INSTALLATION_ID, matchTopics(parsed)).Return(nil)
 	_, err := ctx.client.Unsubscribe(ctx.ctx, connect.NewRequest(&proto.UnsubscribeRequest{
 		InstallationId: INSTALLATION_ID,
@@ -382,7 +375,7 @@ func Test_SubscribeWithMetadata_StringTopic(t *testing.T) {
 		mock.Anything,
 		INSTALLATION_ID,
 		matchSubscriptionInputs(interfaces.SubscriptionInput{
-			Topic:    mustParseTopic(t, testGroupTopic),
+			Topic:    testutils.MustParseTopic(t, testGroupTopic),
 			IsSilent: true,
 		}),
 	).Return(nil)
@@ -399,7 +392,7 @@ func Test_SubscribeWithMetadata_StringTopic(t *testing.T) {
 func Test_SubscribeWithMetadata_BytesTakesPrecedence(t *testing.T) {
 	ctx := setupTest(t)
 
-	parsed := mustParseTopic(t, testWelcomeTopic)
+	parsed := testutils.MustParseTopic(t, testWelcomeTopic)
 	ctx.subscriptionsMock.On(
 		"SubscribeWithMetadata",
 		mock.Anything,
