@@ -1,4 +1,6 @@
 #!/bin/bash
 set -eou pipefail
 
-docker compose up -d node
+xnet-cli -c xnet.toml up
+xnet-cli node --migrator
+docker compose up -d db

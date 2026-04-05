@@ -1,6 +1,33 @@
 #!/bin/bash
 set -eou pipefail
 
-docker compose up -d node
+SCENARIO="${1:-v3-writes}"
+
+# Get CoreDNS container IP for DNS resolution inside containers
+COREDNS_IP=$(docker inspect xnet-coredns -f '{{.NetworkSettings.Networks.xnet.IPAddress}}')
+export COREDNS_IP
+
+case "$SCENARIO" in
+  v3-writes)
+    # Writes go to V3 node-go, listener connects to xmtpd (V4)
+    export LISTENER_TYPE=v4
+    export XMTP_LISTENER_ADDRESS=xnet-100:5050
+    export XMTP_CLIENT_URL=http://xnet-node:4446
+    ;;
+  v4-writes)
+    # Writes go to V4 gateway, listener connects to xmtpd (V4)
+    # Requires d14n activation
+    xnet-cli activate-d14n
+    export LISTENER_TYPE=v4
+    export XMTP_LISTENER_ADDRESS=xnet-100:5050
+    export XMTP_CLIENT_URL=http://xnet-gateway:5050
+    ;;
+  *)
+    echo "Unknown scenario: $SCENARIO (use v3-writes or v4-writes)"
+    exit 1
+    ;;
+esac
+
+docker compose up -d db notification_server
 docker compose up integration
 exit $?

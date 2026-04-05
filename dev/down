@@ -2,3 +2,4 @@
 set -eou pipefail
 
 docker compose down
+xnet-cli down
