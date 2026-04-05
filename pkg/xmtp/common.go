@@ -25,6 +25,7 @@ func cappedBackoff(sleepTime time.Duration) time.Duration {
 type NotificationListener interface {
 	Start()
 	Stop()
+	Ready() bool
 }
 
 // deliveryDispatcher handles shared delivery logic for both V3 and V4 listeners

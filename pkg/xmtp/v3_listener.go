@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"io"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
@@ -29,6 +30,7 @@ type Listener struct {
 	clientVersion  string
 	appVersion     string
 	dispatcher     deliveryDispatcher
+	ready          atomic.Bool
 }
 
 func NewListener(
@@ -74,17 +76,32 @@ func (l *Listener) Start() {
 }
 
 func (l *Listener) Stop() {
+	l.ready.Store(false)
 	l.cancelFunc()
+}
+
+func (l *Listener) Ready() bool {
+	return l.ready.Load()
 }
 
 func (l *Listener) startMessageListener() {
 	l.logger.Info("starting message listener")
-	var stream v1.MessageApi_SubscribeAllClient
-	var err error
+	defer close(l.messageChannel)
+
 	sleepTime := STARTING_SLEEP_TIME
 	for {
-		stream, err = l.xmtpClient.SubscribeAll(l.ctx, &v1.SubscribeAllRequest{})
+		select {
+		case <-l.ctx.Done():
+			return
+		default:
+		}
+
+		stream, err := l.xmtpClient.SubscribeAll(l.ctx, &v1.SubscribeAllRequest{})
 		if err != nil {
+			if l.ctx.Err() != nil {
+				return
+			}
+
 			l.logger.Error("error connecting to stream", zap.Error(err))
 			time.Sleep(sleepTime)
 			sleepTime = cappedBackoff(sleepTime)
@@ -93,35 +110,43 @@ func (l *Listener) startMessageListener() {
 			}
 			continue
 		}
-	streamLoop:
-		for {
-			select {
-			case <-l.ctx.Done():
-				close(l.messageChannel)
-				return
-			default:
-				msg, err := stream.Recv()
-				if err == io.EOF {
-					l.logger.Info("stream closed")
-					break streamLoop
-				}
 
-				if err != nil {
-					l.logger.Warn("error reading from stream", zap.Error(err))
-					// Wait 100ms to avoid hammering the API and getting rate limited
-					time.Sleep(sleepTime)
-					sleepTime = cappedBackoff(sleepTime)
-					if err = l.refreshClient(); err != nil {
-						l.logger.Error("error refreshing client", zap.Error(err))
-					}
-					break streamLoop
-				}
+		l.ready.Store(true)
+		if l.consumeMessageStream(stream, &sleepTime) {
+			return
+		}
+	}
+}
 
-				if msg != nil {
-					// Reset the sleep time on first successful message
-					sleepTime = STARTING_SLEEP_TIME
-					l.messageChannel <- msg
+func (l *Listener) consumeMessageStream(stream v1.MessageApi_SubscribeAllClient, sleepTime *time.Duration) bool {
+	defer l.ready.Store(false)
+
+	for {
+		select {
+		case <-l.ctx.Done():
+			return true
+		default:
+			msg, err := stream.Recv()
+			if err == io.EOF {
+				l.logger.Info("stream closed")
+				return false
+			}
+
+			if err != nil {
+				l.logger.Warn("error reading from stream", zap.Error(err))
+				// Wait 100ms to avoid hammering the API and getting rate limited
+				time.Sleep(*sleepTime)
+				*sleepTime = cappedBackoff(*sleepTime)
+				if err = l.refreshClient(); err != nil {
+					l.logger.Error("error refreshing client", zap.Error(err))
 				}
+				return false
+			}
+
+			if msg != nil {
+				// Reset the sleep time on first successful message
+				*sleepTime = STARTING_SLEEP_TIME
+				l.messageChannel <- msg
 			}
 		}
 	}

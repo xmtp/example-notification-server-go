@@ -14,6 +14,7 @@ Many applications will have different needs for push notifications (different de
 
 1. Go 1.26
 2. Docker and Docker Compose
+3. Nix
 
 ## Local Setup
 
@@ -22,6 +23,8 @@ To start the XMTP service and database, run:
 ```sh
 ./dev/up
 ```
+
+If `xnet-cli` is not already installed, `./dev/up` will try to install it with Nix.
 
 You should then be able to build the server using:
 

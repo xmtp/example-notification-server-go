@@ -1,5 +1,8 @@
+FROM node:22-bookworm-slim AS node
+
 FROM ubuntu:24.04 AS base
-RUN apt-get update && apt-get install -y nodejs npm && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=node /usr/local /usr/local
 WORKDIR /usr/app
 
 # Install dependencies into temp directory

@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eou pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+xnet-cli -c "$SCRIPT_DIR/../xnet.toml" "$@"

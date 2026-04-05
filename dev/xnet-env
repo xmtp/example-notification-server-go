@@ -1,0 +1,40 @@
+#!/bin/bash
+
+MESSAGE_SOURCE="${1:-v3-direct}"
+
+case "$MESSAGE_SOURCE" in
+  v3-direct)
+    export MESSAGE_SOURCE
+    export LISTENER_TYPE="v3"
+    export XMTP_LISTENER_ADDRESS="xnet-node:5556"
+    export XMTP_CLIENT_URL="http://xnet-node:5556"
+    export XMTP_GATEWAY_URL=""
+    export XMTP_NEEDS_XMTPD_NODE="false"
+    export XMTP_SHOULD_ENABLE_D14N="false"
+    export XMTP_MIGRATOR_RUNNING="false"
+    ;;
+  v4-with-migrator)
+    export MESSAGE_SOURCE
+    export LISTENER_TYPE="v4"
+    export XMTP_LISTENER_ADDRESS="xnet-100:5050"
+    export XMTP_CLIENT_URL="http://xnet-node:5556"
+    export XMTP_GATEWAY_URL=""
+    export XMTP_NEEDS_XMTPD_NODE="true"
+    export XMTP_SHOULD_ENABLE_D14N="false"
+    export XMTP_MIGRATOR_RUNNING="true"
+    ;;
+  v4-direct)
+    export MESSAGE_SOURCE
+    export LISTENER_TYPE="v4"
+    export XMTP_LISTENER_ADDRESS="xnet-100:5050"
+    export XMTP_CLIENT_URL="http://xnet-100:5050"
+    export XMTP_GATEWAY_URL="http://xnet-gateway:5050"
+    export XMTP_NEEDS_XMTPD_NODE="true"
+    export XMTP_SHOULD_ENABLE_D14N="true"
+    export XMTP_MIGRATOR_RUNNING="false"
+    ;;
+  *)
+    echo "Unknown message-source: $MESSAGE_SOURCE (use v3-direct, v4-with-migrator, or v4-direct)" >&2
+    return 1 2>/dev/null || exit 1
+    ;;
+esac

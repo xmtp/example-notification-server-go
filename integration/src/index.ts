@@ -3,7 +3,7 @@ import {
   type Signer,
   type ClientOptions,
   IdentifierKind,
-  createBackend,
+  LogLevel,
 } from "@xmtp/node-sdk";
 import { createWalletClient, http, toBytes } from "viem";
 import { mainnet } from "viem/chains";
@@ -46,12 +46,14 @@ export async function randomClient() {
   };
 
   const encKey = getRandomValues(new Uint8Array(32));
+  console.log(config);
   const opts: ClientOptions = {
     apiUrl: config.nodeUrl,
     env: "local",
     dbEncryptionKey: encKey,
+    loggingLevel: LogLevel.Info,
     dbPath: `/tmp/test-${wallet.account.address}.db3`,
-    ...(config.gatewayUrl ? { gatewayUrl: config.gatewayUrl } : {}),
+    ...(config.gatewayHost ? { gatewayHost: config.gatewayHost } : {}),
   };
   return await Client.create(signer, opts);
 }
@@ -62,6 +64,10 @@ export function createNotificationClient() {
   });
 
   return createClient(Notifications, transport);
+}
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function subscribeToTopics(

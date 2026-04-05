@@ -1,20 +1,40 @@
 import Koa from "koa";
 import { bodyParser } from "@koa/bodyparser";
+import type { Client as XmtpClient } from "@xmtp/node-sdk";
 import { expect, test, afterAll, describe } from "vitest";
-import { createNotificationClient, randomClient } from ".";
+import { createNotificationClient, randomClient, sleep } from ".";
 import type { NotificationResponse } from "./types";
 
 const PORT = 7777;
 
 describe("notifications", () => {
-  let onRequest = (req: NotificationResponse) =>
-    console.log("No request handler set for", req);
+  const pendingResolvers = new Map<
+    string,
+    (body: NotificationResponse) => void
+  >();
+  const pendingNotifications = new Map<string, NotificationResponse[]>();
 
   // Set up a Koa server to receive messages from the HttpDelivery service
   const app = new Koa();
   app.use(bodyParser());
   app.use(async (ctx) => {
-    onRequest(ctx.request.body as NotificationResponse);
+    const body = ctx.request.body as NotificationResponse;
+    const installationId = body.installation?.id;
+    if (!installationId) {
+      console.log("Notification missing installation id");
+      ctx.status = 200;
+      return;
+    }
+
+    const resolver = pendingResolvers.get(installationId);
+    if (resolver) {
+      pendingResolvers.delete(installationId);
+      resolver(body);
+    } else {
+      const queue = pendingNotifications.get(installationId) ?? [];
+      queue.push(body);
+      pendingNotifications.set(installationId, queue);
+    }
     ctx.status = 200;
   });
   const server = app.listen(PORT);
@@ -23,17 +43,80 @@ describe("notifications", () => {
     server.close();
   });
 
-  const waitForNextRequest = (
+  const waitForNotification = (
+    installationId: string,
     timeoutMs: number,
   ): Promise<NotificationResponse> =>
     new Promise((resolve, reject) => {
-      onRequest = (body) => resolve(body);
-      setTimeout(reject, timeoutMs);
+      const queued = pendingNotifications.get(installationId);
+      if (queued && queued.length > 0) {
+        const [nextNotification, ...rest] = queued;
+        if (rest.length > 0) {
+          pendingNotifications.set(installationId, rest);
+        } else {
+          pendingNotifications.delete(installationId);
+        }
+        resolve(nextNotification);
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        pendingResolvers.delete(installationId);
+        reject(
+          new Error(`Timed out waiting for notification for ${installationId}`),
+        );
+      }, timeoutMs);
+
+      pendingResolvers.set(installationId, (body) => {
+        clearTimeout(timer);
+        resolve(body);
+      });
     });
+
+  const expectNoNotification = async (
+    installationId: string,
+    timeoutMs: number,
+  ) => {
+    const result = await waitForNotification(installationId, timeoutMs).catch(
+      () => "timeout",
+    );
+    expect(result).toEqual("timeout");
+  };
+
+  const waitForConversationCount = async (
+    client: XmtpClient<any>,
+    expectedCount: number,
+    timeoutMs: number,
+  ) => {
+    const start = Date.now();
+    let lastError: unknown;
+
+    while (Date.now() - start < timeoutMs) {
+      try {
+        await client.conversations.syncAll();
+      } catch (error) {
+        lastError = error;
+      }
+
+      const conversations = await client.conversations.list();
+      if (conversations.length >= expectedCount) {
+        return conversations;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
+
+    throw new Error(`Timed out waiting for ${expectedCount} conversations`);
+  };
 
   test("conversation invites", async () => {
     const alix = await randomClient();
     const bo = await randomClient();
+
     const alixNotificationClient = createNotificationClient();
     await alixNotificationClient.registerInstallation({
       installationId: alix.installationId,
@@ -56,7 +139,7 @@ describe("notifications", () => {
       ],
     });
 
-    const notificationPromise = waitForNextRequest(10000);
+    const notificationPromise = waitForNotification(alix.installationId, 30000);
     // Bo creates a DM with alix, which sends a welcome to alix's installation
     await bo.conversations.createDm(alix.inboxId);
     const notification = await notificationPromise;
@@ -87,8 +170,7 @@ describe("notifications", () => {
     const boGroup = await bo.conversations.createGroup([alix.inboxId]);
 
     expect((await alix.conversations.list()).length).toEqual(0);
-    await alix.conversations.syncAll();
-    const alixGroups = await alix.conversations.list();
+    const alixGroups = await waitForConversationCount(alix, 1, 15000);
     expect(alixGroups.length).toEqual(1);
     const alixGroup = alixGroups[0];
 
@@ -113,7 +195,7 @@ describe("notifications", () => {
       ],
     });
 
-    const notificationPromise = waitForNextRequest(10000);
+    const notificationPromise = waitForNotification(alix.installationId, 15000);
     await alixGroup.sendText("This should never be delivered");
     await boGroup.sendText("This should be delivered");
 
@@ -142,8 +224,7 @@ describe("notifications", () => {
     // Bo creates two groups with alix
     const group1 = await bo.conversations.createGroup([alix.inboxId]);
     const group2 = await bo.conversations.createGroup([alix.inboxId]);
-    await alix.conversations.syncAll();
-    const alixGroups = await alix.conversations.list();
+    const alixGroups = await waitForConversationCount(alix, 2, 15000);
 
     // Subscribe to both group topics with HMAC keys
     const hmacKeys = alix.conversations.hmacKeys();
@@ -159,29 +240,20 @@ describe("notifications", () => {
       })),
     });
 
-    // Unsubscribe from group1 — resubscribe with only group2
-    const alixGroup2 = alixGroups.find((g) => g.id !== group1.id)!;
-    await notifClient.subscribeWithMetadata({
+    // Unsubscribe from group1 while keeping group2 active
+    await notifClient.unsubscribe({
       installationId: alix.installationId,
-      subscriptions: [
-        {
-          topic: alixGroup2.topic,
-          isSilent: false,
-          hmacKeys: hmacKeys[alixGroup2.id]?.map((v) => ({
-            thirtyDayPeriodsSinceEpoch: Number(v.epoch),
-            key: Uint8Array.from(v.key),
-          })),
-        },
-      ],
+      topics: [group1.topic],
     });
 
     // Send messages to both groups — only group2 should be delivered
-    const notificationPromise = waitForNextRequest(10000);
+    const notificationPromise = waitForNotification(alix.installationId, 15000);
     await group1.sendText("Should NOT be delivered");
     await group2.sendText("Should be delivered");
 
     const notification = await notificationPromise;
-    expect(notification.message.content_topic).toEqual(alixGroup2.topic);
+    expect(notification.message.content_topic).toEqual(group2.topic);
+    await expectNoNotification(alix.installationId, 3000);
   });
 
   test("group message sender filtering", async () => {
@@ -199,8 +271,7 @@ describe("notifications", () => {
 
     // Bo creates group, invites alix
     const boGroup = await bo.conversations.createGroup([alix.inboxId]);
-    await alix.conversations.syncAll();
-    const alixGroups = await alix.conversations.list();
+    const alixGroups = await waitForConversationCount(alix, 1, 15000);
     const alixGroup = alixGroups[0];
 
     // Alix subscribes with HMAC keys
@@ -220,13 +291,14 @@ describe("notifications", () => {
     });
 
     // Both send messages — only bo's should be delivered
-    const notificationPromise = waitForNextRequest(10000);
+    const notificationPromise = waitForNotification(alix.installationId, 15000);
     await alixGroup.sendText("From alix — should NOT be delivered");
     await boGroup.sendText("From bo — should be delivered");
 
     const notification = await notificationPromise;
     expect(notification.message.content_topic).toEqual(alixGroup.topic);
     expect(notification.idempotency_key).toBeTypeOf("string");
+    await expectNoNotification(alix.installationId, 3000);
   });
 
   test("unregister stops notifications", async () => {
@@ -256,9 +328,6 @@ describe("notifications", () => {
     await bo.conversations.createGroup([alix.inboxId]);
 
     // Wait briefly and verify no notification arrived
-    const noNotification = await waitForNextRequest(5000).catch(
-      () => "timeout",
-    );
-    expect(noNotification).toEqual("timeout");
+    await expectNoNotification(alix.installationId, 5000);
   });
 });

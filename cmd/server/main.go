@@ -104,6 +104,9 @@ func main() {
 
 	if opts.Api.Enabled {
 		apiServer = api.NewApiServer(logger, opts.Api, installationsService, subscriptionsService, interfaces.ListenerType(opts.Xmtp.ListenerType))
+		if notifListener != nil {
+			apiServer.SetReadyCheck(notifListener.Ready)
+		}
 		apiServer.Start()
 	}
 

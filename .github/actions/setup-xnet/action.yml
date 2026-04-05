@@ -5,6 +5,9 @@ inputs:
   github-token:
     description: "GitHub token for Nix installation"
     required: true
+  cachix-auth-token:
+    description: "Cachix auth token for cache pushes"
+    required: false
 
 runs:
   using: "composite"
@@ -19,9 +22,10 @@ runs:
     - uses: cachix/cachix-action@v16
       with:
         name: xmtp
+        authToken: ${{ inputs.cachix-auth-token }}
     - name: Install xnet-cli
       shell: bash
-      run: nix profile install github:xmtp/libxmtp/push-mtruypwzqklu#xnet-cli
+      run: ./dev/install-xnet
     - name: Setup DNS
       shell: bash
       run: |

@@ -1,0 +1,52 @@
+#!/bin/bash
+set -euo pipefail
+
+XNET_COMMIT="001ce0a76a8727319e3209b1bd509792388d67d2"
+XNET_FLAKE="github:xmtp/libxmtp/${XNET_COMMIT}"
+XNET_REF="${XNET_FLAKE}#xnet-cli"
+XNET_LOCKED_PREFIX="${XNET_FLAKE}"
+
+have_command() { command -v "$1" >/dev/null 2>&1; }
+
+ensure_nix_profile_path() {
+  local nix_path
+
+  for nix_path in \
+    "$HOME/.nix-profile/bin" \
+    "$HOME/.local/state/nix/profile/bin" \
+    "/nix/var/nix/profiles/default/bin"
+  do
+    if [[ -d "$nix_path" ]] && [[ ":$PATH:" != *":$nix_path:"* ]]; then
+      PATH="$nix_path:$PATH"
+    fi
+  done
+}
+
+ensure_nix_profile_path
+
+if ! have_command nix; then
+  echo "Nix is required to install xnet-cli." >&2
+  exit 1
+fi
+
+if nix profile list --json --no-pretty | jq -e --arg locked_prefix "$XNET_LOCKED_PREFIX" '
+  .elements
+  | [to_entries[]
+      | select(
+          .value.active
+          and ((.value.attrPath // "") | endswith(".xnet-cli"))
+        )
+    ] as $xnet_entries
+  | ($xnet_entries | length) > 0
+    and all(
+      $xnet_entries[];
+      ((.value.url // "") | startswith($locked_prefix))
+    )
+' >/dev/null; then
+  echo "xnet-cli already matches pinned commit $XNET_COMMIT"
+  exit 0
+fi
+
+echo "Installing xnet-cli from $XNET_REF"
+nix profile remove xnet-cli >/dev/null 2>&1 || true
+nix --accept-flake-config profile add "$XNET_REF"

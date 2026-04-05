@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"testing"
@@ -16,9 +17,9 @@ import (
 	"github.com/xmtp/example-notification-server-go/mocks"
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
 	"github.com/xmtp/example-notification-server-go/pkg/options"
-	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 	proto "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1"
 	protoconnect "github.com/xmtp/example-notification-server-go/pkg/proto/notifications/v1/notificationsv1connect"
+	"github.com/xmtp/example-notification-server-go/pkg/testutils"
 
 	topicpkg "github.com/xmtp/xmtpd/pkg/topic"
 )
@@ -35,7 +36,6 @@ type testContext struct {
 	subscriptionsMock *mocks.Subscriptions
 	apiServer         *ApiServer
 }
-
 
 func matchTopics(expected ...*topicpkg.Topic) interface{} {
 	return mock.MatchedBy(func(actual []*topicpkg.Topic) bool {
@@ -489,7 +489,6 @@ func TestRegisterInstallation_WithPayloadFormatV4_OnV4Listener_Succeeds(t *testi
 func TestRegisterInstallation_WithUnspecified_DefaultsToV3(t *testing.T) {
 	ctx := setupTest(t)
 
-
 	validUntil := time.Now()
 	ctx.installationsMock.On(
 		"Register",
@@ -518,4 +517,35 @@ func TestRegisterInstallation_WithUnspecified_DefaultsToV3(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, INSTALLATION_ID, result.Msg.InstallationId)
+}
+
+func Test_Readyz_DefaultsToOk(t *testing.T) {
+	ctx := setupTest(t)
+
+	resp, err := ctx.httpClient.Get(fmt.Sprintf("http://127.0.0.1:%d/readyz", ctx.apiServer.port))
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, "ok", string(body))
+}
+
+func Test_Readyz_ReflectsReadyCheck(t *testing.T) {
+	ctx := setupTest(t)
+	ctx.apiServer.SetReadyCheck(func() bool { return false })
+
+	resp, err := ctx.httpClient.Get(fmt.Sprintf("http://127.0.0.1:%d/readyz", ctx.apiServer.port))
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+	require.Equal(t, "listener not ready", string(body))
 }

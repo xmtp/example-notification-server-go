@@ -1,34 +1,47 @@
 #!/bin/bash
 set -eou pipefail
 
-SCENARIO="${1:-v3-writes}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+# message-source controls both how the XMTP client writes messages and what
+# listener topology the notification server is expected to exercise:
+# - v3-direct:
+#   client writes directly to node-go and the notification server listens to the
+#   same v3 node with the v3 listener.
+# - v4-with-migrator:
+#   client writes to node-go, the migrator forwards those messages into xmtpd,
+#   and the notification server listens to xmtpd with the v4 listener.
+# - v4-direct:
+#   client writes to xmtpd after cutover + d14n activation, and the
+#   notification server also listens directly to xmtpd with the v4 listener.
+MESSAGE_SOURCE="${1:-v3-direct}"
+source "$SCRIPT_DIR/xnet-env" "$MESSAGE_SOURCE"
+
+"$SCRIPT_DIR/down"
+"$SCRIPT_DIR/up" "$MESSAGE_SOURCE"
+
+echo "message-source=$MESSAGE_SOURCE listener_type=$LISTENER_TYPE listener_address=$XMTP_LISTENER_ADDRESS migrator_running=$XMTP_MIGRATOR_RUNNING xmtp_client_url=$XMTP_CLIENT_URL xmtp_gateway_url=${XMTP_GATEWAY_URL:-<unset>}"
+
+docker compose build -q notification_server integration
 
 # Get CoreDNS container IP for DNS resolution inside containers
 COREDNS_IP=$(docker inspect xnet-coredns -f '{{.NetworkSettings.Networks.xnet.IPAddress}}')
 export COREDNS_IP
 
-case "$SCENARIO" in
-  v3-writes)
-    # Writes go to V3 node-go, listener connects to xmtpd (V4)
-    export LISTENER_TYPE=v4
-    export XMTP_LISTENER_ADDRESS=xnet-100:5050
-    export XMTP_CLIENT_URL=http://xnet-node:5556
-    ;;
-  v4-writes)
-    # Writes go to V4 gateway, listener connects to xmtpd (V4)
-    # Requires d14n activation
-    xnet-cli activate-d14n
-    export LISTENER_TYPE=v4
-    export XMTP_LISTENER_ADDRESS=xnet-100:5050
-    export XMTP_CLIENT_URL=http://xnet-gateway:5050
-    export XMTP_GATEWAY_URL=http://xnet-gateway:5050
-    ;;
-  *)
-    echo "Unknown scenario: $SCENARIO (use v3-writes or v4-writes)"
-    exit 1
-    ;;
-esac
+docker compose up -d notification_server
+notification_server_container_id="$(docker compose ps -q notification_server)"
+for _ in $(seq 1 30); do
+  if [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$notification_server_container_id")" = "healthy" ]; then
+    break
+  fi
+  sleep 1
+done
 
-docker compose up -d db notification_server
-docker compose up integration
+if [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$notification_server_container_id")" != "healthy" ]; then
+  echo "notification_server did not become healthy for message-source $MESSAGE_SOURCE" >&2
+  docker compose logs notification_server >&2 || true
+  exit 1
+fi
+
+docker compose run --rm --use-aliases integration npx vitest run
 exit $?

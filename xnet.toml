@@ -17,5 +17,8 @@ version = "main"
 image = "ghcr.io/xmtp/mls-validation-service"
 version = "main"
 
+[contracts]
+version = "v2026.02.10-1"
+
 # Nodes are added manually via: xnet-cli node add --migrator
 # This is done in dev/up after `xnet-cli up --paused`

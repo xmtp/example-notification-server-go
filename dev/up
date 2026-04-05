@@ -1,6 +1,89 @@
 #!/bin/bash
 set -eou pipefail
 
-xnet-cli -c xnet.toml up --paused
-xnet-cli node add --migrator
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ensure_nix_profile_path() {
+  local nix_path
+
+  for nix_path in \
+    "$HOME/.nix-profile/bin" \
+    "$HOME/.local/state/nix/profile/bin" \
+    "/nix/var/nix/profiles/default/bin"
+  do
+    if [[ -d "$nix_path" ]] && [[ ":$PATH:" != *":$nix_path:"* ]]; then
+      PATH="$nix_path:$PATH"
+    fi
+  done
+}
+
+ensure_xnet_cli() {
+  "$SCRIPT_DIR/install-xnet"
+  ensure_nix_profile_path
+
+  if ! command -v xnet-cli >/dev/null 2>&1; then
+    echo "xnet-cli is required. Install Nix and rerun ./dev/up, or install xnet-cli manually." >&2
+    exit 1
+  fi
+}
+
+xnet() { "$SCRIPT_DIR/xnet" "$@"; }
+is_node_running() { docker inspect xnet-100 --format '{{.State.Running}}' 2>/dev/null | grep -q '^true$'; }
+is_node_registered() { xnet addresses 2>&1 | grep -q "xnet-100"; }
+is_v3_node_running() { docker inspect xnet-node --format '{{.State.Running}}' 2>/dev/null | grep -q '^true$'; }
+
+MESSAGE_SOURCE="${1:-v3-direct}"
+source "$SCRIPT_DIR/xnet-env" "$MESSAGE_SOURCE"
+
+ensure_xnet_cli
+xnet up --paused
+
+if [[ "$XMTP_CLIENT_URL" == "http://xnet-node:5556" ]]; then
+  for _ in $(seq 1 30); do
+    if is_v3_node_running; then
+      break
+    fi
+    sleep 1
+  done
+
+  if ! is_v3_node_running; then
+    echo "xnet-node did not become ready for message-source $MESSAGE_SOURCE" >&2
+    exit 1
+  fi
+fi
+
+if [[ "$XMTP_NEEDS_XMTPD_NODE" == "true" ]]; then
+  xnet node add --migrator
+
+  if [[ "$XMTP_SHOULD_ENABLE_D14N" == "true" ]]; then
+    xnet migrate
+    xnet activate-d14n
+  fi
+
+  for _ in $(seq 1 30); do
+    if is_node_running; then
+      break
+    fi
+    sleep 1
+  done
+
+  if ! is_node_running; then
+    echo "xnet-100 did not become ready for message-source $MESSAGE_SOURCE" >&2
+    exit 1
+  fi
+
+  if [[ "$XMTP_SHOULD_ENABLE_D14N" == "true" ]]; then
+    for _ in $(seq 1 90); do
+      if is_node_registered; then
+        break
+      fi
+      sleep 1
+    done
+
+    if ! is_node_registered; then
+      echo "xnet-100 did not become registered for message-source $MESSAGE_SOURCE" >&2
+      exit 1
+    fi
+  fi
+fi
+
 docker compose up -d db

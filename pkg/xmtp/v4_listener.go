@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/xmtp/example-notification-server-go/pkg/interfaces"
@@ -33,6 +34,7 @@ type V4Listener struct {
 	subscriptions   interfaces.Subscriptions
 	clientVersion   string
 	appVersion      string
+	ready           atomic.Bool
 }
 
 func NewV4Listener(
@@ -79,6 +81,7 @@ func (l *V4Listener) Start() {
 }
 
 func (l *V4Listener) Stop() {
+	l.ready.Store(false)
 	l.cancelFunc()
 	l.connMu.Lock()
 	defer l.connMu.Unlock()
@@ -86,6 +89,10 @@ func (l *V4Listener) Stop() {
 		_ = l.v4Conn.Close()
 		l.v4Conn = nil
 	}
+}
+
+func (l *V4Listener) Ready() bool {
+	return l.ready.Load()
 }
 
 func (l *V4Listener) startEnvelopeListener() {
@@ -109,34 +116,43 @@ func (l *V4Listener) startEnvelopeListener() {
 			}
 			continue
 		}
-	streamLoop:
-		for {
-			select {
-			case <-l.ctx.Done():
-				close(l.envelopeChannel)
-				return
-			default:
-				resp, err := stream.Recv()
-				if err == io.EOF {
-					l.logger.Info("V4 stream closed")
-					break streamLoop
-				}
 
-				if err != nil {
-					l.logger.Error("error reading from V4 stream", zap.Error(err))
-					time.Sleep(sleepTime)
-					sleepTime = cappedBackoff(sleepTime)
-					if err = l.refreshV4Client(); err != nil {
-						l.logger.Error("error refreshing V4 client", zap.Error(err))
-					}
-					break streamLoop
-				}
+		l.ready.Store(true)
+		if l.consumeEnvelopeStream(stream, &sleepTime) {
+			return
+		}
+	}
+}
 
-				if resp != nil {
-					sleepTime = STARTING_SLEEP_TIME
-					for _, env := range resp.GetEnvelopes() {
-						l.envelopeChannel <- env
-					}
+func (l *V4Listener) consumeEnvelopeStream(stream notificationApi.NotificationApi_SubscribeAllEnvelopesClient, sleepTime *time.Duration) bool {
+	defer l.ready.Store(false)
+
+	for {
+		select {
+		case <-l.ctx.Done():
+			close(l.envelopeChannel)
+			return true
+		default:
+			resp, err := stream.Recv()
+			if err == io.EOF {
+				l.logger.Info("V4 stream closed")
+				return false
+			}
+
+			if err != nil {
+				l.logger.Error("error reading from V4 stream", zap.Error(err))
+				time.Sleep(*sleepTime)
+				*sleepTime = cappedBackoff(*sleepTime)
+				if err = l.refreshV4Client(); err != nil {
+					l.logger.Error("error refreshing V4 client", zap.Error(err))
+				}
+				return false
+			}
+
+			if resp != nil {
+				*sleepTime = STARTING_SLEEP_TIME
+				for _, env := range resp.GetEnvelopes() {
+					l.envelopeChannel <- env
 				}
 			}
 		}
@@ -222,7 +238,7 @@ func (l *V4Listener) processOriginatorEnvelope(env *envelopesProto.OriginatorEnv
 			)
 			continue
 		}
-
+		logger.Info("delivering notification")
 		if err = l.dispatcher.deliver(req); err != nil {
 			logger.Error("error delivering V4 request", zap.Error(err))
 		}

@@ -19,6 +19,11 @@ services:
       - ${COREDNS_IP:-172.18.0.2}
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/readyz"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
     networks:
       - xnet
     command:
@@ -41,7 +46,8 @@ services:
     dns:
       - ${COREDNS_IP:-172.18.0.2}
     depends_on:
-      - notification_server
+      notification_server:
+        condition: service_healthy
     environment:
       - XMTP_NODE_URL=${XMTP_CLIENT_URL:-http://xnet-node:5556}
       - NOTIFICATION_SERVER_URL=http://notification_server:8080

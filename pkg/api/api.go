@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -29,6 +30,7 @@ type ApiServer struct {
 	port          int
 	listener      net.Listener
 	listenerType  interfaces.ListenerType
+	readyCheck    func() bool
 }
 
 func NewApiServer(logger *zap.Logger, opts options.ApiOptions, installations interfaces.Installations, subscriptions interfaces.Subscriptions, listenerType interfaces.ListenerType) *ApiServer {
@@ -54,10 +56,15 @@ func (s *ApiServer) SetListener(listener net.Listener) error {
 	return nil
 }
 
+func (s *ApiServer) SetReadyCheck(readyCheck func() bool) {
+	s.readyCheck = readyCheck
+}
+
 func (s *ApiServer) Start() {
 	mux := http.NewServeMux()
 	path, handler := notificationsv1connect.NewNotificationsHandler(s)
 	mux.Handle(path, handler)
+	mux.HandleFunc("/readyz", s.handleReady)
 
 	addr := fmt.Sprintf(":%d", s.port)
 	if s.listener != nil {
@@ -283,4 +290,15 @@ func convertDeliveryMechanism(mechanism *proto.DeliveryMechanism) *interfaces.De
 	} else {
 		return &interfaces.DeliveryMechanism{Kind: interfaces.FCM, Token: fcmToken}
 	}
+}
+
+func (s *ApiServer) handleReady(w http.ResponseWriter, _ *http.Request) {
+	if s.readyCheck != nil && !s.readyCheck() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = io.WriteString(w, "listener not ready")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.WriteString(w, "ok")
 }

@@ -1,5 +1,11 @@
 #!/bin/bash
 set -eou pipefail
 
-docker compose down
-xnet-cli down
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+xnet() { "$SCRIPT_DIR/xnet" "$@"; }
+
+docker compose down -v
+
+if docker network inspect xnet >/dev/null 2>&1; then
+  xnet delete
+fi
