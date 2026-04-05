@@ -1,50 +1,31 @@
 services:
-  node:
-    image: ghcr.io/xmtp/node-go:main
-    platform: linux/amd64
-    environment:
-      - GOWAKU-NODEKEY=8a30dcb604b0b53627a5adc054dbf434b446628d4bd1eccc681d223f0550ce67
-    command:
-      - --store.enable
-      - --store.db-connection-string=postgres://postgres:xmtp@db:5432/postgres?sslmode=disable
-      - --store.reader-db-connection-string=postgres://postgres:xmtp@db:5432/postgres?sslmode=disable
-      - --mls-store.db-connection-string=postgres://postgres:xmtp@mlsdb:5432/postgres?sslmode=disable
-      - --mls-validation.grpc-address=validation:50051
-      - --api.enable-mls
-      - --wait-for-db=30s
-    ports:
-      - 25555:5555
-      - 25556:5556
-    depends_on:
-      - db
-      - mlsdb
-      - validation
-
-  validation:
-    image: ghcr.io/xmtp/mls-validation-service:main
-    platform: linux/amd64
-
   db:
     image: postgres:13
     environment:
       POSTGRES_PASSWORD: xmtp
     ports:
       - 25432:5432
-
-  mlsdb:
-    image: postgres:13
-    environment:
-      POSTGRES_PASSWORD: xmtp
+    networks:
+      - xnet
 
   notification_server:
     build:
       context: .
-    env_file: .env.docker
+    environment:
+      DB_CONNECTION_STRING: "postgres://postgres:xmtp@db:5432/postgres?sslmode=disable"
+      LOG_ENCODING: console
+      API_PORT: "8080"
+    dns:
+      - ${COREDNS_IP:-172.18.0.2}
     depends_on:
-      - node
+      - db
+    networks:
+      - xnet
     command:
       - --xmtp-listener
       - --api
+      - --listener-type=${LISTENER_TYPE:-v4}
+      - --xmtp-address=${XMTP_LISTENER_ADDRESS:-xnet-100:5050}
       - --http-delivery
       - --http-delivery-address=http://integration:7777/post
       - --api-port=8080
@@ -57,13 +38,20 @@ services:
       - 7777
     volumes:
       - ./integration/src:/usr/app/src:ro
+    dns:
+      - ${COREDNS_IP:-172.18.0.2}
     depends_on:
-      - node
       - notification_server
     environment:
-      - XMTP_NODE_URL=http://node:5556
+      - XMTP_NODE_URL=${XMTP_CLIENT_URL:-http://xnet-node:4446}
       - NOTIFICATION_SERVER_URL=http://notification_server:8080
+    networks:
+      - xnet
     command:
       - npx
       - vitest
       - run
+
+networks:
+  xnet:
+    external: true
