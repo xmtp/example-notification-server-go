@@ -11,10 +11,11 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install xnet-cli
-        run: |
-          curl -L -o xnet-cli https://github.com/xmtp/libxmtp/releases/latest/download/xnet-cli-x86_64-unknown-linux-gnu
-          chmod +x xnet-cli
-          sudo mv xnet-cli /usr/local/bin/
+        uses: baptistearno/rust-cargo-install@v3
+        with:
+          crate: xnet-cli
+          git: https://github.com/xmtp/libxmtp
+          branch: push-mtruypwzqklu
       - name: Setup DNS
         run: |
           sudo mkdir -p /etc/systemd/resolved.conf.d
@@ -33,10 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install xnet-cli
-        run: |
-          curl -L -o xnet-cli https://github.com/xmtp/libxmtp/releases/latest/download/xnet-cli-x86_64-unknown-linux-gnu
-          chmod +x xnet-cli
-          sudo mv xnet-cli /usr/local/bin/
+        uses: baptistearno/rust-cargo-install@v3
+        with:
+          crate: xnet-cli
+          git: https://github.com/xmtp/libxmtp
+          branch: push-mtruypwzqklu
       - name: Setup DNS
         run: |
           sudo mkdir -p /etc/systemd/resolved.conf.d
@@ -54,10 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install xnet-cli
-        run: |
-          curl -L -o xnet-cli https://github.com/xmtp/libxmtp/releases/latest/download/xnet-cli-x86_64-unknown-linux-gnu
-          chmod +x xnet-cli
-          sudo mv xnet-cli /usr/local/bin/
+        uses: baptistearno/rust-cargo-install@v3
+        with:
+          crate: xnet-cli
+          git: https://github.com/xmtp/libxmtp
+          branch: push-mtruypwzqklu
       - name: Setup DNS
         run: |
           sudo mkdir -p /etc/systemd/resolved.conf.d
