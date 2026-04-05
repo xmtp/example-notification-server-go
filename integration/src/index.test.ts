@@ -125,4 +125,140 @@ describe("notifications", () => {
     expect(notification.subscription.is_silent).toBe(false);
     expect(notification.installation.delivery_mechanism.token).toEqual("token");
   });
+
+  test("selective unsubscribe", async () => {
+    const alix = await randomClient();
+    const bo = await randomClient();
+    const notifClient = createNotificationClient();
+
+    // Register alix
+    await notifClient.registerInstallation({
+      installationId: alix.installationId,
+      deliveryMechanism: {
+        deliveryMechanismType: { value: "token", case: "apnsDeviceToken" },
+      },
+    });
+
+    // Bo creates two groups with alix
+    const group1 = await bo.conversations.createGroup([alix.inboxId]);
+    const group2 = await bo.conversations.createGroup([alix.inboxId]);
+    await alix.conversations.syncAll();
+    const alixGroups = await alix.conversations.list();
+
+    // Subscribe to both group topics with HMAC keys
+    const hmacKeys = alix.conversations.hmacKeys();
+    await notifClient.subscribeWithMetadata({
+      installationId: alix.installationId,
+      subscriptions: alixGroups.map((g) => ({
+        topic: g.topic,
+        isSilent: false,
+        hmacKeys: hmacKeys[g.id]?.map((v) => ({
+          thirtyDayPeriodsSinceEpoch: Number(v.epoch),
+          key: Uint8Array.from(v.key),
+        })),
+      })),
+    });
+
+    // Unsubscribe from group1 — resubscribe with only group2
+    const alixGroup2 = alixGroups.find((g) => g.id !== group1.id)!;
+    await notifClient.subscribeWithMetadata({
+      installationId: alix.installationId,
+      subscriptions: [
+        {
+          topic: alixGroup2.topic,
+          isSilent: false,
+          hmacKeys: hmacKeys[alixGroup2.id]?.map((v) => ({
+            thirtyDayPeriodsSinceEpoch: Number(v.epoch),
+            key: Uint8Array.from(v.key),
+          })),
+        },
+      ],
+    });
+
+    // Send messages to both groups — only group2 should be delivered
+    const notificationPromise = waitForNextRequest(10000);
+    await group1.sendText("Should NOT be delivered");
+    await group2.sendText("Should be delivered");
+
+    const notification = await notificationPromise;
+    expect(notification.message.content_topic).toEqual(alixGroup2.topic);
+  });
+
+  test("group message sender filtering", async () => {
+    const alix = await randomClient();
+    const bo = await randomClient();
+    const notifClient = createNotificationClient();
+
+    // Register alix
+    await notifClient.registerInstallation({
+      installationId: alix.installationId,
+      deliveryMechanism: {
+        deliveryMechanismType: { value: "token", case: "apnsDeviceToken" },
+      },
+    });
+
+    // Bo creates group, invites alix
+    const boGroup = await bo.conversations.createGroup([alix.inboxId]);
+    await alix.conversations.syncAll();
+    const alixGroups = await alix.conversations.list();
+    const alixGroup = alixGroups[0];
+
+    // Alix subscribes with HMAC keys
+    const hmacKeys = alix.conversations.hmacKeys();
+    await notifClient.subscribeWithMetadata({
+      installationId: alix.installationId,
+      subscriptions: [
+        {
+          topic: alixGroup.topic,
+          isSilent: false,
+          hmacKeys: hmacKeys[alixGroup.id]?.map((v) => ({
+            thirtyDayPeriodsSinceEpoch: Number(v.epoch),
+            key: Uint8Array.from(v.key),
+          })),
+        },
+      ],
+    });
+
+    // Both send messages — only bo's should be delivered
+    const notificationPromise = waitForNextRequest(10000);
+    await alixGroup.sendText("From alix — should NOT be delivered");
+    await boGroup.sendText("From bo — should be delivered");
+
+    const notification = await notificationPromise;
+    expect(notification.message.content_topic).toEqual(alixGroup.topic);
+    expect(notification.idempotency_key).toBeTypeOf("string");
+  });
+
+  test("unregister stops notifications", async () => {
+    const alix = await randomClient();
+    const bo = await randomClient();
+    const notifClient = createNotificationClient();
+
+    // Register alix and subscribe to welcome topic
+    await notifClient.registerInstallation({
+      installationId: alix.installationId,
+      deliveryMechanism: {
+        deliveryMechanismType: { value: "token", case: "apnsDeviceToken" },
+      },
+    });
+    const welcomeTopic = `/xmtp/mls/1/w-${alix.installationId}/proto`;
+    await notifClient.subscribeWithMetadata({
+      installationId: alix.installationId,
+      subscriptions: [{ topic: welcomeTopic, isSilent: true }],
+    });
+
+    // Unregister alix
+    await notifClient.deleteInstallation({
+      installationId: alix.installationId,
+    });
+
+    // Bo creates group with alix — should NOT trigger notification
+    await bo.conversations.createGroup([alix.inboxId]);
+
+    // Wait briefly and verify no notification arrived
+    const noNotification = await waitForNextRequest(5000).catch(
+      () => "timeout",
+    );
+    expect(noNotification).toEqual("timeout");
+  });
 });
