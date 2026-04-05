@@ -10,12 +10,62 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version-file: go.mod
+      - name: Install xnet-cli
+        run: |
+          curl -L -o xnet-cli https://github.com/xmtp/libxmtp/releases/latest/download/xnet-cli-x86_64-unknown-linux-gnu
+          chmod +x xnet-cli
+          sudo mv xnet-cli /usr/local/bin/
+      - name: Setup DNS
+        run: |
+          sudo mkdir -p /etc/systemd/resolved.conf.d
+          sudo tee /etc/systemd/resolved.conf.d/xmtp.conf <<EOF
+          [Resolve]
+          DNS=127.0.0.1:5354
+          Domains=~xmtpd.local
+          EOF
+          sudo systemctl restart systemd-resolved
       - run: ./dev/up
       - name: Run Tests
         run: go test -p 1 ./...
   integration:
-    name: Integration
+    name: Integration (V3 writes)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: ./dev/integration
+      - name: Install xnet-cli
+        run: |
+          curl -L -o xnet-cli https://github.com/xmtp/libxmtp/releases/latest/download/xnet-cli-x86_64-unknown-linux-gnu
+          chmod +x xnet-cli
+          sudo mv xnet-cli /usr/local/bin/
+      - name: Setup DNS
+        run: |
+          sudo mkdir -p /etc/systemd/resolved.conf.d
+          sudo tee /etc/systemd/resolved.conf.d/xmtp.conf <<EOF
+          [Resolve]
+          DNS=127.0.0.1:5354
+          Domains=~xmtpd.local
+          EOF
+          sudo systemctl restart systemd-resolved
+      - run: ./dev/up
+      - run: ./dev/integration v3-writes
+  integration-v4:
+    name: Integration (V4 writes)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install xnet-cli
+        run: |
+          curl -L -o xnet-cli https://github.com/xmtp/libxmtp/releases/latest/download/xnet-cli-x86_64-unknown-linux-gnu
+          chmod +x xnet-cli
+          sudo mv xnet-cli /usr/local/bin/
+      - name: Setup DNS
+        run: |
+          sudo mkdir -p /etc/systemd/resolved.conf.d
+          sudo tee /etc/systemd/resolved.conf.d/xmtp.conf <<EOF
+          [Resolve]
+          DNS=127.0.0.1:5354
+          Domains=~xmtpd.local
+          EOF
+          sudo systemctl restart systemd-resolved
+      - run: ./dev/up
+      - run: ./dev/integration v4-writes
