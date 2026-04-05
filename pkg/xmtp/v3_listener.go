@@ -136,7 +136,6 @@ func (l *Listener) startMessageWorkers() {
 					l.logger.Error("error processing envelope", zap.String("topic", msg.ContentTopic), zap.Error(err))
 					continue
 				}
-				// l.logger.Info("processed a message", zap.String("topic", msg.ContentTopic))
 			}
 		}()
 	}
@@ -214,7 +213,7 @@ func buildIdempotencyKey(env *v1.Envelope) string {
 func buildSendRequests(envelope *v1.Envelope, t *topicpkg.Topic, installations []interfaces.Installation, subscriptions []interfaces.Subscription) []interfaces.SendRequest {
 	idempotencyKey := buildIdempotencyKey(envelope)
 	messageContext := getContext(envelope, t)
-	out := []interfaces.SendRequest{}
+	out := make([]interfaces.SendRequest, 0, len(subscriptions))
 	installationMap := make(map[string]interfaces.Installation)
 	for _, installation := range installations {
 		installationMap[installation.Id] = installation
