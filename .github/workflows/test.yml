@@ -10,21 +10,9 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version-file: go.mod
-      - name: Install xnet-cli
-        uses: baptistearno/rust-cargo-install@v3
+      - uses: ./.github/actions/setup-xnet
         with:
-          crate: xnet-cli
-          git: https://github.com/xmtp/libxmtp
-          branch: push-mtruypwzqklu
-      - name: Setup DNS
-        run: |
-          sudo mkdir -p /etc/systemd/resolved.conf.d
-          sudo tee /etc/systemd/resolved.conf.d/xmtp.conf <<EOF
-          [Resolve]
-          DNS=127.0.0.1:5354
-          Domains=~xmtpd.local
-          EOF
-          sudo systemctl restart systemd-resolved
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: ./dev/up
       - name: Run Tests
         run: go test -p 1 ./...
@@ -33,21 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install xnet-cli
-        uses: baptistearno/rust-cargo-install@v3
+      - uses: ./.github/actions/setup-xnet
         with:
-          crate: xnet-cli
-          git: https://github.com/xmtp/libxmtp
-          branch: push-mtruypwzqklu
-      - name: Setup DNS
-        run: |
-          sudo mkdir -p /etc/systemd/resolved.conf.d
-          sudo tee /etc/systemd/resolved.conf.d/xmtp.conf <<EOF
-          [Resolve]
-          DNS=127.0.0.1:5354
-          Domains=~xmtpd.local
-          EOF
-          sudo systemctl restart systemd-resolved
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: ./dev/up
       - run: ./dev/integration v3-writes
   integration-v4:
@@ -55,20 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install xnet-cli
-        uses: baptistearno/rust-cargo-install@v3
+      - uses: ./.github/actions/setup-xnet
         with:
-          crate: xnet-cli
-          git: https://github.com/xmtp/libxmtp
-          branch: push-mtruypwzqklu
-      - name: Setup DNS
-        run: |
-          sudo mkdir -p /etc/systemd/resolved.conf.d
-          sudo tee /etc/systemd/resolved.conf.d/xmtp.conf <<EOF
-          [Resolve]
-          DNS=127.0.0.1:5354
-          Domains=~xmtpd.local
-          EOF
-          sudo systemctl restart systemd-resolved
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: ./dev/up
       - run: ./dev/integration v4-writes

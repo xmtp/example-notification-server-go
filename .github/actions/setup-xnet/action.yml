@@ -1,0 +1,34 @@
+name: "Setup xnet"
+description: "Install Nix and xnet-cli for XMTP network testing"
+
+inputs:
+  github-token:
+    description: "GitHub token for Nix installation"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: cachix/install-nix-action@v31
+      with:
+        github_access_token: ${{ inputs.github-token }}
+        extra_nix_config: |
+          accept-flake-config = true
+          extra-trusted-public-keys = xmtp.cachix.org-1:nFPFrqLQ9kjYQKiWL7gKq6llcNEeaV4iI+Ka1F+Tmq0=
+          extra-substituters = https://xmtp.cachix.org
+    - uses: cachix/cachix-action@v16
+      with:
+        name: xmtp
+    - name: Install xnet-cli
+      shell: bash
+      run: nix profile install github:xmtp/libxmtp/push-mtruypwzqklu#xnet-cli
+    - name: Setup DNS
+      shell: bash
+      run: |
+        sudo mkdir -p /etc/systemd/resolved.conf.d
+        sudo tee /etc/systemd/resolved.conf.d/xmtp.conf <<EOF
+        [Resolve]
+        DNS=127.0.0.1:5354
+        Domains=~xmtpd.local
+        EOF
+        sudo systemctl restart systemd-resolved
