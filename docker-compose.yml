@@ -43,7 +43,7 @@ services:
     depends_on:
       - notification_server
     environment:
-      - XMTP_NODE_URL=${XMTP_CLIENT_URL:-http://xnet-node:4446}
+      - XMTP_NODE_URL=${XMTP_CLIENT_URL:-http://xnet-node:5556}
       - NOTIFICATION_SERVER_URL=http://notification_server:8080
     networks:
       - xnet

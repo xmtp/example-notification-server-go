@@ -12,7 +12,7 @@ case "$SCENARIO" in
     # Writes go to V3 node-go, listener connects to xmtpd (V4)
     export LISTENER_TYPE=v4
     export XMTP_LISTENER_ADDRESS=xnet-100:5050
-    export XMTP_CLIENT_URL=http://xnet-node:4446
+    export XMTP_CLIENT_URL=http://xnet-node:5556
     ;;
   v4-writes)
     # Writes go to V4 gateway, listener connects to xmtpd (V4)
