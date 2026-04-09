@@ -24,3 +24,12 @@ func Test_BuildFcmData_TopicField(t *testing.T) {
 	require.Equal(t, base64.StdEncoding.EncodeToString([]byte("test")), data["encryptedMessage"])
 	require.Equal(t, "v3-conversation", data["messageType"])
 }
+
+func Test_BuildFcmData_V4TopicBytesB64(t *testing.T) {
+	req := buildDeliveryRequest(t, interfaces.PayloadFormatV4)
+
+	data := buildFcmData(req)
+	require.Equal(t, deliveryTestTopic, data["topic"])
+	require.Equal(t, req.TopicBytes, data["topicBytesB64"])
+	require.Equal(t, "v4", data["payloadFormat"])
+}

@@ -26,6 +26,7 @@ type sendRequestJSONFixture struct {
 	} `json:"message_context"`
 	Topic            string `json:"topic"`
 	EncryptedMessage string `json:"encrypted_message"`
+	TopicBytesB64    string `json:"topicBytesB64"`
 }
 
 func TestPayloadFormat_String(t *testing.T) {
@@ -106,6 +107,48 @@ func TestSendRequest_MarshalJSON_BackwardCompatible(t *testing.T) {
 	require.Empty(t, result.EncryptedMessage)
 	require.Equal(t, "abc123", result.IdempotencyKey)
 	require.Equal(t, "v3-welcome", result.MessageContext.MessageType)
+}
+
+func TestSendRequest_MarshalJSON_TopicBytesIncluded(t *testing.T) {
+	req := SendRequest{
+		IdempotencyKey:   "abc123",
+		Topic:            "/xmtp/mls/1/g-01020304/proto",
+		TopicBytes:       "AQECBA==",
+		EncryptedMessage: []byte("encrypted-data"),
+		PayloadFormat:    PayloadFormatV4,
+		MessageContext:   MessageContext{MessageType: "v3-conversation"},
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var result sendRequestJSONFixture
+	require.NoError(t, json.Unmarshal(data, &result))
+
+	require.Equal(t, "/xmtp/mls/1/g-01020304/proto", result.Message.ContentTopic)
+	require.Equal(t, "AQECBA==", result.TopicBytesB64)
+}
+
+func TestSendRequest_MarshalJSON_TopicBytesOmittedWhenEmpty(t *testing.T) {
+	req := SendRequest{
+		IdempotencyKey:   "abc123",
+		Topic:            "/xmtp/mls/1/g-01020304/proto",
+		EncryptedMessage: []byte("encrypted-data"),
+		PayloadFormat:    PayloadFormatV3,
+		MessageContext:   MessageContext{MessageType: "v3-conversation"},
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var result sendRequestJSONFixture
+	require.NoError(t, json.Unmarshal(data, &result))
+
+	require.Empty(t, result.TopicBytesB64)
+	// Also verify it's not in the raw JSON at all
+	var raw map[string]interface{}
+	require.NoError(t, json.Unmarshal(data, &raw))
+	require.NotContains(t, raw, "topicBytesB64")
 }
 
 func Test_Subscription_MarshalJSON_TopicV4NotSerialized(t *testing.T) {

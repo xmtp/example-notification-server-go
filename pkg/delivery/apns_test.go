@@ -19,7 +19,7 @@ func buildDeliveryRequest(t *testing.T, payloadFormat interfaces.PayloadFormat) 
 	parsed, err := topics.ParseV3Topic(deliveryTestTopic)
 	require.NoError(t, err)
 	topicStr := topics.TopicToString(parsed)
-	return interfaces.SendRequest{
+	req := interfaces.SendRequest{
 		Topic:            topicStr,
 		EncryptedMessage: []byte("test"),
 		PayloadFormat:    payloadFormat,
@@ -32,6 +32,10 @@ func buildDeliveryRequest(t *testing.T, payloadFormat interfaces.PayloadFormat) 
 		},
 		MessageContext: interfaces.MessageContext{MessageType: topics.V3Conversation},
 	}
+	if payloadFormat == interfaces.PayloadFormatV4 {
+		req.TopicBytes = topics.TopicToBase64(parsed)
+	}
+	return req
 }
 
 func TestApns_PayloadIncludesPayloadFormat(t *testing.T) {
@@ -61,4 +65,19 @@ func Test_ApnsDelivery_BuildNotification_TopicField(t *testing.T) {
 	require.NotContains(t, p, "topicBytesB64")
 	require.Equal(t, "device-token", notification.DeviceToken)
 	require.Equal(t, "com.example.app", notification.Topic)
+}
+
+func Test_ApnsDelivery_BuildNotification_V4TopicBytesB64(t *testing.T) {
+	a := ApnsDelivery{opts: options.ApnsOptions{Topic: "com.example.app"}}
+	req := buildDeliveryRequest(t, interfaces.PayloadFormatV4)
+
+	notification := a.buildNotification(req)
+	payloadBytes, err := notification.Payload.(*payload.Payload).MarshalJSON()
+	require.NoError(t, err)
+
+	var p map[string]interface{}
+	require.NoError(t, json.Unmarshal(payloadBytes, &p))
+	require.Equal(t, deliveryTestTopic, p["topic"])
+	require.Equal(t, req.TopicBytes, p["topicBytesB64"])
+	require.Equal(t, "v4", p["payloadFormat"])
 }

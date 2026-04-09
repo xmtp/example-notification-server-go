@@ -76,12 +76,7 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 		APNS: &messaging.APNSConfig{
 			Headers: apnsHeaders,
 			Payload: &messaging.APNSPayload{
-				CustomData: map[string]interface{}{
-					"topic":            req.Topic,
-					"encryptedMessage": data["encryptedMessage"],
-					"messageType":      data["messageType"],
-					"payloadFormat":    data["payloadFormat"],
-				},
+				CustomData: buildFcmApnsCustomData(req, data),
 				Aps: &messaging.Aps{
 					ContentAvailable: req.Subscription.IsSilent,
 					MutableContent:   !req.Subscription.IsSilent,
@@ -93,11 +88,28 @@ func (f FcmDelivery) Send(ctx context.Context, req interfaces.SendRequest) error
 	return err
 }
 
+func buildFcmApnsCustomData(req interfaces.SendRequest, data map[string]string) map[string]interface{} {
+	customData := map[string]interface{}{
+		"topic":            req.Topic,
+		"encryptedMessage": data["encryptedMessage"],
+		"messageType":      data["messageType"],
+		"payloadFormat":    data["payloadFormat"],
+	}
+	if req.TopicBytes != "" {
+		customData["topicBytesB64"] = req.TopicBytes
+	}
+	return customData
+}
+
 func buildFcmData(req interfaces.SendRequest) map[string]string {
-	return map[string]string{
+	data := map[string]string{
 		"topic":            req.Topic,
 		"encryptedMessage": base64.StdEncoding.EncodeToString(req.EncryptedMessage),
 		"messageType":      string(req.MessageContext.MessageType),
 		"payloadFormat":    req.PayloadFormat.String(),
 	}
+	if req.TopicBytes != "" {
+		data["topicBytesB64"] = req.TopicBytes
+	}
+	return data
 }

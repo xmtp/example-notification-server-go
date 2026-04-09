@@ -123,6 +123,7 @@ type Subscription struct {
 type SendRequest struct {
 	IdempotencyKey   string         `json:"-"`
 	Topic            string         `json:"-"`
+	TopicBytes       string         `json:"-"`
 	EncryptedMessage []byte         `json:"-"`
 	PayloadFormat    PayloadFormat  `json:"-"`
 	MessageContext   MessageContext `json:"-"`
@@ -142,6 +143,7 @@ type sendRequestJSON struct {
 	Installation   Installation   `json:"installation"`
 	Subscription   Subscription   `json:"subscription"`
 	PayloadFormat  PayloadFormat  `json:"payload_format,omitempty"`
+	TopicBytesB64  string         `json:"topicBytesB64,omitempty"`
 }
 
 func (r SendRequest) MarshalJSON() ([]byte, error) {
@@ -151,6 +153,7 @@ func (r SendRequest) MarshalJSON() ([]byte, error) {
 		Installation:   r.Installation,
 		Subscription:   r.Subscription,
 		PayloadFormat:  r.PayloadFormat,
+		TopicBytesB64:  r.TopicBytes,
 	}
 	out.Message.ContentTopic = r.Topic
 	out.Message.Message = r.EncryptedMessage
