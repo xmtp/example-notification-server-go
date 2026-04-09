@@ -30,6 +30,6 @@ func Test_BuildFcmData_V4TopicBytesB64(t *testing.T) {
 
 	data := buildFcmData(req)
 	require.Equal(t, deliveryTestTopic, data["topic"])
-	require.Equal(t, req.TopicBytes, data["topicBytesB64"])
+	require.Equal(t, req.TopicBytesB64, data["topicBytesB64"])
 	require.Equal(t, "v4", data["payloadFormat"])
 }

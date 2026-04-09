@@ -281,7 +281,7 @@ func buildV4SendRequest(
 	return interfaces.SendRequest{
 		IdempotencyKey:   idempotencyKey,
 		Topic:            topics.TopicToLegacy(targetTopic),
-		TopicBytes:       topics.TopicToBase64(targetTopic),
+		TopicBytesB64:    topics.TopicToBase64(targetTopic),
 		EncryptedMessage: envBytes,
 		PayloadFormat:    interfaces.PayloadFormatV4,
 		MessageContext:   messageContext,

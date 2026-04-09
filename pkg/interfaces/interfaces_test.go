@@ -113,7 +113,7 @@ func TestSendRequest_MarshalJSON_TopicBytesIncluded(t *testing.T) {
 	req := SendRequest{
 		IdempotencyKey:   "abc123",
 		Topic:            "/xmtp/mls/1/g-01020304/proto",
-		TopicBytes:       "AQECBA==",
+		TopicBytesB64:       "AQECBA==",
 		EncryptedMessage: []byte("encrypted-data"),
 		PayloadFormat:    PayloadFormatV4,
 		MessageContext:   MessageContext{MessageType: "v3-conversation"},

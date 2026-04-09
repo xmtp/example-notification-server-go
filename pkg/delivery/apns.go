@@ -82,8 +82,8 @@ func (a ApnsDelivery) buildNotification(req interfaces.SendRequest) *apns2.Notif
 		Custom("messageKind", string(req.MessageContext.MessageType)).
 		Custom("payloadFormat", req.PayloadFormat.String())
 
-	if req.TopicBytes != "" {
-		notificationPayload = notificationPayload.Custom("topicBytesB64", req.TopicBytes)
+	if req.TopicBytesB64 != "" {
+		notificationPayload = notificationPayload.Custom("topicBytesB64", req.TopicBytesB64)
 	}
 
 	if req.Subscription.IsSilent {

@@ -223,7 +223,7 @@ func TestV4Listener_ProcessGroupMessage_V4Format(t *testing.T) {
 	capturedReq := testutils.RequireSendRequestForInstallation(t, sendReqs, "inst-v4")
 	require.Equal(t, interfaces.PayloadFormatV4, capturedReq.PayloadFormat)
 	require.Equal(t, topicutil.TopicToLegacy(groupTopic), capturedReq.Topic)
-	require.Equal(t, topicutil.TopicToBase64(groupTopic), capturedReq.TopicBytes)
+	require.Equal(t, topicutil.TopicToBase64(groupTopic), capturedReq.TopicBytesB64)
 	require.NotEmpty(t, capturedReq.EncryptedMessage)
 	require.Equal(t, topicutil.V3Conversation, capturedReq.MessageContext.MessageType)
 
@@ -298,7 +298,7 @@ func TestV4Listener_ProcessGroupMessage_MixedFormats(t *testing.T) {
 	v4Req := testutils.RequireSendRequestForInstallation(t, sendReqs, "inst-mixed-v4")
 	require.Equal(t, interfaces.PayloadFormatV4, v4Req.PayloadFormat)
 	require.Equal(t, topicutil.TopicToLegacy(groupTopic), v4Req.Topic)
-	require.Equal(t, topicutil.TopicToBase64(groupTopic), v4Req.TopicBytes)
+	require.Equal(t, topicutil.TopicToBase64(groupTopic), v4Req.TopicBytesB64)
 }
 
 // TestV4Listener_SkipNonConvertiblePayload_V3Format tests that a non-group/welcome payload
@@ -368,7 +368,7 @@ func TestV4Listener_DeliverNonConvertiblePayload_V4Format(t *testing.T) {
 	capturedReq := testutils.RequireSendRequestForInstallation(t, sendReqs, "inst-payer-v4")
 	require.Equal(t, interfaces.PayloadFormatV4, capturedReq.PayloadFormat)
 	require.Equal(t, topicutil.TopicToLegacy(payerReportTopic), capturedReq.Topic)
-	require.Equal(t, topicutil.TopicToBase64(payerReportTopic), capturedReq.TopicBytes)
+	require.Equal(t, topicutil.TopicToBase64(payerReportTopic), capturedReq.TopicBytesB64)
 	require.Equal(t, topicutil.Unknown, capturedReq.MessageContext.MessageType)
 
 	var deliveredEnv envelopesProto.OriginatorEnvelope

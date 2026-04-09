@@ -95,8 +95,8 @@ func buildFcmApnsCustomData(req interfaces.SendRequest, data map[string]string) 
 		"messageType":      data["messageType"],
 		"payloadFormat":    data["payloadFormat"],
 	}
-	if req.TopicBytes != "" {
-		customData["topicBytesB64"] = req.TopicBytes
+	if req.TopicBytesB64 != "" {
+		customData["topicBytesB64"] = req.TopicBytesB64
 	}
 	return customData
 }
@@ -108,8 +108,8 @@ func buildFcmData(req interfaces.SendRequest) map[string]string {
 		"messageType":      string(req.MessageContext.MessageType),
 		"payloadFormat":    req.PayloadFormat.String(),
 	}
-	if req.TopicBytes != "" {
-		data["topicBytesB64"] = req.TopicBytes
+	if req.TopicBytesB64 != "" {
+		data["topicBytesB64"] = req.TopicBytesB64
 	}
 	return data
 }

@@ -33,7 +33,7 @@ func buildDeliveryRequest(t *testing.T, payloadFormat interfaces.PayloadFormat) 
 		MessageContext: interfaces.MessageContext{MessageType: topics.V3Conversation},
 	}
 	if payloadFormat == interfaces.PayloadFormatV4 {
-		req.TopicBytes = topics.TopicToBase64(parsed)
+		req.TopicBytesB64 = topics.TopicToBase64(parsed)
 	}
 	return req
 }
@@ -78,6 +78,6 @@ func Test_ApnsDelivery_BuildNotification_V4TopicBytesB64(t *testing.T) {
 	var p map[string]interface{}
 	require.NoError(t, json.Unmarshal(payloadBytes, &p))
 	require.Equal(t, deliveryTestTopic, p["topic"])
-	require.Equal(t, req.TopicBytes, p["topicBytesB64"])
+	require.Equal(t, req.TopicBytesB64, p["topicBytesB64"])
 	require.Equal(t, "v4", p["payloadFormat"])
 }
