@@ -31,3 +31,4 @@ docs/plans
 .omx/
 .claude/*
 !.claude/skills
+.direnv/**
